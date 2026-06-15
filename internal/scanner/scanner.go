@@ -31,7 +31,7 @@ func NewScanner(browserWSURL string) *Scanner {
 		gatherers: []Gatherer{
 			gatherWHOIS,
 			gatherASN,
-			gatherWeb,
+			newWebGatherer(browserWSURL),
 		},
 	}
 }
