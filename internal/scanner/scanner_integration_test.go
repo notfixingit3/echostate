@@ -4,19 +4,25 @@ package scanner
 
 import (
 	"context"
+	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
 
 // TestScannerIntegration performs a live, end-to-end run of the scanner against
 // example.com. It requires outbound network access for WHOIS and ASN lookups,
-// and an optional browserless/chrome endpoint for web data. If the browser
-// endpoint is unavailable, the web gatherer is expected to report an error
-// gracefully rather than fail the scan.
+// and an optional browserless/chrome endpoint for web data. If the network is
+// unavailable, the test skips. If the browser endpoint is unavailable, the web
+// gatherer is expected to report an error gracefully rather than fail the scan.
 func TestScannerIntegration(t *testing.T) {
 	if os.Getenv("ECHOSTATE_INTEGRATION") == "skip" {
 		t.Skip("ECHOSTATE_INTEGRATION=skip set")
+	}
+
+	if !networkAvailable() {
+		t.Skip("network unavailable; skipping integration test")
 	}
 
 	browserWSURL := os.Getenv("BROWSER_WS_URL")
@@ -44,18 +50,10 @@ func TestScannerIntegration(t *testing.T) {
 
 	// Web may fail if no browser is available; that's acceptable, but we should
 	// not see a panic or fatal error in result.Errors.
-	hasFatal := false
 	for _, e := range result.Errors {
-		if e == "" {
-			continue
+		if strings.Contains(e, "panic") || strings.Contains(e, "runtime error") {
+			t.Errorf("unexpected fatal error: %s", e)
 		}
-		// Treat runtime panics / unexpected fatals as failures.
-		if containsAny(e, []string{"panic", "runtime error", "index out of range"}) {
-			hasFatal = true
-		}
-	}
-	if hasFatal {
-		t.Errorf("unexpected fatal errors in result.Errors: %v", result.Errors)
 	}
 
 	t.Logf("WHOIS: %v", result.WHOIS)
@@ -64,24 +62,11 @@ func TestScannerIntegration(t *testing.T) {
 	t.Logf("Errors: %v", result.Errors)
 }
 
-func containsAny(s string, subs []string) bool {
-	for _, sub := range subs {
-		if contains(s, sub) {
-			return true
-		}
-	}
-	return false
-}
-
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(sub) > 0 && containsImpl(s, sub))
-}
-
-func containsImpl(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
+// networkAvailable returns true if we can resolve a well-known public DNS name.
+func networkAvailable() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resolver := &net.Resolver{}
+	_, err := resolver.LookupHost(ctx, "example.com")
+	return err == nil
 }

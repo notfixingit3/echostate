@@ -31,6 +31,19 @@ func TestWHOIS(t *testing.T) {
 	}
 }
 
+func TestWHOISError(t *testing.T) {
+	orig := whoisLookup
+	whoisLookup = func(domain string, servers ...string) (string, error) {
+		return "", context.DeadlineExceeded
+	}
+	defer func() { whoisLookup = orig }()
+
+	_, _, err := gatherWHOIS(context.Background(), "this-is-not-a-real-domain-12345.invalidtld")
+	if err == nil {
+		t.Fatal("expected error for invalid/unresolvable domain")
+	}
+}
+
 func TestWHOISParse(t *testing.T) {
 	validRaw := `Domain Name: example.com
 Registrar: Example Registrar Inc.

@@ -1,0 +1,27 @@
+F3 Real Manual QA — EchoState Tasks 4 + 1
+============================================
+
+Scenarios [9/9 pass]
+  1. FUNDING.yml clean + valid YAML ........................ PASS
+  2. Dependencies present + go build ./... ................. PASS
+  3. Normalizer unit tests ................................. PASS
+  4. WHOIS gatherer tests .................................. PASS
+  5. ASN gatherer tests .................................... PASS
+  6. Web/copyright matcher tests ........................... PASS (live browser skipped, expected)
+  7. Scanner wiring: build, vet, no pending stubs .......... PASS
+  8. Integration test -tags=integration .................... PASS
+  9. Docker Compose end-to-end scan + PostgreSQL query ..... PASS
+
+Integration [3/3]
+  go test ./... ............................................ PASS
+  go test ./internal/scanner/ -tags=integration -v ......... PASS
+  docker compose up → POST /api/scan → psql COUNT(*)≥1 ..... PASS
+
+Edge Cases [4 tested]
+  empty host ............................................... graceful 3 errors, no panic
+  invalid host ............................................. graceful 3 errors, no panic
+  gatherer timeout (1ns context) ........................... graceful timeout errors, no panic
+  browser unavailable ...................................... WHOIS/ASN succeed, web fails gracefully
+
+VERDICT: PASS
+Containers left running: NONE

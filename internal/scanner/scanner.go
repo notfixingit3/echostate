@@ -38,8 +38,10 @@ func NewScanner(browserWSURL string) *Scanner {
 
 // Run executes all gatherers concurrently and returns a unified result.
 func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, error) {
+	normalized := NormalizeHost(host)
+
 	result := &models.ScanResult{
-		Host:      host,
+		Host:      normalized,
 		ScannedAt: time.Now().UTC(),
 		WHOIS:     make(map[string]any),
 		ASN:       make(map[string]any),
@@ -55,7 +57,10 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 		go func(gatherer Gatherer) {
 			defer wg.Done()
 
-			key, value, err := gatherer(ctx, host)
+			gatherCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			key, value, err := gatherer(gatherCtx, normalized)
 			if err != nil {
 				mu.Lock()
 				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", key, err))

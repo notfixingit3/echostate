@@ -1,0 +1,33 @@
+=== Edge Case: empty host ===
+WHOIS empty=true
+ASN empty=true
+Web empty=true
+errors=3
+  - web: empty host
+  - asn: empty host
+  - whois: empty host
+
+=== Edge Case: invalid host ===
+WHOIS empty=true
+ASN empty=true
+Web empty=true
+errors=3
+  - web: web gather failed for this-is-not-a-valid-host.invalidtld123: failed to modify wsURL: Get "http://localhost:3000/json/version": dial tcp [::1]:3000: connect: connection refused
+  - asn: resolve host: lookup this-is-not-a-valid-host.invalidtld123: no such host
+  - whois: whois lookup failed: whois: no whois server found for domain: this-is-not-a-valid-host.invalidtld123
+
+=== Edge Case: gatherer timeout (1ns context) ===
+WHOIS empty=true
+ASN empty=true
+Web empty=true
+errors=3
+  - whois: whois lookup timed out: context deadline exceeded
+  - asn: resolve host: lookup example.com: i/o timeout
+  - web: web gather failed for example.com: failed to modify wsURL: Get "http://localhost:3000/json/version": context deadline exceeded
+
+=== Edge Case: browser unavailable ===
+WHOIS empty=false
+ASN empty=false
+Web empty=true
+errors=1
+  - web: web gather failed for example.com: failed to modify wsURL: Get "http://localhost:9999/json/version": dial tcp [::1]:9999: connect: connection refused
