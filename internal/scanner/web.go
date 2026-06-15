@@ -13,12 +13,6 @@ import (
 
 const defaultBrowserWSURL = "ws://localhost:3000/"
 
-// gatherWeb is the default web/copyright gatherer.
-// It uses the default browser WebSocket endpoint and is suitable for direct use
-// in tests or simple callers. NewScanner builds its own gatherer closure when a
-// custom endpoint is configured.
-var gatherWeb Gatherer = newWebGatherer("")
-
 // newWebGatherer returns a Gatherer that connects to a browserless Chrome
 // instance at browserWSURL and extracts the landing page title, final URL, and
 // copyright snippets from visible text.

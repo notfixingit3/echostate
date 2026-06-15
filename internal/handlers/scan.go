@@ -163,8 +163,13 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 
 func computeChanges(previous map[string]any, current *models.ScanResult) []string {
 	currentMap := map[string]any{}
-	data, _ := json.Marshal(current)
-	_ = json.Unmarshal(data, &currentMap)
+	data, err := json.Marshal(current)
+	if err != nil {
+		return []string{fmt.Sprintf("marshal current: %v", err)}
+	}
+	if err := json.Unmarshal(data, &currentMap); err != nil {
+		return []string{fmt.Sprintf("unmarshal current: %v", err)}
+	}
 
 	changes := []string{}
 	for key, curVal := range currentMap {
@@ -174,8 +179,16 @@ func computeChanges(previous map[string]any, current *models.ScanResult) []strin
 			continue
 		}
 
-		prevJSON, _ := json.Marshal(prevVal)
-		curJSON, _ := json.Marshal(curVal)
+		prevJSON, err := json.Marshal(prevVal)
+		if err != nil {
+			changes = append(changes, fmt.Sprintf("marshal previous %s: %v", key, err))
+			continue
+		}
+		curJSON, err := json.Marshal(curVal)
+		if err != nil {
+			changes = append(changes, fmt.Sprintf("marshal current %s: %v", key, err))
+			continue
+		}
 		if string(prevJSON) != string(curJSON) {
 			changes = append(changes, fmt.Sprintf("changed %s", key))
 		}
