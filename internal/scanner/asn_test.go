@@ -163,7 +163,7 @@ func TestASNLive(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), asnGatherTimeout)
 	defer cancel()
 
-	key, value, err := gatherASN(ctx, "one.one.one.one")
+	key, value, err := gatherASN(ctx, "example.com")
 	if err != nil {
 		t.Skipf("live ASN lookup unavailable, skipping: %v", err)
 	}

@@ -64,6 +64,16 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 			if err != nil {
 				mu.Lock()
 				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", key, err))
+				if len(value) > 0 {
+					switch key {
+					case "whois":
+						mergeMap(result.WHOIS, value)
+					case "asn":
+						mergeMap(result.ASN, value)
+					case "web":
+						mergeMap(result.Web, value)
+					}
+				}
 				mu.Unlock()
 				return
 			}
@@ -83,6 +93,12 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 
 	wg.Wait()
 	return result, nil
+}
+
+func mergeMap(dst, src map[string]any) {
+	for k, v := range src {
+		dst[k] = v
+	}
 }
 
 // Hash computes a SHA256 hash of the scan result JSON.
