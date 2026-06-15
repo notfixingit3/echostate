@@ -17,12 +17,17 @@ type Gatherer func(ctx context.Context, host string) (key string, value map[stri
 
 // Scanner orchestrates passive reconnaissance tasks.
 type Scanner struct {
-	gatherers []Gatherer
+	browserWSURL string
+	gatherers    []Gatherer
 }
 
 // NewScanner builds a scanner with the default set of gatherers.
-func NewScanner() *Scanner {
+func NewScanner(browserWSURL string) *Scanner {
+	if browserWSURL == "" {
+		browserWSURL = "ws://localhost:3000/"
+	}
 	return &Scanner{
+		browserWSURL: browserWSURL,
 		gatherers: []Gatherer{
 			gatherWHOIS,
 			gatherASN,
@@ -86,17 +91,4 @@ func Hash(result *models.ScanResult) (string, error) {
 	return hex.EncodeToString(hash[:]), nil
 }
 
-func gatherWHOIS(ctx context.Context, host string) (string, map[string]any, error) {
-	// TODO: implement WHOIS lookup with github.com/likexian/whois
-	return "whois", map[string]any{"status": "pending"}, nil
-}
 
-func gatherASN(ctx context.Context, host string) (string, map[string]any, error) {
-	// TODO: implement passive BGP/ASN lookup
-	return "asn", map[string]any{"status": "pending"}, nil
-}
-
-func gatherWeb(ctx context.Context, host string) (string, map[string]any, error) {
-	// TODO: implement chromedp DOM scraping for copyright data
-	return "web", map[string]any{"status": "pending"}, nil
-}

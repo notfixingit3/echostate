@@ -28,7 +28,7 @@ func Register(router *gin.Engine, database *db.DB, cfg *config.Config) {
 	h := &Handler{
 		db:      database,
 		config:  cfg,
-		scanner: scanner.NewScanner(),
+		scanner: scanner.NewScanner(cfg.BrowserWSURL),
 	}
 
 	router.GET("/health", h.health)
