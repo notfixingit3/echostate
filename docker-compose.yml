@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: echostate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-echostate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-echostate}
+      POSTGRES_DB: ${POSTGRES_DB:-echostate}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-echostate} -d ${POSTGRES_DB:-echostate}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  browser:
+    image: browserless/chrome:latest
+    container_name: echostate-browser
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      CONNECTION_TIMEOUT: 30000
+      MAX_CONCURRENT_SESSIONS: 5
+    ports:
+      - "${BROWSER_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/pressure"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echostate-api
+    restart: unless-stopped
+    environment:
+      ECHOSTATE_ENV: ${ECHOSTATE_ENV:-development}
+      ECHOSTATE_PORT: ${ECHOSTATE_PORT:-8080}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-echostate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-echostate}
+      POSTGRES_DB: ${POSTGRES_DB:-echostate}
+      DATABASE_URL: postgres://${POSTGRES_USER:-echostate}:${POSTGRES_PASSWORD:-echostate}@db:5432/${POSTGRES_DB:-echostate}?sslmode=disable
+      BROWSER_WS_URL: ${BROWSER_WS_URL:-ws://browser:3000/}
+    ports:
+      - "${ECHOSTATE_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      browser:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

@@ -1,0 +1,79 @@
+package db
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// DB wraps a pgx connection pool.
+type DB struct {
+	Pool *pgxpool.Pool
+}
+
+// Connect establishes a connection pool to PostgreSQL.
+func Connect(databaseURL string) (*DB, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	config, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse database url: %w", err)
+	}
+
+	config.MaxConns = 10
+	config.MinConns = 2
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		return nil, fmt.Errorf("create pool: %w", err)
+	}
+
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	return &DB{Pool: pool}, nil
+}
+
+// Close shuts down the connection pool.
+func (db *DB) Close() {
+	db.Pool.Close()
+}
+
+// Migrate runs the embedded schema migrations.
+func Migrate(db *DB) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	_, err := db.Pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS targets (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			host TEXT NOT NULL UNIQUE,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		CREATE TABLE IF NOT EXISTS snapshots (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			target_id UUID NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
+			scanned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			data_hash TEXT NOT NULL,
+			raw_data JSONB NOT NULL,
+			changes TEXT[] DEFAULT '{}'
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_snapshots_target_id_scanned_at
+			ON snapshots(target_id, scanned_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_snapshots_data_hash
+			ON snapshots(data_hash);
+	`)
+	if err != nil {
+		return fmt.Errorf("execute migrations: %w", err)
+	}
+
+	return nil
+}

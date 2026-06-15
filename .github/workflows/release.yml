@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build release binaries
+        run: |
+          GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o echostate-linux-amd64 ./main.go
+          GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o echostate-linux-arm64 ./main.go
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o echostate-darwin-amd64 ./main.go
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-w -s" -o echostate-darwin-arm64 ./main.go
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            echostate-linux-amd64
+            echostate-linux-arm64
+            echostate-darwin-amd64
+            echostate-darwin-arm64
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'dev') }}
