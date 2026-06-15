@@ -91,16 +91,18 @@ func (h *Handler) upsertTarget(ctx context.Context, host string) (uuid.UUID, err
 
 func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHash string, result *models.ScanResult) (*models.Snapshot, error) {
 	var previous models.Snapshot
-	err := h.db.Pool.QueryRow(ctx, `
+	errPrev := h.db.Pool.QueryRow(ctx, `
 		SELECT id, data_hash, raw_data
 		FROM snapshots
 		WHERE target_id = $1
 		ORDER BY scanned_at DESC
 		LIMIT 1
 	`, targetID).Scan(&previous.ID, &previous.DataHash, &previous.RawData)
-	if err != nil && err != pgx.ErrNoRows {
-		return nil, fmt.Errorf("fetch previous snapshot: %w", err)
+	if errPrev != nil && errPrev != pgx.ErrNoRows {
+		return nil, fmt.Errorf("fetch previous snapshot: %w", errPrev)
 	}
+
+	hasPrevious := errPrev == nil
 
 	rawJSON, err := json.Marshal(result)
 	if err != nil {
@@ -109,7 +111,7 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 
 	now := time.Now().UTC()
 
-	if err == nil && previous.DataHash == dataHash {
+	if hasPrevious && previous.DataHash == dataHash {
 		_, err := h.db.Pool.Exec(ctx, `
 			UPDATE snapshots
 			SET last_seen = $1
@@ -130,7 +132,7 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 	}
 
 	var changes []string
-	if err == nil {
+	if hasPrevious {
 		changes = computeChanges(previous.RawData, result)
 	}
 
