@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -203,4 +204,195 @@ func TestSnapshotReport_SnapshotNotFound(t *testing.T) {
 	h.snapshotReport(c)
 
 	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func insertReport(t *testing.T, d *db.DB, snapshotID uuid.UUID, status models.ReportStatus, pdf []byte) uuid.UUID {
+	t.Helper()
+
+	ctx := context.Background()
+	var id uuid.UUID
+	var completedAt interface{}
+	if status == models.ReportCompleted {
+		completedAt = time.Now().UTC()
+	} else {
+		completedAt = nil
+	}
+	err := d.Pool.QueryRow(ctx, `
+		INSERT INTO reports (snapshot_id, status, pdf, completed_at)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id
+	`, snapshotID, status, pdf, completedAt).Scan(&id)
+	require.NoError(t, err)
+	return id
+}
+
+func TestGetReport_Pending(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	body, _ := json.Marshal(map[string]any{"snapshot_id": snapshotID})
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/reports", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	h.createReport(c)
+	require.Equal(t, http.StatusAccepted, w.Code)
+
+	var created models.ReportResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &created))
+	require.Equal(t, models.ReportPending, created.Status)
+
+	w = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/reports/"+created.ID.String(), nil)
+	c.Params = gin.Params{{Key: "id", Value: created.ID.String()}}
+	h.getReport(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp models.ReportResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, created.ID, resp.ID)
+	require.Equal(t, models.ReportPending, resp.Status)
+	require.Equal(t, snapshotID, resp.SnapshotID)
+	require.Empty(t, resp.DownloadURL)
+}
+
+func TestGetReport_Completed(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+	reportID := insertReport(t, d, snapshotID, models.ReportCompleted, []byte("%PDF completed"))
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/reports/"+reportID.String(), nil)
+	c.Params = gin.Params{{Key: "id", Value: reportID.String()}}
+	h.getReport(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp models.ReportResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, reportID, resp.ID)
+	require.Equal(t, models.ReportCompleted, resp.Status)
+	require.Equal(t, snapshotID, resp.SnapshotID)
+	require.Contains(t, resp.DownloadURL, "/api/reports/"+reportID.String()+"/download")
+	require.NotNil(t, resp.CompletedAt)
+}
+
+func TestGetReport_NotFound(t *testing.T) {
+	d := setupTestDB(t)
+	h := newTestHandler(t, d)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/reports/"+uuid.New().String(), nil)
+	c.Params = gin.Params{{Key: "id", Value: uuid.New().String()}}
+	h.getReport(c)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestDownloadReport_Completed(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+	pdf := []byte("%PDF fake download")
+	reportID := insertReport(t, d, snapshotID, models.ReportCompleted, pdf)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/reports/"+reportID.String()+"/download", nil)
+	c.Params = gin.Params{{Key: "id", Value: reportID.String()}}
+	h.downloadReport(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "application/pdf", w.Header().Get("Content-Type"))
+	require.Contains(t, w.Header().Get("Content-Disposition"), "attachment")
+	require.Contains(t, w.Header().Get("Content-Disposition"), ".pdf")
+	require.Equal(t, pdf, w.Body.Bytes())
+}
+
+func TestDownloadReport_NotReady(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+	reportID := insertReport(t, d, snapshotID, models.ReportPending, nil)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/reports/"+reportID.String()+"/download", nil)
+	c.Params = gin.Params{{Key: "id", Value: reportID.String()}}
+	h.downloadReport(c)
+
+	require.Equal(t, http.StatusConflict, w.Code)
+	require.Contains(t, strings.ToLower(w.Body.String()), "not ready")
+}
+
+func TestDownloadReport_NotFound(t *testing.T) {
+	d := setupTestDB(t)
+	h := newTestHandler(t, d)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/reports/"+uuid.New().String()+"/download", nil)
+	c.Params = gin.Params{{Key: "id", Value: uuid.New().String()}}
+	h.downloadReport(c)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSnapshotReport_ReusesCompleted(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+	pdf := []byte("%PDF snapshot completed")
+	insertReport(t, d, snapshotID, models.ReportCompleted, pdf)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/snapshots/"+snapshotID.String()+"/report", nil)
+	c.Params = gin.Params{{Key: "id", Value: snapshotID.String()}}
+	h.snapshotReport(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "application/pdf", w.Header().Get("Content-Type"))
+	require.Contains(t, w.Header().Get("Content-Disposition"), "attachment")
+	require.Contains(t, w.Header().Get("Content-Disposition"), ".pdf")
+	require.Equal(t, pdf, w.Body.Bytes())
+}
+
+func TestSnapshotReport_CreatesNew(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/snapshots/"+snapshotID.String()+"/report", nil)
+	c.Params = gin.Params{{Key: "id", Value: snapshotID.String()}}
+	h.snapshotReport(c)
+
+	require.Equal(t, http.StatusAccepted, w.Code)
+	var resp models.ReportResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, models.ReportPending, resp.Status)
+	require.Equal(t, snapshotID, resp.SnapshotID)
+	require.NotEqual(t, uuid.Nil, resp.ID)
+
+	var count int
+	err := d.Pool.QueryRow(context.Background(), `
+		SELECT COUNT(*) FROM reports WHERE snapshot_id = $1
+	`, snapshotID).Scan(&count)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
 }
