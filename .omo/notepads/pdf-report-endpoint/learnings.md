@@ -44,6 +44,18 @@
 - Evidence captured in `.omo/evidence/task-7-create-by-snapshot.txt` and `.omo/evidence/task-7-download-pdf.txt`.
 - `go build ./...`, `go vet ./...`, and `go test ./internal/handlers/...` all pass.
 
+## Wave 3 — Review Fixes
+
+### Task: Sanitize report error responses and add missing handler tests
+
+- Updated `internal/handlers/reports.go` `toReportResponse` to stop exposing `report.ErrorMessage` directly.
+- For failed reports, the API now returns a fixed user-friendly message `"report generation failed"`; all other statuses return an empty `error` field.
+- Added `TestCreateReport_BothFields` confirming that providing both `snapshot_id` and `host` returns HTTP 400.
+- Added `TestCreateReport_NeitherField` confirming that providing neither field returns HTTP 400.
+- Added `TestGetReport_Failed` inserting a report with an internal error message and asserting the response status is `failed` while the `error` field is sanitized and does not contain the internal details.
+- Added `insertFailedReport` test helper to create failed reports with a specific `error_message`.
+- `go test ./...` and `go vet ./...` pass.
+
 ### Task 8: Report status, download, and normalized_host tests
 
 - Extended `internal/handlers/reports_test.go` with coverage for `getReport`, `downloadReport`, and `snapshotReport`.
