@@ -1,0 +1,35 @@
+# Task 8 — Report endpoint unit/integration tests
+
+## New tests added
+
+- `internal/handlers/reports_test.go`:
+  - `TestGetReport_Pending`
+  - `TestGetReport_Completed`
+  - `TestGetReport_NotFound`
+  - `TestDownloadReport_Completed`
+  - `TestDownloadReport_NotReady`
+  - `TestDownloadReport_NotFound`
+  - `TestSnapshotReport_ReusesCompleted`
+  - `TestSnapshotReport_CreatesNew`
+
+- `internal/handlers/scan_test.go`:
+  - `TestUpsertTargetStoresNormalizedHost`
+
+## Verification
+
+```bash
+$ go vet ./...
+(no output)
+
+$ go test ./...
+?       github.com/notfixingit3/echostate       [no test files]
+?       github.com/notfixingit3/echostate/internal/config       [no test files]
+?       github.com/notfixingit3/echostate/internal/db   [no test files]
+ok      github.com/notfixingit3/echostate/internal/handlers     0.816s
+?       github.com/notfixingit3/echostate/internal/models       [no test files]
+ok      github.com/notfixingit3/echostate/internal/pdf  (cached)
+ok      github.com/notfixingit3/echostate/internal/reports      (cached)
+ok      github.com/notfixingit3/echostate/internal/scanner      (cached)
+```
+
+All new tests pass and no production handler logic was changed.

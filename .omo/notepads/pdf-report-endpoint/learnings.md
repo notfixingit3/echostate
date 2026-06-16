@@ -44,4 +44,13 @@
 - Evidence captured in `.omo/evidence/task-7-create-by-snapshot.txt` and `.omo/evidence/task-7-download-pdf.txt`.
 - `go build ./...`, `go vet ./...`, and `go test ./internal/handlers/...` all pass.
 
+### Task 8: Report status, download, and normalized_host tests
+
+- Extended `internal/handlers/reports_test.go` with coverage for `getReport`, `downloadReport`, and `snapshotReport`.
+- Added `internal/handlers/scan_test.go` to verify `upsertTarget` stores `normalized_host` correctly.
+- Completed reports are created by direct DB insert in tests to avoid flakiness from async worker timing.
+- `snapshotReport` returns an existing completed PDF directly (200) or enqueues a new report (202) when none exists.
+- `downloadReport` sets `Content-Type: application/pdf` and an attachment `Content-Disposition` header.
+- `TestUpsertTargetStoresNormalizedHost` confirms `https://www.Example.COM:8080/path` normalizes to `example.com`.
+- `go test ./...` and `go vet ./...` pass.
 
