@@ -81,6 +81,18 @@
 - Stopped the stack with `docker compose down`; no containers left running.
 - All command outputs and curl responses captured in `.omo/evidence/task-9-e2e-report.txt`.
 
+## Wave 3 — Worker Reliability Fixes
+
+### Task 1: Enforce renderer timeout and log worker errors
+
+- Updated `internal/reports/worker.go` to wrap the synchronous renderer call in its own `context.WithTimeout(ctx, renderTimeout)`.
+- The renderer runs in a goroutine and a `select` waits on either `renderCtx.Done()` or the render result, so a slow/blocking renderer is explicitly cancelled and the report is marked failed with the context error.
+- Replaced silent error swallowing in `processPending` (claim-next-pending failures) and `failReport` (UPDATE failures) with `log.Printf` messages.
+- Added `log` import and verified with `go vet ./...`.
+- `TestWorkerRendererError` already existed in `internal/reports/worker_test.go` from a prior commit and asserts that a renderer error causes `failed` status with the renderer message; it continues to pass.
+- `go test ./internal/reports/...`, `go test ./...`, and `go vet ./...` all pass.
+- Committed as `fix(reports): enforce renderer timeout and log worker errors`.
+
 ## Wave 3 — PDF Metadata Section and Renderer Error Handling
 
 ### Task: Add explicit metadata/report-generated-at section
