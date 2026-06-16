@@ -1,0 +1,31 @@
+Task 4 — PDF Renderer Evidence
+==============================
+
+Files created:
+- internal/pdf/renderer.go
+- internal/pdf/renderer_test.go
+
+Verification commands:
+
+$ go test ./internal/pdf/... -v
+=== RUN   TestRenderReport
+--- PASS: TestRenderReport (0.01s)
+=== RUN   TestRenderReport_EmptyData
+--- PASS: TestRenderReport_EmptyData (0.00s)
+=== RUN   TestRenderReport_NilResult
+--- PASS: TestRenderReport_NilResult (0.00s)
+PASS
+ok  	github.com/notfixingit3/echostate/internal/pdf	0.473s
+
+$ go build ./...
+(no errors, exit 0)
+
+PDF magic bytes verified by TestRenderReport: output starts with "%PDF".
+
+Implementation notes:
+- Uses maroto v2 (github.com/johnfercher/maroto/v2 v2.4.0).
+- Sections: cover page, WHOIS, ASN/BGP, web/copyright, errors.
+- Footer page numbers via config.WithPageNumber.
+- Missing/empty data rendered as "N/A" or skipped.
+- Long fields and raw WHOIS truncated; copyrights limited to ~10 items.
+- No chromedp, images, charts, or logos.
