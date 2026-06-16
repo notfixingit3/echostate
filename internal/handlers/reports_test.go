@@ -178,6 +178,43 @@ func TestCreateReport_ByHost(t *testing.T) {
 	require.Contains(t, w.Body.String(), "pending")
 }
 
+func TestCreateReport_BothFields(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body, _ := json.Marshal(map[string]any{"snapshot_id": snapshotID, "host": "example.com"})
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/reports", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.createReport(c)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "provide exactly one of snapshot_id or host")
+}
+
+func TestCreateReport_NeitherField(t *testing.T) {
+	d := setupTestDB(t)
+	h := newTestHandler(t, d)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body, _ := json.Marshal(map[string]any{})
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/reports", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.createReport(c)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "provide exactly one of snapshot_id or host")
+}
+
 func TestGetReport_InvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -222,6 +259,20 @@ func insertReport(t *testing.T, d *db.DB, snapshotID uuid.UUID, status models.Re
 		VALUES ($1, $2, $3, $4)
 		RETURNING id
 	`, snapshotID, status, pdf, completedAt).Scan(&id)
+	require.NoError(t, err)
+	return id
+}
+
+func insertFailedReport(t *testing.T, d *db.DB, snapshotID uuid.UUID, errorMessage string) uuid.UUID {
+	t.Helper()
+
+	ctx := context.Background()
+	var id uuid.UUID
+	err := d.Pool.QueryRow(ctx, `
+		INSERT INTO reports (snapshot_id, status, error_message, pdf, completed_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`, snapshotID, models.ReportFailed, errorMessage, nil, nil).Scan(&id)
 	require.NoError(t, err)
 	return id
 }
@@ -295,6 +346,30 @@ func TestGetReport_NotFound(t *testing.T) {
 	h.getReport(c)
 
 	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetReport_Failed(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+	h := newTestHandler(t, d)
+	internalError := "internal renderer crashed: connection refused"
+	reportID := insertFailedReport(t, d, snapshotID, internalError)
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/reports/"+reportID.String(), nil)
+	c.Params = gin.Params{{Key: "id", Value: reportID.String()}}
+	h.getReport(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp models.ReportResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, reportID, resp.ID)
+	require.Equal(t, models.ReportFailed, resp.Status)
+	require.Equal(t, "report generation failed", resp.Error)
+	require.NotContains(t, resp.Error, internalError)
+	require.NotContains(t, w.Body.String(), internalError)
 }
 
 func TestDownloadReport_Completed(t *testing.T) {

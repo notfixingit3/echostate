@@ -200,9 +200,11 @@ func (h *Handler) toReportResponse(report *models.Report) models.ReportResponse 
 		ID:          report.ID,
 		Status:      report.Status,
 		SnapshotID:  report.SnapshotID,
-		Error:       report.ErrorMessage,
 		CreatedAt:   report.CreatedAt,
 		CompletedAt: report.CompletedAt,
+	}
+	if report.Status == models.ReportFailed {
+		resp.Error = "report generation failed"
 	}
 	if report.Status == models.ReportCompleted {
 		resp.DownloadURL = fmt.Sprintf("/api/reports/%s/download", report.ID)
