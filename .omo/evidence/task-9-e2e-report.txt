@@ -1,0 +1,213 @@
+EchoState Task 9 — Docker Compose E2E Report Verification
+Started at: 2026-06-16T00:47:59Z
+================================================================================
+
+
+================================================================================
+STEP: 1. Start from clean state: docker compose down -v
+================================================================================
+time="2026-06-15T17:48:00-07:00" level=warning msg="/Users/house/Documents/gitlab/echostate/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Volume echostate_postgres_data Removing 
+ Volume echostate_postgres_data Removed 
+
+================================================================================
+STEP: 2. Build and start: docker compose up --build -d
+================================================================================
+time="2026-06-15T17:48:00-07:00" level=warning msg="/Users/house/Documents/gitlab/echostate/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Image echostate-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 522B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 440B done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/golang:1.26-alpine
+#3 DONE 0.0s
+
+#4 [internal] load metadata for docker.io/library/alpine:3.20
+#4 DONE 0.4s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [builder 1/7] FROM docker.io/library/golang:1.26-alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c
+#6 resolve docker.io/library/golang:1.26-alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c 0.0s done
+#6 DONE 0.0s
+
+#7 [stage-1 1/4] FROM docker.io/library/alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+#7 resolve docker.io/library/alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc 0.0s done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 30.36kB 0.0s done
+#8 DONE 0.1s
+
+#9 [builder 3/7] RUN apk add --no-cache git ca-certificates
+#9 CACHED
+
+#10 [builder 4/7] COPY go.mod go.sum ./
+#10 CACHED
+
+#11 [builder 2/7] WORKDIR /app
+#11 CACHED
+
+#12 [builder 5/7] RUN go mod download
+#12 CACHED
+
+#13 [builder 6/7] COPY . .
+#13 DONE 0.2s
+
+#14 [builder 7/7] RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o echostate ./main.go
+#14 DONE 21.2s
+
+#15 [stage-1 2/4] RUN apk add --no-cache ca-certificates chromium
+#15 CACHED
+
+#16 [stage-1 3/4] WORKDIR /app
+#16 CACHED
+
+#17 [stage-1 4/4] COPY --from=builder /app/echostate /app/echostate
+#17 CACHED
+
+#18 exporting to image
+#18 exporting layers done
+#18 exporting manifest sha256:a24bdd91d15f1a70a8810570f02a6c8625e7320c52d78623c03bef98e69fe594 done
+#18 exporting config sha256:1f488fe6f45244921f59ac1c8b78af193e9a6d55c63948f75bf3c2802babcd9e done
+#18 exporting attestation manifest sha256:be40836e1bc93da844bc9b016a06958cafc502cf895290104604e4940e3c48b5 0.0s done
+#18 exporting manifest list sha256:e6f65fe096d7645871f429799c8bb5329c7dc189521acc859e094eadf8c270cf 0.0s done
+#18 naming to docker.io/library/echostate-api:latest
+#18 naming to docker.io/library/echostate-api:latest done
+#18 unpacking to docker.io/library/echostate-api:latest done
+#18 DONE 0.1s
+
+#19 resolving provenance for metadata file
+#19 DONE 0.1s
+ Image echostate-api Built 
+ Network echostate_default Creating 
+ Network echostate_default Created 
+ Volume echostate_postgres_data Creating 
+ Volume echostate_postgres_data Created 
+ Container echostate-db Creating 
+ Container echostate-browser Creating 
+ Container echostate-browser Created 
+ Container echostate-db Created 
+ Container echostate-api Creating 
+ Container echostate-api Created 
+ Container echostate-browser Starting 
+ Container echostate-db Starting 
+ Container echostate-db Started 
+ Container echostate-browser Started 
+ Container echostate-db Waiting 
+ Container echostate-browser Waiting 
+ Container echostate-db Healthy 
+ Container echostate-browser Healthy 
+ Container echostate-api Starting 
+ Container echostate-api Started 
+
+================================================================================
+STEP: 3. Wait for services to be healthy (max 60s)
+================================================================================
+
+CMD: docker compose ps
+--------------------------------------------------------------------------------
+time="2026-06-15T17:49:33-07:00" level=warning msg="/Users/house/Documents/gitlab/echostate/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+NAME                IMAGE                       COMMAND                  SERVICE   CREATED              STATUS                        PORTS
+echostate-api       echostate-api               "/app/echostate"         api       About a minute ago   Up About a minute             0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+echostate-browser   browserless/chrome:latest   "./start.sh"             browser   About a minute ago   Up About a minute (healthy)   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+echostate-db        postgres:16-alpine          "docker-entrypoint.s…"   db        About a minute ago   Up About a minute (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+[exit 0]
+
+================================================================================
+STEP: 4. Wait for API health endpoint (max 60s)
+================================================================================
+API health response: {"env":"development","status":"ok"}
+
+================================================================================
+STEP: 5. Scan example.com
+================================================================================
+Scan response:
+{"id":"bd03780a-155e-4746-82de-a34e1a8de45c","target_id":"69f98123-87c2-44b3-ad90-77b564e8651e","scanned_at":"2026-06-16T00:49:35.15563226Z","last_seen":"2026-06-16T00:49:35.15563226Z","data_hash":"904022b170ddd345c96b6b852928bebd881b64be55868355d66fa697571394a9","raw_data":{"asn":{"allocated":"2014-03-28","as_name":"CLOUDFLARENET - Cloudflare, Inc., US","asn":"13335","country":"US","ip":"104.20.23.154","prefix":"104.20.16.0/20","registry":"arin"},"host":"example.com","scanned_at":"2026-06-16T00:49:33.115672016Z","web":{"copyrights":null,"title":"Example Domain","url":"https://example.com/"},"whois":{"domain":"example.com","expiration_date":"2026-08-13T04:00:00Z","name_servers":["elliott.ns.cloudflare.com","hera.ns.cloudflare.com"],"raw":"Domain Name: EXAMPLE.COM\r\n   Registry Domain ID: 2336799_DOMAIN_COM-VRSN\r\n   Registrar WHOIS Server: whois.iana.org\r\n   Registrar URL: http://res-dom.iana.org\r\n   Updated Date: 2026-01-16T18:26:50Z\r\n   Creation Date: 1995-08-14T04:00:00Z\r\n   Registry Expiry Date: 2026-08-13T04:00:00Z\r\n   Registrar: RESERVED-Internet Assigned Numbers Authority\r\n   Registrar IANA ID: 376\r\n   Registrar Abuse Contact Email:\r\n   Registrar Abuse Contact Phone:\r\n   Domain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\r\n   Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\r\n   Domain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\r\n   Name Server: ELLIOTT.NS.CLOUDFLARE.COM\r\n   Name Server: HERA.NS.CLOUDFLARE.COM\r\n   DNSSEC: signedDelegation\r\n   DNSSEC DS Data: 2371 13 2 C988EC423E3880EB8DD8A46FE06CA230EE23F35B578D64E78B29C3E1C83D245A\r\n   URL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\r\n\u003e\u003e\u003e Last update of whois database: 2026-06-16T00:49:13Z \u003c\u003c\u003c\r\n\r\nFor more information on Whois status codes, please visit https://icann.org/epp\r\n\r\nNOTICE: The expiration date displayed in this record is the date the\r\nregistrar's sponsorship of the domain name registration in the registry is\r\ncurrently set to expire. This date does not necessarily reflect the expiration\r\ndate of the domain name registrant's agreement with the sponsoring\r\nregistrar.  Users may consult the sponsoring registrar's Whois database to\r\nview the registrar's reported date of expiration for this registration.\r\n\r\nTERMS OF USE: You are not authorized to access or query our Whois\r\ndatabase through the use of electronic processes that are high-volume and\r\nautomated except as reasonably necessary to register domain names or\r\nmodify existing registrations; the Data in VeriSign Global Registry\r\nServices' (\"VeriSign\") Whois database is provided by VeriSign for\r\ninformation purposes only, and to assist persons in obtaining information\r\nabout or related to a domain name registration record. VeriSign does not\r\nguarantee its accuracy. By submitting a Whois query, you agree to abide\r\nby the following terms of use: You agree that you may use this Data only\r\nfor lawful purposes and that under no circumstances will you use this Data\r\nto: (1) allow, enable, or otherwise support the transmission of mass\r\nunsolicited, commercial advertising or solicitations via e-mail, telephone,\r\nor facsimile; or (2) enable high volume, automated, electronic processes\r\nthat apply to VeriSign (or its computer systems). The compilation,\r\nrepackaging, dissemination or other use of this Data is expressly\r\nprohibited without the prior written consent of VeriSign. You agree not to\r\nuse electronic processes that are automated and high-volume to access or\r\nquery the Whois database except as reasonably necessary to register\r\ndomain names or modify existing registrations. VeriSign reserves the right\r\nto restrict your access to the Whois database in its sole discretion to ensure\r\noperational stability.  VeriSign may restrict or terminate your access to the\r\nWhois database for failure to abide by these terms of use. VeriSign\r\nreserves the right to modify these terms at any time.\r\n\r\nThe Registry database contains ONLY .COM, .NET, .EDU domains and\r\nRegistrars.\r\n% IANA WHOIS server\n% for more information on IANA, visit http://www.iana.org\n% This query returned 1 object\n\ndomain:       EXAMPLE.COM\n\norganisation: Internet Assigned Numbers Authority\n\ncreated:      1992-01-01\nsource:       IANA\n\n% Query time: 145 msec\n% WHEN: Tue Jun 16 00:49:33 UTC 2026","registrar":"RESERVED-Internet Assigned Numbers Authority","status":["clientDeleteProhibited","clientTransferProhibited","clientUpdateProhibited"]}}}
+Extracted snapshot_id: bd03780a-155e-4746-82de-a34e1a8de45c
+
+================================================================================
+STEP: 6. Verify normalized_host populated
+================================================================================
+
+CMD: docker exec echostate-db psql -U echostate -d echostate -c SELECT host, normalized_host FROM targets WHERE host='example.com';
+--------------------------------------------------------------------------------
+    host     | normalized_host 
+-------------+-----------------
+ example.com | example.com
+(1 row)
+
+[exit 0]
+
+================================================================================
+STEP: 7. Create report by snapshot ID
+================================================================================
+Create report headers:
+HTTP/1.1 202 Accepted
+Content-Type: application/json; charset=utf-8
+Date: Tue, 16 Jun 2026 00:49:35 GMT
+Content-Length: 163
+
+Create report body:
+{"id":"44cb5d2c-5039-4769-a90e-141f41672629","status":"pending","snapshot_id":"bd03780a-155e-4746-82de-a34e1a8de45c","created_at":"2026-06-16T00:49:35.271693896Z"}Extracted report_id: 44cb5d2c-5039-4769-a90e-141f41672629
+
+================================================================================
+STEP: 8. Poll report status until completed or failed (max 60s)
+================================================================================
+Poll 1: {"id":"44cb5d2c-5039-4769-a90e-141f41672629","status":"completed","snapshot_id":"bd03780a-155e-4746-82de-a34e1a8de45c","download_url":"/api/reports/44cb5d2c-5039-4769-a90e-141f41672629/download","created_at":"2026-06-16T00:49:35.270027Z","completed_at":"2026-06-16T00:49:35.28476Z"}
+
+================================================================================
+STEP: 9. Download PDF from /api/reports/<id>/download
+================================================================================
+Download headers:
+HTTP/1.1 200 OK
+Content-Disposition: attachment; filename="echostate-example.com-2026-06-16.pdf"
+Content-Type: application/pdf
+Date: Tue, 16 Jun 2026 00:49:35 GMT
+Transfer-Encoding: chunked
+
+PDF magic verified: %PDF-1.3
+PDF size: 12384 bytes
+
+================================================================================
+STEP: 10. Test convenience endpoint /api/snapshots/<id>/report
+================================================================================
+Convenience endpoint headers:
+HTTP/1.1 200 OK
+Content-Disposition: attachment; filename="echostate-example.com-2026-06-16.pdf"
+Content-Type: application/pdf
+Date: Tue, 16 Jun 2026 00:49:35 GMT
+Transfer-Encoding: chunked
+
+Convenience PDF magic verified: %PDF-1.3
+Convenience PDF size: 12384 bytes
+
+================================================================================
+STEP: 11. Stop stack: docker compose down
+================================================================================
+time="2026-06-15T17:49:35-07:00" level=warning msg="/Users/house/Documents/gitlab/echostate/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container echostate-api Stopping 
+ Container echostate-api Stopped 
+ Container echostate-api Removing 
+ Container echostate-api Removed 
+ Container echostate-db Stopping 
+ Container echostate-browser Stopping 
+ Container echostate-browser Stopped 
+ Container echostate-browser Removing 
+ Container echostate-browser Removed 
+ Container echostate-db Stopped 
+ Container echostate-db Removing 
+ Container echostate-db Removed 
+ Network echostate_default Removing 
+ Network echostate_default Removed 
+
+================================================================================
+STEP: E2E verification completed successfully
+================================================================================
+Finished at: 2026-06-16T00:49:36Z
