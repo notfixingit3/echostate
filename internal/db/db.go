@@ -52,6 +52,7 @@ func Migrate(db *DB) error {
 		CREATE TABLE IF NOT EXISTS targets (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			host TEXT NOT NULL UNIQUE,
+			normalized_host TEXT,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 
@@ -70,6 +71,25 @@ func Migrate(db *DB) error {
 
 		CREATE INDEX IF NOT EXISTS idx_snapshots_data_hash
 			ON snapshots(data_hash);
+
+		ALTER TABLE targets ADD COLUMN IF NOT EXISTS normalized_host TEXT;
+
+		CREATE INDEX IF NOT EXISTS idx_targets_normalized_host
+			ON targets(normalized_host);
+
+		CREATE TABLE IF NOT EXISTS reports (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			snapshot_id UUID NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
+			status TEXT NOT NULL DEFAULT 'pending',
+			error_message TEXT,
+			pdf BYTEA,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			completed_at TIMESTAMPTZ
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_reports_snapshot_id_status
+			ON reports(snapshot_id, status);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

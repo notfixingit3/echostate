@@ -1,10 +1,8 @@
-# PDF Report Endpoint — Learnings
+# PDF Report Endpoint - Learnings
 
-## Task 3 — Report Models (2026-06-15)
-
-- Added `ReportStatus` string type with four constants: `pending`, `running`, `completed`, `failed`.
-- `CreateReportRequest` uses pointer fields (`*uuid.UUID`, `*string`) with `omitempty` so callers can provide either a snapshot ID or a host.
-- `ReportResponse` is the JSON envelope for API responses; `DownloadURL` and `Error` are omitempty since they're only set after completion or on failure.
-- `Report` is the internal DB model; `PDF` uses `json:"-"` to never serialize the binary blob over the wire.
-- All types live in `internal/models/models.go` alongside `Target`, `Snapshot`, `ScanRequest`, and `ScanResult`.
-- `go build ./...` and `go vet ./...` both pass cleanly.
+## Task 2: DB Migration (2026-06-15)
+- Added `reports` table with FK to `snapshots(id) ON DELETE CASCADE`
+- Added `normalized_host TEXT` column to `targets` (idempotent via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`)
+- Indexes: `idx_targets_normalized_host` and `idx_reports_snapshot_id_status`
+- All migrations remain inline in `Migrate()`, following existing pattern
+- Verified: `go build ./...` and `go vet ./...` pass
