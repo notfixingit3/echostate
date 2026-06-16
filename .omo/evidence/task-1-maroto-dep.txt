@@ -1,0 +1,12 @@
+Task: Add maroto v2 PDF library dependency
+Date: 2026-06-15
+
+Actions taken:
+1. go get github.com/johnfercher/maroto/v2  → v2.4.0 downloaded
+2. go mod edit -require github.com/johnfercher/maroto/v2@v2.4.0 (pinned before usage)
+3. go build ./...  → exit 0
+
+Result:
+- go.mod now lists github.com/johnfercher/maroto/v2 v2.4.0 in require block
+- go.sum updated with maroto and its transitive dependencies
+- Build passes clean

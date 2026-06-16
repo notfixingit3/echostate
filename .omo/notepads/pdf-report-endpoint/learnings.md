@@ -1,8 +1,10 @@
-# PDF Report Endpoint - Learnings
+# PDF Report Endpoint — Learnings
 
-## Task 2: DB Migration (2026-06-15)
-- Added `reports` table with FK to `snapshots(id) ON DELETE CASCADE`
-- Added `normalized_host TEXT` column to `targets` (idempotent via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`)
-- Indexes: `idx_targets_normalized_host` and `idx_reports_snapshot_id_status`
-- All migrations remain inline in `Migrate()`, following existing pattern
-- Verified: `go build ./...` and `go vet ./...` pass
+## Wave 1 — Foundation
+
+### Task 1: Add maroto v2 dependency
+
+- Added `github.com/johnfercher/maroto/v2 v2.4.0` to go.mod
+- Since no code imports it yet, `go mod tidy` strips unused direct deps. Pinned explicitly via `go mod edit -require`.
+- Transitive deps pulled in: boombuler/barcode, pdfcpu/pdfcpu, go-tree, go-async, uax29, hhrutter/tiff/lzw/pkcs7
+- Build passes: `go build ./...` exits 0
