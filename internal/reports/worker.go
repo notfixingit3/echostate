@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -185,6 +186,7 @@ func (w *Worker) processPending(ctx context.Context) {
 
 		reportID, snapshotID, ok, err := w.claimNextPending(ctx)
 		if err != nil {
+			log.Printf("report worker: claim next pending: %v", err)
 			<-w.sem
 			return
 		}
@@ -268,7 +270,27 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 		return
 	}
 
-	pdfBytes, err := w.renderer(&result)
+	renderCtx, renderCancel := context.WithTimeout(ctx, renderTimeout)
+	defer renderCancel()
+
+	type renderResult struct {
+		pdf []byte
+		err error
+	}
+	renderDone := make(chan renderResult, 1)
+	go func() {
+		pdf, err := w.renderer(&result)
+		renderDone <- renderResult{pdf: pdf, err: err}
+	}()
+
+	var pdfBytes []byte
+	select {
+	case <-renderCtx.Done():
+		w.failReport(ctx, reportID, fmt.Sprintf("render PDF: %v", renderCtx.Err()))
+		return
+	case res := <-renderDone:
+		pdfBytes, err = res.pdf, res.err
+	}
 	if err != nil {
 		w.failReport(ctx, reportID, fmt.Sprintf("render PDF: %v", err))
 		return
@@ -297,8 +319,7 @@ func (w *Worker) failReport(ctx context.Context, reportID uuid.UUID, message str
 		WHERE id = $3
 	`, models.ReportFailed, message, reportID)
 	if err != nil {
-		// Nothing useful to do at this point; the worker context may be cancelled.
-		_ = err
+		log.Printf("report worker: failed to mark report %s failed: %v", reportID, err)
 	}
 }
 
