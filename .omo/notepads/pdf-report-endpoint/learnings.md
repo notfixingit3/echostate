@@ -29,4 +29,19 @@
 - Tests in `internal/reports/worker_test.go` cover completion, missing snapshot, oversized PDF, concurrency limit, stale-running cleanup, and wake behavior.
 - `go test ./internal/reports/...`, `go build ./...`, and `go vet ./...` all pass.
 
+### Task 7: HTTP report endpoints
+
+- Created `internal/handlers/reports.go` with four endpoints on `*Handler`:
+  - `POST /api/reports` accepts `models.CreateReportRequest` with exactly one of `snapshot_id` or `host`.
+  - `GET /api/reports/:id` returns `models.ReportResponse`; `download_url` is only set when status is `completed`.
+  - `GET /api/reports/:id/download` streams the PDF with `Content-Type: application/pdf` and an attachment filename (`echostate-<host>-<date>.pdf`), returning 409 if not ready.
+  - `GET /api/snapshots/:id/report` serves an existing completed PDF directly or enqueues a new report and returns 202.
+- Host-based report requests join `targets` on `normalized_host` and order by `snapshots.scanned_at DESC LIMIT 1`.
+- `internal/handlers/scan.go` was updated to add a `worker *reports.Worker` field; `Register` now creates the worker with `reports.New(database, pdf.RenderReport, 3)` and returns it so `main.go` can manage its lifecycle.
+- `main.go` starts the worker after `db.Migrate(database)` and calls `worker.Stop()` before closing the database during graceful shutdown.
+- Added `internal/handlers/reports_test.go` covering invalid requests (400), missing snapshots (404), and valid create-by-snapshot/host (202).
+- Manual verification: created a report by snapshot ID, polled to `completed`, and downloaded a valid PDF (`%PDF-1.3`, 9620 bytes).
+- Evidence captured in `.omo/evidence/task-7-create-by-snapshot.txt` and `.omo/evidence/task-7-download-pdf.txt`.
+- `go build ./...`, `go vet ./...`, and `go test ./internal/handlers/...` all pass.
+
 
