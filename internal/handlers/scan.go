@@ -79,12 +79,14 @@ func (h *Handler) createScan(c *gin.Context) {
 func (h *Handler) upsertTarget(ctx context.Context, host string) (uuid.UUID, error) {
 	var id uuid.UUID
 
+	normalized := scanner.NormalizeHost(host)
+
 	err := h.db.Pool.QueryRow(ctx, `
-		INSERT INTO targets (host)
-		VALUES ($1)
-		ON CONFLICT (host) DO UPDATE SET host = EXCLUDED.host
+		INSERT INTO targets (host, normalized_host)
+		VALUES ($1, $2)
+		ON CONFLICT (host) DO UPDATE SET normalized_host = EXCLUDED.normalized_host
 		RETURNING id
-	`, host).Scan(&id)
+	`, host, normalized).Scan(&id)
 
 	return id, err
 }
