@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo-banner.png" alt="EchoState" width="640">
+</p>
+
 # EchoState
 
 EchoState is an unobtrusive, passive reconnaissance web API and reporting tool. Feed it an IP address, hostname, or web address and it gathers deep, passive intelligence — WHOIS records, BGP/ASN routing, hosting provider hints, and webpage copyright data — then tracks changes over time and generates downloadable PDF reports.
