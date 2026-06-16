@@ -10,9 +10,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/models"
+	"github.com/notfixingit3/echostate/internal/reports"
 	"github.com/notfixingit3/echostate/internal/scanner"
 )
 
@@ -21,18 +23,28 @@ type Handler struct {
 	db      *db.DB
 	config  *config.Config
 	scanner *scanner.Scanner
+	worker  *reports.Worker
 }
 
-// Register wires routes into the Gin router.
-func Register(router *gin.Engine, database *db.DB, cfg *config.Config) {
+// Register wires routes into the Gin router and returns the report worker so
+// the caller can manage its lifecycle.
+func Register(router *gin.Engine, database *db.DB, cfg *config.Config) *reports.Worker {
 	h := &Handler{
 		db:      database,
 		config:  cfg,
 		scanner: scanner.NewScanner(cfg.BrowserWSURL),
+		worker:  newWorker(database),
 	}
 
 	router.GET("/health", h.health)
 	router.POST("/api/scan", h.createScan)
+
+	router.POST("/api/reports", h.createReport)
+	router.GET("/api/reports/:id", h.getReport)
+	router.GET("/api/reports/:id/download", h.downloadReport)
+	router.GET("/api/snapshots/:id/report", h.snapshotReport)
+
+	return h.worker
 }
 
 func (h *Handler) health(c *gin.Context) {

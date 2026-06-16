@@ -30,17 +30,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	defer database.Close()
 
 	if err := db.Migrate(database); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 
+	workerCtx, cancelWorker := context.WithCancel(context.Background())
+	defer cancelWorker()
+
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(loggingMiddleware())
 
-	handlers.Register(router, database, cfg)
+	worker := handlers.Register(router, database, cfg)
+	if err := worker.Start(workerCtx); err != nil {
+		log.Fatalf("failed to start report worker: %v", err)
+	}
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
@@ -60,12 +65,16 @@ func main() {
 
 	log.Println("shutting down EchoState API")
 
+	worker.Stop()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("forced shutdown: %v", err)
 	}
+
+	database.Close()
 
 	log.Println("shutdown complete")
 }
