@@ -3,6 +3,7 @@ package reports
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -179,6 +180,35 @@ func TestWorkerFailsMissingSnapshot(t *testing.T) {
 	require.Contains(t, report.ErrorMessage, "snapshot not found")
 }
 
+func TestWorkerFailsRendererError(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+
+	renderer := func(*models.ScanResult) ([]byte, error) {
+		return nil, fmt.Errorf("renderer exploded")
+	}
+
+	w := New(d, renderer, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	require.NoError(t, w.Start(ctx))
+	defer w.Stop()
+
+	reportID, err := w.CreateReport(ctx, snapshotID)
+	require.NoError(t, err)
+
+	var report *models.Report
+	require.Eventually(t, func() bool {
+		report, err = w.GetReport(ctx, reportID)
+		require.NoError(t, err)
+		return report.Status == models.ReportCompleted || report.Status == models.ReportFailed
+	}, 15*time.Second, 100*time.Millisecond)
+
+	require.Equal(t, models.ReportFailed, report.Status)
+	require.Contains(t, report.ErrorMessage, "renderer exploded")
+}
+
 func TestWorkerFailsOversizedPDF(t *testing.T) {
 	d := setupTestDB(t)
 	snapshotID := seedSnapshot(t, d)
@@ -207,6 +237,37 @@ func TestWorkerFailsOversizedPDF(t *testing.T) {
 
 	require.Equal(t, models.ReportFailed, report.Status)
 	require.Contains(t, report.ErrorMessage, "generated PDF exceeds max size")
+}
+
+func TestWorkerRendererError(t *testing.T) {
+	d := setupTestDB(t)
+	snapshotID := seedSnapshot(t, d)
+
+	rendererErr := errors.New("renderer exploded")
+	renderer := func(*models.ScanResult) ([]byte, error) {
+		return nil, rendererErr
+	}
+
+	w := New(d, renderer, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	require.NoError(t, w.Start(ctx))
+	defer w.Stop()
+
+	reportID, err := w.CreateReport(ctx, snapshotID)
+	require.NoError(t, err)
+
+	var report *models.Report
+	require.Eventually(t, func() bool {
+		var err error
+		report, err = w.GetReport(ctx, reportID)
+		require.NoError(t, err)
+		return report.Status == models.ReportCompleted || report.Status == models.ReportFailed
+	}, 15*time.Second, 100*time.Millisecond)
+
+	require.Equal(t, models.ReportFailed, report.Status)
+	require.Contains(t, report.ErrorMessage, rendererErr.Error())
 }
 
 func TestWorkerConcurrencyLimit(t *testing.T) {

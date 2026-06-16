@@ -46,6 +46,7 @@ func RenderReport(result *models.ScanResult) ([]byte, error) {
 	m := maroto.New(cfg)
 
 	addCoverPage(m, result)
+	addReportMetadata(m, result)
 	addSectionHeader(m, "WHOIS")
 	addWHOIS(m, result.WHOIS)
 	addSectionHeader(m, "ASN / BGP")
@@ -104,6 +105,19 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 			Style: fontstyle.Italic,
 		}),
 	)
+}
+
+func addReportMetadata(m core.Maroto, result *models.ScanResult) {
+	addSectionHeader(m, "Report Metadata")
+
+	addKeyValueRow(m, "Report Generated At", time.Now().UTC().Format(pdfDateFormat))
+	addKeyValueRow(m, "Target", valueOrNA(result.Host))
+
+	scannedAt := result.ScannedAt.Format(pdfDateFormat)
+	if result.ScannedAt.IsZero() {
+		scannedAt = "N/A"
+	}
+	addKeyValueRow(m, "Scanned At", scannedAt)
 }
 
 func addSectionHeader(m core.Maroto, title string) {

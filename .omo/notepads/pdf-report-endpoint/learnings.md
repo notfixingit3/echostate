@@ -54,3 +54,44 @@
 - `TestUpsertTargetStoresNormalizedHost` confirms `https://www.Example.COM:8080/path` normalizes to `example.com`.
 - `go test ./...` and `go vet ./...` pass.
 
+## Wave 2 — End-to-End Verification
+
+### Task 9: Full Docker Compose E2E report flow
+
+- Started clean with `docker compose down -v`, then `docker compose up --build -d`.
+- Port `8080` was initially occupied by an unrelated container (`traceline-api`); stopped it, reran the flow, and restarted it afterward.
+- Scanned `example.com` and extracted snapshot ID `bd03780a-155e-4746-82de-a34e1a8de45c`.
+- Confirmed `normalized_host` is populated as `example.com` in the `targets` table.
+- Created a report by snapshot ID and received HTTP 202 with report ID `44cb5d2c-5039-4769-a90e-141f41672629`.
+- Report completed on the first poll (`GET /api/reports/:id`), returning `download_url`.
+- Downloaded PDF from `/api/reports/:id/download`: HTTP 200, `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="echostate-example.com-2026-06-16.pdf"`, body starts with `%PDF-1.3`, 12384 bytes.
+- Convenience endpoint `/api/snapshots/:id/report` returned the existing completed PDF directly (HTTP 200, same 12384-byte PDF).
+- Stopped the stack with `docker compose down`; no containers left running.
+- All command outputs and curl responses captured in `.omo/evidence/task-9-e2e-report.txt`.
+
+## Wave 3 — PDF Metadata Section and Renderer Error Handling
+
+### Task: Add explicit metadata/report-generated-at section
+
+- Added `addReportMetadata(m core.Maroto, result *models.ScanResult)` in `internal/pdf/renderer.go`.
+- The section is placed immediately after `addCoverPage` and before the WHOIS section.
+- Uses existing helpers `addSectionHeader` and `addKeyValueRow` to show:
+  - "Report Metadata" header
+  - "Report Generated At: <timestamp>" with current UTC time formatted via `pdfDateFormat`
+  - "Target: <host>"
+  - "Scanned At: <timestamp>" from `result.ScannedAt`
+- `RenderReport` now calls `addReportMetadata(m, result)` right after the cover page.
+
+### Task: Add worker test for renderer error path
+
+- Added `TestWorkerFailsRendererError` in `internal/reports/worker_test.go`.
+- Uses a renderer that always returns `fmt.Errorf("renderer exploded")`.
+- Verifies the report status becomes `ReportFailed` and the error message contains the renderer error.
+
+### Verification
+
+- `go test ./internal/pdf/...` passes.
+- `go test ./internal/reports/...` passes.
+- `go build ./...` exits 0.
+- Generated PDF bytes still start with `%PDF`.
+
