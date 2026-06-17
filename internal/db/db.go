@@ -63,7 +63,8 @@ func Migrate(db *DB) error {
 			last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			data_hash TEXT NOT NULL,
 			raw_data JSONB NOT NULL,
-			changes TEXT[] DEFAULT '{}'
+			changes TEXT[] DEFAULT '{}',
+			client_ip TEXT
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_snapshots_target_id_scanned_at
@@ -90,6 +91,20 @@ func Migrate(db *DB) error {
 
 		CREATE INDEX IF NOT EXISTS idx_reports_snapshot_id_status
 			ON reports(snapshot_id, status);
+
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS pwhois_data JSONB;
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS pwhois_looked_up_at TIMESTAMPTZ;
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS pwhois_origin_as TEXT;
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS pwhois_org_name TEXT;
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS pwhois_country_code TEXT;
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS pwhois_city TEXT;
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS pwhois_prefix TEXT;
+
+		CREATE INDEX IF NOT EXISTS idx_snapshots_pwhois_country_code
+			ON snapshots(pwhois_country_code);
+
+		CREATE INDEX IF NOT EXISTS idx_snapshots_pwhois_origin_as
+			ON snapshots(pwhois_origin_as);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

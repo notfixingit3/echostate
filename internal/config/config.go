@@ -3,23 +3,33 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 // Config holds application configuration loaded from the environment.
 type Config struct {
-	Env          string
-	Port         string
-	DatabaseURL  string
-	BrowserWSURL string
+	Env                string
+	Port               string
+	DatabaseURL        string
+	BrowserWSURL       string
+	FrontendURL        string
+	PwhoisEnabled      bool
+	PwhoisCacheTTLHours int
 }
 
 // Load reads configuration from environment variables and validates required fields.
 func Load() (*Config, error) {
+	pwhoisEnabled, _ := strconv.ParseBool(getEnv("ECHOSTATE_PWHOIS_ENABLED", "true"))
+	pwhoisCacheTTL, _ := strconv.Atoi(getEnv("PWHOIS_CACHE_TTL_HOURS", "24"))
+
 	cfg := &Config{
-		Env:          getEnv("ECHOSTATE_ENV", "development"),
-		Port:         getEnv("ECHOSTATE_PORT", "8080"),
-		DatabaseURL:  os.Getenv("DATABASE_URL"),
-		BrowserWSURL: getEnv("BROWSER_WS_URL", "ws://localhost:3000/"),
+		Env:                getEnv("ECHOSTATE_ENV", "development"),
+		Port:               getEnv("ECHOSTATE_PORT", "8080"),
+		DatabaseURL:        os.Getenv("DATABASE_URL"),
+		BrowserWSURL:       getEnv("BROWSER_WS_URL", "ws://localhost:3000/"),
+		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		PwhoisEnabled:      pwhoisEnabled,
+		PwhoisCacheTTLHours: pwhoisCacheTTL,
 	}
 
 	if cfg.DatabaseURL == "" {

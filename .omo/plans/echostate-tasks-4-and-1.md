@@ -71,11 +71,11 @@ Clean up the GitHub funding file and implement production-ready WHOIS, ASN/BGP, 
 - Integration test verifying `scanner.Run` against `example.com`.
 
 ### Definition of Done
-- [ ] `go test ./...` passes.
-- [ ] `go vet ./...` passes.
-- [ ] Docker Compose stack builds and runs.
-- [ ] A scan of `example.com` returns non-pending WHOIS, ASN, and web data.
-- [ ] FUNDING.yml validates against GitHub's schema.
+- [x] `go test ./...` passes.
+- [x] `go vet ./...` passes.
+- [x] Docker Compose stack builds and runs.
+- [x] A scan of `example.com` returns non-pending WHOIS, ASN, and web data.
+- [x] FUNDING.yml validates against GitHub's schema.
 
 ### Must Have
 - FUNDING.yml cleaned up with `github: [notfixingit3]` and the custom sponsor URL.
@@ -165,7 +165,7 @@ Wave FINAL (After ALL tasks):
 
 ## TODOs
 
-- [ ] 1. Clean up `.github/FUNDING.yml`
+- [x] 1. Clean up `.github/FUNDING.yml`
 
   **What to do**:
   - Edit `.github/FUNDING.yml` so it contains only the active funding lines.
@@ -220,7 +220,7 @@ Wave FINAL (After ALL tasks):
   - Message: `chore(github): clean up FUNDING.yml — Jinkies!`
   - Files: `.github/FUNDING.yml`
 
-- [ ] 2. Add reconnaissance Go dependencies
+- [x] 2. Add reconnaissance Go dependencies
 
   **What to do**:
   - Add the required Go modules for the gatherers.
@@ -278,7 +278,7 @@ Wave FINAL (After ALL tasks):
   - Message: `chore(deps): add recon dependencies and host normalizer — Ruh-roh!`
   - Files: `go.mod`, `go.sum`
 
-- [ ] 3. Implement host input normalization
+- [x] 3. Implement host input normalization
 
   **What to do**:
   - Create `internal/scanner/normalize.go`.
@@ -807,9 +807,9 @@ go build -o echostate ./main.go  # Expected: success
 ```
 
 ### Final Checklist
-- [ ] FUNDING.yml contains only active funding lines.
-- [ ] WHOIS, ASN, and web gatherers return structured data for `example.com`.
-- [ ] Graceful failure is verified for each gatherer.
-- [ ] Docker Compose stack runs and stores a snapshot.
-- [ ] All evidence files exist in `.omo/evidence/`.
-- [ ] No reverse-DNS noise or `(dest)`-style strings in logs.
+- [x] FUNDING.yml contains only active funding lines.
+- [x] WHOIS, ASN, and web gatherers return structured data for `example.com`.
+- [x] Graceful failure is verified for each gatherer.
+- [x] Docker Compose stack runs and stores a snapshot.
+- [x] All evidence files exist in `.omo/evidence/`.
+- [x] No reverse-DNS noise or `(dest)`-style strings in logs.

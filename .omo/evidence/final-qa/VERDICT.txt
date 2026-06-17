@@ -1,27 +1,16 @@
-F3 Real Manual QA — EchoState Tasks 4 + 1
-============================================
+Scenarios 7/7 pass | Integration 1/1 | Edge Cases 0 tested | VERDICT: APPROVE
 
-Scenarios [9/9 pass]
-  1. FUNDING.yml clean + valid YAML ........................ PASS
-  2. Dependencies present + go build ./... ................. PASS
-  3. Normalizer unit tests ................................. PASS
-  4. WHOIS gatherer tests .................................. PASS
-  5. ASN gatherer tests .................................... PASS
-  6. Web/copyright matcher tests ........................... PASS (live browser skipped, expected)
-  7. Scanner wiring: build, vet, no pending stubs .......... PASS
-  8. Integration test -tags=integration .................... PASS
-  9. Docker Compose end-to-end scan + PostgreSQL query ..... PASS
+Scenario results:
+1. Home page loads and navigation visible — PASS (HTTP 200, nav data-testid attributes present)
+2. Submit scan, snapshot created with client_ip — PASS (snapshot 10f9cb07-b86c-47ff-9a8c-59c04319b7ae, client_ip 192.168.97.1)
+3. Browse /targets, /snapshots, /reports via frontend and API — PASS (all 6 endpoints HTTP 200, API JSON valid)
+4. Navigate /snapshot?id=<id> and create report — PASS (snapshot page HTTP 200, report create HTTP 202)
+5. Navigate /report?id=<id> and download PDF — PASS (report page HTTP 200, PDF starts with %PDF-1.3)
+6. Rate limiting with 35 parallel POST /api/scan — PASS (30 x HTTP 200, 5 x HTTP 429 with retry_after=1)
+7. CORS preflight from FRONTEND_URL origin — PASS (HTTP 204 with Access-Control-Allow-Origin: http://localhost:3001)
 
-Integration [3/3]
-  go test ./... ............................................ PASS
-  go test ./internal/scanner/ -tags=integration -v ......... PASS
-  docker compose up → POST /api/scan → psql COUNT(*)≥1 ..... PASS
+Integration: Full Playwright suite — PASS (6/6 tests)
 
-Edge Cases [4 tested]
-  empty host ............................................... graceful 3 errors, no panic
-  invalid host ............................................. graceful 3 errors, no panic
-  gatherer timeout (1ns context) ........................... graceful timeout errors, no panic
-  browser unavailable ...................................... WHOIS/ASN succeed, web fails gracefully
+Stack state: docker compose down -v before QA, docker compose up --build -d during QA, no containers running after Playwright teardown.
 
-VERDICT: PASS
-Containers left running: NONE
+No failing scenarios.

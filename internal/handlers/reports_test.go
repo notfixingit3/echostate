@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -30,26 +31,37 @@ func testDatabaseURL() string {
 func setupTestDB(t *testing.T) *db.DB {
 	t.Helper()
 
-	d, err := db.Connect(testDatabaseURL())
+	schema := fmt.Sprintf("handlers_test_%s", uuid.New().String()[:8])
+
+	// Connect with search_path set via connection options so every pool
+	// connection automatically targets the isolated schema.
+	baseURL := testDatabaseURL()
+	sep := "&"
+	if !strings.ContainsRune(baseURL, '?') {
+		sep = "?"
+	}
+	schemaURL := fmt.Sprintf("%s%soptions=--search_path%%3D%s", baseURL, sep, schema)
+
+	d, err := db.Connect(schemaURL)
 	if err != nil {
 		t.Skipf("database not available: %v", err)
 	}
-	t.Cleanup(func() { d.Close() })
+
+	ctx := context.Background()
+	if _, err := d.Pool.Exec(ctx, fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schema)); err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
 
 	if err := db.Migrate(d); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	ctx := context.Background()
-	if _, err := d.Pool.Exec(ctx, "DELETE FROM reports"); err != nil {
-		t.Fatalf("clean reports: %v", err)
-	}
-	if _, err := d.Pool.Exec(ctx, "DELETE FROM snapshots"); err != nil {
-		t.Fatalf("clean snapshots: %v", err)
-	}
-	if _, err := d.Pool.Exec(ctx, "DELETE FROM targets"); err != nil {
-		t.Fatalf("clean targets: %v", err)
-	}
+	t.Cleanup(func() {
+		if _, err := d.Pool.Exec(ctx, fmt.Sprintf("DROP SCHEMA %s CASCADE", schema)); err != nil {
+			t.Logf("warning: dropping schema %s: %v", schema, err)
+		}
+		d.Close()
+	})
 
 	return d
 }
