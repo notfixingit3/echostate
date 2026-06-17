@@ -15,6 +15,9 @@ type Config struct {
 	FrontendURL        string
 	PwhoisEnabled      bool
 	PwhoisCacheTTLHours int
+	Neo4jURI           string
+	Neo4jUser          string
+	Neo4jPassword      string
 }
 
 // Load reads configuration from environment variables and validates required fields.
@@ -30,6 +33,9 @@ func Load() (*Config, error) {
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
 		PwhoisEnabled:      pwhoisEnabled,
 		PwhoisCacheTTLHours: pwhoisCacheTTL,
+		Neo4jURI:           getEnv("NEO4J_URI", "bolt://localhost:7687"),
+		Neo4jUser:          getEnv("NEO4J_USER", "neo4j"),
+		Neo4jPassword:      getEnv("NEO4J_PASSWORD", "echostate123"),
 	}
 
 	if cfg.DatabaseURL == "" {

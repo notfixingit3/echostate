@@ -105,6 +105,25 @@ func Migrate(db *DB) error {
 
 		CREATE INDEX IF NOT EXISTS idx_snapshots_pwhois_origin_as
 			ON snapshots(pwhois_origin_as);
+
+		CREATE TABLE IF NOT EXISTS webhooks (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name TEXT NOT NULL,
+			type TEXT NOT NULL,
+			url TEXT NOT NULL,
+			enabled BOOLEAN NOT NULL DEFAULT true,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		ALTER TABLE targets ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+		CREATE INDEX IF NOT EXISTS idx_targets_tags ON targets USING GIN (tags);
+
+		CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value JSONB NOT NULL,
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

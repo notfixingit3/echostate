@@ -153,7 +153,16 @@ export function TargetsTable() {
                   onClick={() => router.push(`/targets/${target.id}`)}
                   data-testid={`target-row-${target.id}`}
                 >
-                  <TableCell className="font-medium">{target.host}</TableCell>
+                  <TableCell>
+                    <div className="font-medium">{target.host}</div>
+                    {target.tags && target.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {target.tags.map((t) => (
+                          <span key={t} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {target.latest_asn
                       ? `AS${target.latest_asn}${target.latest_as_name ? ` · ${target.latest_as_name}` : ""}`

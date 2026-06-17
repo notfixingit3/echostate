@@ -6,6 +6,7 @@ export type ReportStatus = "pending" | "running" | "completed" | "failed"
 export interface TargetSummary {
   id: string
   host: string
+  tags?: string[]
   created_at: string
   snapshot_count: number
   latest_snapshot_at?: string | null

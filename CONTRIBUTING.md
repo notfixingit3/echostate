@@ -61,11 +61,11 @@ Thank you for your interest in contributing.
 
 ## Releases
 
-Releases are tagged on `main` (or `dev` for betas) with a `v` prefix, e.g. `v0.0.1-beta.0`.
+Releases are tagged on `main` (or `dev` for betas) with a `v` prefix, e.g. `v0.0.1-beta.1`.
 
 ```bash
-git tag -a v0.0.1-beta.0 -m "v0.0.1-beta.0"
-git push origin v0.0.1-beta.0
+git tag -a v0.0.1-beta.1 -m "v0.0.1-beta.1"
+git push origin v0.0.1-beta.1
 ```
 
 Tag pushes trigger GitHub Release binaries and GHCR image builds via Actions.

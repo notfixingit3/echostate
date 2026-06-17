@@ -3,8 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatDistanceToNow } from "date-fns"
 import {
   Card,
   CardContent,
@@ -16,7 +16,10 @@ import {
 import { IntelSummary } from "@/components/intel-summary"
 import { IntelPanels } from "@/components/intel-panels"
 import { TargetSnapshotsTable } from "@/components/target-snapshots-table"
+import { TargetSnapshotsChart } from "@/components/target-snapshots-chart"
+import { TargetTags } from "@/components/target-tags"
 import { CountryFlag } from "@/components/country-flag"
+import { Button } from "@/components/ui/button"
 import { extractIntel } from "@/lib/intel"
 import type { TargetDetail } from "@/lib/types"
 import {
@@ -25,6 +28,7 @@ import {
   HistoryIcon,
   ExternalLinkIcon,
   RadarIcon,
+  AlertCircleIcon,
 } from "lucide-react"
 
 export function TargetDetailView({ target }: { target: TargetDetail }) {
@@ -35,6 +39,19 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
 
   const latestCountry =
     intel.country || latest?.pwhois_country_code || null
+
+  const warnings = []
+  if (intel.expirationDate) {
+    const daysToExpiry = (new Date(intel.expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    if (daysToExpiry > 0 && daysToExpiry <= 30) {
+      warnings.push(`Expires in ${Math.round(daysToExpiry)} days`)
+    }
+  }
+  if (intel.domainStatus) {
+    if (intel.domainStatus.some((s: string) => s.toLowerCase().includes("hold"))) {
+      warnings.push("Domain on HOLD")
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -49,8 +66,15 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
               <CardDescription className="font-mono text-xs">
                 {target.id}
               </CardDescription>
+              <TargetTags targetId={target.id} initialTags={target.tags} />
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {warnings.map(w => (
+                <Badge key={w} variant="destructive" className="font-mono gap-1.5">
+                  <AlertCircleIcon className="size-3" />
+                  {w}
+                </Badge>
+              ))}
               {intel.asn ? (
                 <Badge variant="secondary" className="font-mono">
                   AS{intel.asn}
@@ -73,19 +97,25 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Added
             </span>
-            <span className="flex items-center gap-1.5 text-sm font-medium">
+            <span
+              className="flex items-center gap-1.5 text-sm font-medium"
+              title={new Date(target.created_at).toLocaleString()}
+            >
               <CalendarIcon className="size-3.5 text-primary/70" />
-              {new Date(target.created_at).toLocaleString()}
+              {formatDistanceToNow(new Date(target.created_at), { addSuffix: true })}
             </span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Latest scan
             </span>
-            <span className="flex items-center gap-1.5 text-sm font-medium">
+            <span
+              className="flex items-center gap-1.5 text-sm font-medium"
+              title={target.latest_snapshot_at ? new Date(target.latest_snapshot_at).toLocaleString() : undefined}
+            >
               <HistoryIcon className="size-3.5 text-primary/70" />
               {target.latest_snapshot_at
-                ? new Date(target.latest_snapshot_at).toLocaleString()
+                ? formatDistanceToNow(new Date(target.latest_snapshot_at), { addSuffix: true })
                 : "—"}
             </span>
           </div>
@@ -138,14 +168,15 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
               <h2 className="font-heading text-lg font-semibold tracking-tight">
                 Latest intelligence
               </h2>
-              <Badge variant="secondary" className="font-mono text-xs">
-                {new Date(latest.scanned_at).toLocaleString()}
+              <Badge variant="secondary" className="font-mono text-xs" title={new Date(latest.scanned_at).toLocaleString()}>
+                {formatDistanceToNow(new Date(latest.scanned_at), { addSuffix: true })}
               </Badge>
             </div>
             <IntelSummary intel={intel} />
           </div>
 
           <IntelPanels
+            snapshotId={latest.id}
             raw={latest.raw_data}
             changes={latest.changes}
             pwhois={latest.pwhois_data}
@@ -169,6 +200,7 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
         <h2 className="font-heading text-lg font-semibold tracking-tight">
           Snapshot history
         </h2>
+        <TargetSnapshotsChart targetId={target.id} />
         <TargetSnapshotsTable targetId={target.id} />
       </div>
     </div>

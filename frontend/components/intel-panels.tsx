@@ -5,6 +5,7 @@ import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CopyButton } from "@/components/copy-button"
 import {
   Card,
   CardContent,
@@ -33,7 +34,11 @@ import {
   AlertCircleIcon,
   GitCompareIcon,
   ExternalLinkIcon,
+  ChevronRightIcon,
 } from "lucide-react"
+import ReactDiffViewer from "react-diff-viewer-continued"
+import { useTheme } from "next-themes"
+import { fetchApi } from "@/lib/api"
 
 function DataGrid({
   data,
@@ -89,9 +94,14 @@ function DataGrid({
                 <ExternalLinkIcon className="size-3" />
               </a>
             ) : (
-              <span className={key === "raw" ? "block whitespace-pre-wrap font-mono text-xs leading-relaxed" : "font-mono"}>
-                {formatValue(value)}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className={key === "raw" ? "block whitespace-pre-wrap font-mono text-xs leading-relaxed" : "font-mono"}>
+                  {formatValue(value)}
+                </span>
+                {(typeof value === "string" || typeof value === "number") && (
+                  <CopyButton value={String(value)} />
+                )}
+              </div>
             )}
           </dd>
         </React.Fragment>
@@ -101,16 +111,36 @@ function DataGrid({
 }
 
 export function IntelPanels({
+  snapshotId,
   raw,
   changes,
   pwhois,
 }: {
+  snapshotId?: string
   raw?: RawIntel | null
   changes?: string[]
   pwhois?: Record<string, unknown> | null
 }) {
   const errorCount = raw?.errors?.length ?? 0
   const changeCount = changes?.length ?? 0
+
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
+  const [diffData, setDiffData] = React.useState<{ current: any, previous: any } | null>(null)
+  const [diffLoading, setDiffLoading] = React.useState(false)
+
+  async function loadDiff() {
+    if (!snapshotId || diffData || diffLoading) return
+    setDiffLoading(true)
+    try {
+      const res = await fetchApi<any>(`/api/snapshots/${snapshotId}/diff`)
+      setDiffData(res)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setDiffLoading(false)
+    }
+  }
 
   return (
     <Tabs defaultValue="overview" className="w-full">
@@ -136,6 +166,12 @@ export function IntelPanels({
             </Badge>
           ) : null}
         </TabsTrigger>
+        {snapshotId && (
+          <TabsTrigger value="raw-diff" onClick={loadDiff} className="gap-1.5">
+            <GitCompareIcon className="size-3" />
+            Raw Diff
+          </TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="overview" className="mt-4">
@@ -186,14 +222,20 @@ export function IntelPanels({
           <CardContent className="pt-6">
             <DataGrid data={raw?.whois} exclude={["raw"]} />
             {typeof raw?.whois?.raw === "string" ? (
-              <div className="mt-6 border-t pt-6">
-                <h4 className="mb-3 text-sm font-medium text-muted-foreground">
-                  Raw WHOIS
-                </h4>
-                <pre className="max-h-96 overflow-auto rounded-lg border bg-muted/40 p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap">
-                  {raw.whois.raw}
-                </pre>
-              </div>
+              <details className="group mt-6 border-t pt-6">
+                <summary className="mb-3 flex w-fit cursor-pointer list-none items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                  <ChevronRightIcon className="size-4 transition-transform group-open:rotate-90" />
+                  View Raw WHOIS Data
+                </summary>
+                <div className="overflow-hidden rounded-lg border bg-muted/40">
+                  <pre className="max-h-96 overflow-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                    {raw.whois.raw}
+                  </pre>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <CopyButton value={raw.whois.raw as string} />
+                </div>
+              </details>
             ) : null}
           </CardContent>
         </Card>
@@ -277,14 +319,28 @@ export function IntelPanels({
           <CardContent className="pt-6">
             {changes && changes.length > 0 ? (
               <ul className="flex flex-col gap-2">
-                {changes.map((change) => (
-                  <li
-                    key={change}
-                    className="rounded-lg border bg-muted/30 px-3 py-2 font-mono text-sm"
-                  >
-                    {change}
-                  </li>
-                ))}
+                {changes.map((change) => {
+                  const isAdded = change.startsWith("added ")
+                  const isRemoved = change.startsWith("removed ")
+                  const isChanged = change.startsWith("changed ")
+                  
+                  return (
+                    <li
+                      key={change}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 font-mono text-sm ${
+                        isAdded ? "border-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400" :
+                        isRemoved ? "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400" :
+                        isChanged ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                        "bg-muted/30"
+                      }`}
+                    >
+                      {isAdded && <span className="font-bold">+</span>}
+                      {isRemoved && <span className="font-bold">-</span>}
+                      {isChanged && <span className="font-bold">~</span>}
+                      {change}
+                    </li>
+                  )
+                })}
               </ul>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -294,6 +350,34 @@ export function IntelPanels({
           </CardContent>
         </Card>
       </TabsContent>
+
+      {snapshotId && (
+        <TabsContent value="raw-diff" className="mt-4">
+          <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+            <CardContent className="pt-6">
+              {diffLoading ? (
+                <p className="text-muted-foreground text-sm">Loading diff...</p>
+              ) : diffData ? (
+                diffData.previous ? (
+                  <div className="overflow-hidden rounded-lg border bg-muted/40">
+                    <ReactDiffViewer
+                      oldValue={JSON.stringify(diffData.previous, null, 2)}
+                      newValue={JSON.stringify(diffData.current, null, 2)}
+                      splitView={true}
+                      useDarkTheme={isDark}
+                      hideLineNumbers={false}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No previous snapshot to compare against.</p>
+                )
+              ) : (
+                <p className="text-muted-foreground text-sm">Select to load diff.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      )}
     </Tabs>
   )
 }

@@ -35,6 +35,23 @@ services:
       timeout: 5s
       retries: 5
 
+  neo4j:
+    image: neo4j:5
+    container_name: echostate-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-echostate123}
+    ports:
+      - "${NEO4J_PORT:-7687}:7687"
+      - "7474:7474"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7474/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -52,12 +69,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-echostate}
       DATABASE_URL: postgres://${POSTGRES_USER:-echostate}:${POSTGRES_PASSWORD:-echostate}@db:5432/${POSTGRES_DB:-echostate}?sslmode=disable
       BROWSER_WS_URL: ${BROWSER_WS_URL:-ws://browser:3000/}
+      NEO4J_URI: ${NEO4J_URI:-bolt://neo4j:7687}
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-echostate123}
     ports:
       - "${ECHOSTATE_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
       browser:
+        condition: service_healthy
+      neo4j:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "http://localhost:8080/health"]
@@ -83,3 +105,4 @@ services:
 
 volumes:
   postgres_data:
+  neo4j_data:

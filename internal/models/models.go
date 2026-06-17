@@ -6,10 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Target represents a host or IP address under surveillance.
 type Target struct {
 	ID        uuid.UUID `json:"id"`
 	Host      string    `json:"host"`
+	Tags      []string  `json:"tags"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -104,6 +104,7 @@ type PaginatedResponse[T any] struct {
 type TargetSummary struct {
 	ID               uuid.UUID  `json:"id"`
 	Host             string     `json:"host"`
+	Tags             []string   `json:"tags"`
 	CreatedAt        time.Time  `json:"created_at"`
 	SnapshotCount    int        `json:"snapshot_count"`
 	LatestSnapshotAt *time.Time `json:"latest_snapshot_at,omitempty"`
@@ -147,4 +148,14 @@ type ReportSummary struct {
 	Status      ReportStatus `json:"status"`
 	CreatedAt   time.Time    `json:"created_at"`
 	CompletedAt *time.Time   `json:"completed_at,omitempty"`
+}
+
+type Webhook struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Type      string    `json:"type"`
+	URL       string    `json:"url"`
+	Enabled   bool      `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -31,7 +31,7 @@ export default function Page() {
           alt="EchoState"
           width={320}
           height={80}
-          className="h-16 w-auto md:h-20"
+          className="h-16 w-auto md:h-20 dark:invert"
           priority
         />
         <div className="flex flex-wrap items-center justify-center gap-2">
