@@ -31,6 +31,19 @@ jobs:
           GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o echostate-darwin-amd64 ./main.go
           GOOS=darwin GOARCH=arm64 go build -ldflags="-w -s" -o echostate-darwin-arm64 ./main.go
 
+      - name: Remove stale releases for this tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          gh release list --repo "${GITHUB_REPOSITORY}" --json tagName,id,isDraft \
+            | jq -c --arg tag "$tag" '.[] | select(.tagName == $tag)' \
+            | while read -r release; do
+                id=$(echo "$release" | jq -r '.id')
+                echo "Deleting release id=${id} for ${tag}"
+                gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"
+              done
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
