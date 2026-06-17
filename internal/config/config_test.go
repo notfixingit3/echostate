@@ -27,6 +27,8 @@ func TestLoad_Defaults(t *testing.T) {
 }
 
 func TestLoad_Overrides(t *testing.T) {
+	// Clear DATABASE_URL so POSTGRES_* vars are used to build the URL.
+	t.Setenv("DATABASE_URL", "")
 	t.Setenv("ECHOSTATE_ENV", "staging")
 	t.Setenv("ECHOSTATE_PORT", "9090")
 	t.Setenv("BROWSER_WS_URL", "ws://browser:3000/")
