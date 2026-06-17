@@ -1,0 +1,9 @@
+.git
+.gitignore
+*.md
+node_modules
+frontend
+dist
+assets
+.env
+.env.*

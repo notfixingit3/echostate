@@ -14,6 +14,8 @@ import (
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/handlers"
+	"github.com/notfixingit3/echostate/internal/middleware"
+	"github.com/notfixingit3/echostate/internal/pwhois"
 )
 
 func main() {
@@ -38,19 +40,34 @@ func main() {
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	defer cancelWorker()
 
+	var pwhoisWorker *pwhois.Worker
+	if cfg.PwhoisEnabled {
+		pwhoisWorker = pwhois.NewWorker(database, nil, time.Duration(cfg.PwhoisCacheTTLHours)*time.Hour)
+		if err := pwhoisWorker.Start(workerCtx); err != nil {
+			log.Fatalf("failed to start pwhois worker: %v", err)
+		}
+	}
+
 	router := gin.New()
+	router.SetTrustedProxies([]string{
+		"172.16.0.0/12",
+		"10.0.0.0/8",
+		"192.168.0.0/16",
+		"127.0.0.1",
+	})
 	router.Use(gin.Recovery())
 	router.Use(loggingMiddleware())
+	router.Use(middleware.NewCORS(cfg.FrontendURL))
 
-	worker := handlers.Register(router, database, cfg)
+	rateLimiter := middleware.NewRateLimiter()
+	defer rateLimiter.Stop()
+
+	worker := handlers.Register(router, database, cfg, rateLimiter)
 	if err := worker.Start(workerCtx); err != nil {
 		log.Fatalf("failed to start report worker: %v", err)
 	}
 
-	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: router,
-	}
+	srv := newServer(cfg, router)
 
 	go func() {
 		log.Printf("EchoState API listening on %s", srv.Addr)
@@ -67,6 +84,10 @@ func main() {
 
 	worker.Stop()
 
+	if pwhoisWorker != nil {
+		pwhoisWorker.Stop()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -77,6 +98,14 @@ func main() {
 	database.Close()
 
 	log.Println("shutdown complete")
+}
+
+func newServer(cfg *config.Config, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 }
 
 func loggingMiddleware() gin.HandlerFunc {

@@ -1,23 +1,71 @@
 # Contributing to EchoState
 
-Thank you for your interest in contributing to EchoState.
+Thank you for your interest in contributing.
 
 ## Getting Started
 
-1. Clone the repository.
-2. Copy `.env.example` to `.env` and adjust values as needed.
-3. Run `docker compose up --build` to start the API, database, and browserless Chrome services.
+1. Fork and clone the repository.
+2. Copy `.env.example` to `.env`.
+3. Start the full stack:
+
+   ```bash
+   docker compose up --build
+   ```
+
+4. Open the UI at http://localhost:3001 and the API at http://localhost:8080.
+
+### Local development (without full compose)
+
+- **API:** `go run ./main.go` with `DATABASE_URL` and `BROWSER_WS_URL` set.
+- **Frontend:** `cd frontend && npm install && npm run dev` with `NEXT_PUBLIC_API_URL=http://localhost:8080` in `.env.local`.
+
+## Branching
+
+- `dev` — integration branch for features and fixes.
+- `main` — stable releases only.
+- Branch from `dev` for all contributions.
 
 ## Pull Request Process
 
 1. Create a feature branch from `dev`.
-2. Make your changes and add tests where applicable.
-3. Ensure `go test ./...` passes locally.
-4. Open a pull request back to `dev`.
-5. After review, changes are merged to `dev` and promoted to `main` for release.
+2. Make changes with tests where applicable.
+3. Verify locally:
+
+   ```bash
+   go test $(go list ./... | grep -v '/frontend/')
+   cd frontend && npm run typecheck && npm run build
+   ```
+
+4. Open a pull request targeting `dev`.
+5. After review, changes merge to `dev` and are promoted to `main` for release.
 
 ## Code Style
 
-- Follow standard Go conventions (`gofmt`, `go vet`).
-- Keep handlers thin; business logic belongs in `internal/` packages.
-- Fail gracefully on individual reconnaissance tasks.
+### Go
+
+- `gofmt` and `go vet` before committing.
+- Keep handlers thin; business logic lives in `internal/` packages.
+- Recon gatherers should fail gracefully — partial results are valuable.
+
+### Frontend
+
+- TypeScript strict mode; match existing shadcn/ui patterns.
+- Use `data-testid` on interactive elements targeted by Playwright.
+- Run `npm run format` if you touch TSX files.
+
+## Commit Messages
+
+- Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, etc.).
+- Write concise, natural messages — not robotic filler.
+- A short Scooby-Doo quote at the end is optional project tradition.
+
+## Releases
+
+Releases are tagged on `main` (or `dev` for betas) with a `v` prefix, e.g. `v0.0.1-beta.0`.
+
+```bash
+git tag -a v0.0.1-beta.0 -m "v0.0.1-beta.0"
+git push origin v0.0.1-beta.0
+```
+
+Tag pushes trigger GitHub Release binaries and GHCR image builds via Actions.

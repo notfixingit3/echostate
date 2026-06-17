@@ -1,33 +1,35 @@
-=== Edge Case: empty host ===
-WHOIS empty=true
-ASN empty=true
-Web empty=true
-errors=3
-  - web: empty host
-  - asn: empty host
-  - whois: empty host
+Edge Cases Executed During F3 Final QA
+======================================
 
-=== Edge Case: invalid host ===
-WHOIS empty=true
-ASN empty=true
-Web empty=true
-errors=3
-  - web: web gather failed for this-is-not-a-valid-host.invalidtld123: failed to modify wsURL: Get "http://localhost:3000/json/version": dial tcp [::1]:3000: connect: connection refused
-  - asn: resolve host: lookup this-is-not-a-valid-host.invalidtld123: no such host
-  - whois: whois lookup failed: whois: no whois server found for domain: this-is-not-a-valid-host.invalidtld123
+1. POST /api/reports with neither snapshot_id nor host
+   Command: curl -s -i -X POST http://localhost:8081/api/reports -H "Content-Type: application/json" -d '{}'
+   Expected: 400 Bad Request
+   Result: PASS
+   Evidence: scenario-3-neither.txt
 
-=== Edge Case: gatherer timeout (1ns context) ===
-WHOIS empty=true
-ASN empty=true
-Web empty=true
-errors=3
-  - whois: whois lookup timed out: context deadline exceeded
-  - asn: resolve host: lookup example.com: i/o timeout
-  - web: web gather failed for example.com: failed to modify wsURL: Get "http://localhost:3000/json/version": context deadline exceeded
+2. POST /api/reports with both snapshot_id and host
+   Command: curl -s -i -X POST http://localhost:8081/api/reports -H "Content-Type: application/json" -d '{"snapshot_id":"<id>","host":"example.com"}'
+   Expected: 400 Bad Request
+   Result: PASS
+   Evidence: scenario-3-both.txt
 
-=== Edge Case: browser unavailable ===
-WHOIS empty=false
-ASN empty=false
-Web empty=true
-errors=1
-  - web: web gather failed for example.com: failed to modify wsURL: Get "http://localhost:9999/json/version": dial tcp [::1]:9999: connect: connection refused
+3. GET /api/reports/:id/download while report is pending/running
+   Command: curl -s -i http://localhost:8081/api/reports/<pending_id>/download (immediately after creation)
+   Expected: 409 Conflict
+   Result: PASS
+   Evidence: scenario-5-download-pending.txt
+
+4. GET /api/reports/:id/download for non-existent report
+   Command: curl -s -i http://localhost:8081/api/reports/00000000-0000-0000-0000-000000000000/download
+   Expected: 404 Not Found
+   Result: PASS
+   Evidence: scenario-5-download-missing.txt
+
+5. GET /api/snapshots/:id/report when no completed report exists
+   Command: curl -s -i http://localhost:8081/api/snapshots/<new_snapshot_id>/report
+   Expected: 202 Accepted with pending report metadata
+   Result: PASS
+   Evidence: scenario-6-snapshot-new.txt
+
+Total edge cases tested: 5
+All passed.

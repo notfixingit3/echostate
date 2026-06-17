@@ -13,22 +13,29 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
+	"github.com/notfixingit3/echostate/internal/middleware"
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/reports"
 	"github.com/notfixingit3/echostate/internal/scanner"
 )
 
+// scanRunner is the subset of *scanner.Scanner used by the handlers, extracted
+// as an interface so tests can inject mock scanners without a live browser.
+type scanRunner interface {
+	Run(ctx context.Context, host string) (*models.ScanResult, error)
+}
+
 // Handler carries dependencies for HTTP handlers.
 type Handler struct {
 	db      *db.DB
 	config  *config.Config
-	scanner *scanner.Scanner
+	scanner scanRunner
 	worker  *reports.Worker
 }
 
 // Register wires routes into the Gin router and returns the report worker so
 // the caller can manage its lifecycle.
-func Register(router *gin.Engine, database *db.DB, cfg *config.Config) *reports.Worker {
+func Register(router *gin.Engine, database *db.DB, cfg *config.Config, rateLimiter *middleware.RateLimiter) *reports.Worker {
 	h := &Handler{
 		db:      database,
 		config:  cfg,
@@ -37,11 +44,19 @@ func Register(router *gin.Engine, database *db.DB, cfg *config.Config) *reports.
 	}
 
 	router.GET("/health", h.health)
-	router.POST("/api/scan", h.createScan)
+	router.POST("/api/scan", rateLimiter.Middleware(), h.createScan)
 
+	router.GET("/api/reports", h.listReports)
 	router.POST("/api/reports", h.createReport)
 	router.GET("/api/reports/:id", h.getReport)
 	router.GET("/api/reports/:id/download", h.downloadReport)
+
+	router.GET("/api/targets", h.listTargets)
+	router.GET("/api/targets/:id", h.getTarget)
+	router.GET("/api/targets/:id/snapshots", h.listTargetSnapshots)
+
+	router.GET("/api/snapshots", h.listSnapshots)
+	router.GET("/api/snapshots/:id", h.getSnapshot)
 	router.GET("/api/snapshots/:id/report", h.snapshotReport)
 
 	return h.worker
@@ -79,7 +94,9 @@ func (h *Handler) createScan(c *gin.Context) {
 		return
 	}
 
-	snapshot, err := h.storeSnapshot(ctx, targetID, dataHash, result)
+	clientIP := c.ClientIP()
+
+	snapshot, err := h.storeSnapshot(ctx, targetID, dataHash, result, clientIP)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("snapshot failed: %v", err)})
 		return
@@ -103,7 +120,7 @@ func (h *Handler) upsertTarget(ctx context.Context, host string) (uuid.UUID, err
 	return id, err
 }
 
-func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHash string, result *models.ScanResult) (*models.Snapshot, error) {
+func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHash string, result *models.ScanResult, clientIP string) (*models.Snapshot, error) {
 	var previous models.Snapshot
 	errPrev := h.db.Pool.QueryRow(ctx, `
 		SELECT id, data_hash, raw_data
@@ -128,9 +145,9 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 	if hasPrevious && previous.DataHash == dataHash {
 		_, err := h.db.Pool.Exec(ctx, `
 			UPDATE snapshots
-			SET last_seen = $1
-			WHERE id = $2
-		`, now, previous.ID)
+			SET last_seen = $1, client_ip = $2
+			WHERE id = $3
+		`, now, clientIP, previous.ID)
 		if err != nil {
 			return nil, fmt.Errorf("update last_seen: %w", err)
 		}
@@ -165,9 +182,9 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 	}
 
 	_, err = h.db.Pool.Exec(ctx, `
-		INSERT INTO snapshots (id, target_id, scanned_at, last_seen, data_hash, raw_data, changes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, snapshot.ID, snapshot.TargetID, snapshot.ScannedAt, snapshot.LastSeen, snapshot.DataHash, rawJSON, snapshot.Changes)
+		INSERT INTO snapshots (id, target_id, scanned_at, last_seen, data_hash, raw_data, changes, client_ip)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, snapshot.ID, snapshot.TargetID, snapshot.ScannedAt, snapshot.LastSeen, snapshot.DataHash, rawJSON, snapshot.Changes, clientIP)
 	if err != nil {
 		return nil, fmt.Errorf("insert snapshot: %w", err)
 	}
@@ -176,6 +193,14 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 }
 
 func computeChanges(previous map[string]any, current *models.ScanResult) []string {
+	// Empty previous map means no prior snapshot exists, so no changes can be
+	// detected. storeSnapshot already guards this path (it only calls
+	// computeChanges when a previous snapshot is present), but direct callers
+	// and unit tests expect empty changes when there is no previous data.
+	if len(previous) == 0 {
+		return []string{}
+	}
+
 	currentMap := map[string]any{}
 	data, err := json.Marshal(current)
 	if err != nil {

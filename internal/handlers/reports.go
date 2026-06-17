@@ -97,7 +97,7 @@ func (h *Handler) getReport(c *gin.Context) {
 		return
 	}
 
-	resp := h.toReportResponse(report)
+	resp := h.toReportResponse(c.Request.Context(), report)
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -195,7 +195,7 @@ func (h *Handler) serveReportPDF(c *gin.Context, report *models.Report) {
 }
 
 // toReportResponse maps a Report to its API response.
-func (h *Handler) toReportResponse(report *models.Report) models.ReportResponse {
+func (h *Handler) toReportResponse(ctx context.Context, report *models.Report) models.ReportResponse {
 	resp := models.ReportResponse{
 		ID:          report.ID,
 		Status:      report.Status,
@@ -203,6 +203,13 @@ func (h *Handler) toReportResponse(report *models.Report) models.ReportResponse 
 		CreatedAt:   report.CreatedAt,
 		CompletedAt: report.CompletedAt,
 	}
+
+	host, err := h.snapshotHost(ctx, report.SnapshotID)
+	if err != nil || host == "" {
+		host = "unknown"
+	}
+	resp.Host = host
+
 	if report.Status == models.ReportFailed {
 		resp.Error = "report generation failed"
 	}

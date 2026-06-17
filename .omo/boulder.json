@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
-  "active_work_id": "echostate-tasks-4-and-1-e827602e",
+  "active_work_id": "echostate-web-ui-4ed63e0a",
   "works": {
     "echostate-tasks-4-and-1-e827602e": {
       "work_id": "echostate-tasks-4-and-1-e827602e",
       "active_plan": "/Users/house/Documents/gitlab/echostate/.omo/plans/echostate-tasks-4-and-1.md",
       "plan_name": "echostate-tasks-4-and-1",
-      "status": "active",
+      "status": "completed",
       "started_at": "2026-06-15T23:12:15.409Z",
-      "updated_at": "2026-06-15T23:49:27.079Z",
+      "updated_at": "2026-06-15T23:52:40.315Z",
       "session_ids": [
         "opencode:ses_132837265ffeDXU2VzWZqy4dgg"
       ],
@@ -25,35 +25,611 @@
           "agent": "Sisyphus-Junior",
           "category": "deep",
           "started_at": "2026-06-15T23:20:40.038Z",
-          "status": "running",
-          "updated_at": "2026-06-15T23:49:27.079Z"
+          "status": "completed",
+          "updated_at": "2026-06-15T23:51:15.296Z",
+          "ended_at": "2026-06-15T23:51:15.296Z",
+          "elapsed_ms": 1835258
         }
-      }
+      },
+      "ended_at": "2026-06-15T23:52:40.314Z",
+      "elapsed_ms": 2424905
+    },
+    "pdf-report-endpoint-82598c6b": {
+      "work_id": "pdf-report-endpoint-82598c6b",
+      "active_plan": "/Users/house/Documents/gitlab/echostate/.omo/plans/pdf-report-endpoint.md",
+      "plan_name": "pdf-report-endpoint",
+      "status": "completed",
+      "started_at": "2026-06-16T00:12:55.774Z",
+      "updated_at": "2026-06-16T01:43:26.197Z",
+      "session_ids": [
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg"
+      ],
+      "session_origins": {
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {
+        "todo:1": {
+          "task_key": "todo:1",
+          "task_label": "1",
+          "task_title": "Add maroto v2 dependency",
+          "session_id": "opencode:ses_13238de89ffe77dLpiR1Gha1wP",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T00:17:45.246Z",
+          "started_at": "2026-06-16T00:17:11.692Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T00:17:45.246Z",
+          "elapsed_ms": 33554
+        },
+        "todo:4": {
+          "task_key": "todo:4",
+          "task_label": "4",
+          "task_title": "Create `internal/pdf` report renderer",
+          "session_id": "opencode:ses_13234ecbeffeG2UkFTJK3E0k2g",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T00:23:19.153Z",
+          "started_at": "2026-06-16T00:22:52.401Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T00:23:19.153Z",
+          "elapsed_ms": 26752
+        },
+        "todo:5": {
+          "task_key": "todo:5",
+          "task_label": "5",
+          "task_title": "Create async report worker/job manager",
+          "session_id": "opencode:ses_1322fac4effeAi2z4n6Di5qC3F",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T00:33:08.101Z",
+          "started_at": "2026-06-16T00:32:51.192Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T00:33:08.101Z",
+          "elapsed_ms": 16909
+        },
+        "todo:7": {
+          "task_key": "todo:7",
+          "task_label": "7",
+          "task_title": "Add reports HTTP handlers and routes",
+          "session_id": "opencode:ses_13226c9cbffe4A6rznhGmyngAo",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T00:40:34.251Z",
+          "started_at": "2026-06-16T00:39:54.444Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T00:40:34.251Z",
+          "elapsed_ms": 39807
+        },
+        "todo:8": {
+          "task_key": "todo:8",
+          "task_label": "8",
+          "task_title": "Add unit and integration tests",
+          "session_id": "opencode:ses_132200e5fffeaSsEmHVQj9OKNW",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T00:44:16.955Z",
+          "started_at": "2026-06-16T00:43:58.650Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T00:44:16.955Z",
+          "elapsed_ms": 18305
+        },
+        "todo:9": {
+          "task_key": "todo:9",
+          "task_label": "9",
+          "task_title": "Docker Compose end-to-end verification",
+          "session_id": "opencode:ses_1321c9c0fffeqB69fHV8zcdLnw",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T00:51:19.523Z",
+          "started_at": "2026-06-16T00:51:01.942Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T00:51:19.523Z",
+          "elapsed_ms": 17581
+        },
+        "final-wave:f1": {
+          "task_key": "final-wave:f1",
+          "task_label": "F1",
+          "task_title": "**Plan Compliance Audit** — `oracle`",
+          "session_id": "opencode:ses_1321657b3ffemTbg0T7fmK8yuF",
+          "agent": "oracle",
+          "updated_at": "2026-06-16T01:10:44.519Z",
+          "started_at": "2026-06-16T00:52:18.399Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T01:10:44.519Z",
+          "elapsed_ms": 1106120
+        }
+      },
+      "ended_at": "2026-06-16T01:43:26.197Z",
+      "elapsed_ms": 5430423
+    },
+    "missing-go-tests-9261b347": {
+      "work_id": "missing-go-tests-9261b347",
+      "active_plan": "/Users/house/Documents/gitlab/echostate/.omo/plans/missing-go-tests.md",
+      "plan_name": "missing-go-tests",
+      "status": "completed",
+      "started_at": "2026-06-16T01:55:43.615Z",
+      "updated_at": "2026-06-16T02:34:30.619Z",
+      "session_ids": [
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg"
+      ],
+      "session_origins": {
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {
+        "todo:1": {
+          "task_key": "todo:1",
+          "task_label": "1",
+          "task_title": "Add `internal/config/config_test.go`",
+          "session_id": "opencode:ses_131db102affez3sWhMn56MzqO2",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T01:59:15.885Z",
+          "started_at": "2026-06-16T01:57:32.684Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T01:59:15.885Z",
+          "elapsed_ms": 103201
+        },
+        "todo:4": {
+          "task_key": "todo:4",
+          "task_label": "4",
+          "task_title": "Add `internal/db/db_test.go`",
+          "session_id": "opencode:ses_131d7d2abffe5cKPjfJAkr5W0g",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T02:10:54.918Z",
+          "started_at": "2026-06-16T02:01:32.249Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T02:10:54.918Z",
+          "elapsed_ms": 562669
+        },
+        "todo:6": {
+          "task_key": "todo:6",
+          "task_label": "6",
+          "task_title": "Run full test suite and verify no regressions",
+          "session_id": "opencode:ses_131c97e1bffe1Dnbrag4afL8YV",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T02:20:48.534Z",
+          "started_at": "2026-06-16T02:19:46.503Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T02:20:48.534Z",
+          "elapsed_ms": 62031
+        },
+        "final-wave:f1": {
+          "task_key": "final-wave:f1",
+          "task_label": "F1",
+          "task_title": "**Plan Compliance Audit** — `oracle`",
+          "session_id": "opencode:ses_131bca0d2ffe3U9FmCRtIinRxc",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "started_at": "2026-06-16T02:23:07.911Z",
+          "status": "completed",
+          "updated_at": "2026-06-16T02:33:29.620Z",
+          "ended_at": "2026-06-16T02:33:29.620Z",
+          "elapsed_ms": 621709
+        }
+      },
+      "ended_at": "2026-06-16T02:34:30.619Z",
+      "elapsed_ms": 2327004
+    },
+    "fix-slowloris-g112-84633452": {
+      "work_id": "fix-slowloris-g112-84633452",
+      "active_plan": "/Users/house/Documents/gitlab/echostate/.omo/plans/fix-slowloris-g112.md",
+      "plan_name": "fix-slowloris-g112",
+      "status": "completed",
+      "started_at": "2026-06-16T02:43:50.866Z",
+      "updated_at": "2026-06-16T02:52:06.490Z",
+      "session_ids": [
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg"
+      ],
+      "session_origins": {
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {
+        "todo:1": {
+          "task_key": "todo:1",
+          "task_label": "1",
+          "task_title": "Add `ReadHeaderTimeout` to `http.Server` in `main.go` and add `main_test.go`",
+          "session_id": "opencode:ses_131aeff7dffeWDquVz3WaMM3Y0",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T02:47:03.318Z",
+          "started_at": "2026-06-16T02:46:23.725Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T02:47:03.318Z",
+          "elapsed_ms": 39593
+        },
+        "final-wave:f1": {
+          "task_key": "final-wave:f1",
+          "task_label": "F1",
+          "task_title": "**Plan Compliance Audit** — `oracle`",
+          "session_id": "opencode:ses_131ac6920ffeKmKacvJwcxxeUa",
+          "agent": "oracle",
+          "updated_at": "2026-06-16T02:49:41.493Z",
+          "started_at": "2026-06-16T02:48:14.909Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T02:49:41.493Z",
+          "elapsed_ms": 86584
+        }
+      },
+      "ended_at": "2026-06-16T02:52:06.490Z",
+      "elapsed_ms": 495624
+    },
+    "echostate-web-ui-4ed63e0a": {
+      "work_id": "echostate-web-ui-4ed63e0a",
+      "active_plan": "/Users/house/Documents/gitlab/echostate/.omo/plans/echostate-web-ui.md",
+      "plan_name": "echostate-web-ui",
+      "status": "completed",
+      "started_at": "2026-06-16T04:04:21.287Z",
+      "updated_at": "2026-06-17T02:55:56.144Z",
+      "session_ids": [
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg"
+      ],
+      "session_origins": {
+        "opencode:ses_132837265ffeDXU2VzWZqy4dgg": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {
+        "todo:1": {
+          "task_key": "todo:1",
+          "task_label": "1",
+          "task_title": "Add `client_ip` to snapshots, update model, and capture IP in scan handler",
+          "session_id": "opencode:ses_13164d100ffe5ohr7LO8TGuxMA",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T04:11:19.905Z",
+          "started_at": "2026-06-16T04:08:21.242Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T04:11:19.904Z",
+          "elapsed_ms": 178662
+        },
+        "todo:4": {
+          "task_key": "todo:4",
+          "task_label": "4",
+          "task_title": "Add browse API endpoints",
+          "session_id": "opencode:ses_1315e95e0ffetiw0MoeN5AD7OQ",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T04:22:08.542Z",
+          "started_at": "2026-06-16T04:20:38.404Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T04:22:08.542Z",
+          "elapsed_ms": 90138
+        },
+        "todo:7": {
+          "task_key": "todo:7",
+          "task_label": "7",
+          "task_title": "Create async pwhois worker",
+          "session_id": "opencode:ses_1314f3c2bffewBPHtiRMV83pI9",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "started_at": "2026-06-16T04:28:02.527Z",
+          "status": "completed",
+          "updated_at": "2026-06-16T04:33:42.158Z",
+          "ended_at": "2026-06-16T04:33:42.158Z",
+          "elapsed_ms": 339631
+        },
+        "todo:10": {
+          "task_key": "todo:10",
+          "task_label": "10",
+          "task_title": "Initialize Next.js 14+ App Router + shadcn/ui in `frontend/`",
+          "session_id": "opencode:ses_131497756ffet2t7qitKSL4dnB",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T04:42:13.589Z",
+          "started_at": "2026-06-16T04:41:28.103Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T04:42:13.589Z",
+          "elapsed_ms": 45486
+        },
+        "todo:11": {
+          "task_key": "todo:11",
+          "task_label": "11",
+          "task_title": "Create shared layout + navigation",
+          "session_id": "opencode:ses_13142f525ffeTLZqrNgg3tDyse",
+          "agent": "Sisyphus-Junior",
+          "category": "visual-engineering",
+          "updated_at": "2026-06-16T04:47:48.396Z",
+          "started_at": "2026-06-16T04:47:06.147Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T04:47:48.396Z",
+          "elapsed_ms": 42249
+        },
+        "todo:13": {
+          "task_key": "todo:13",
+          "task_label": "13",
+          "task_title": "Build browse targets page",
+          "session_id": "opencode:ses_130e773c8ffeADnRE77ydfp15h",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "started_at": "2026-06-16T06:21:06.993Z",
+          "status": "completed",
+          "updated_at": "2026-06-16T06:24:26.045Z",
+          "ended_at": "2026-06-16T06:24:26.045Z",
+          "elapsed_ms": 199052
+        },
+        "todo:18": {
+          "task_key": "todo:18",
+          "task_label": "18",
+          "task_title": "Add frontend Dockerfile",
+          "session_id": "opencode:ses_130e4b0e7ffeeEtFqpZzGCoY6N",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T06:32:52.497Z",
+          "started_at": "2026-06-16T06:31:10.523Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T06:32:52.497Z",
+          "elapsed_ms": 101974
+        },
+        "todo:19": {
+          "task_key": "todo:19",
+          "task_label": "19",
+          "task_title": "Update docker-compose.yml with frontend service",
+          "session_id": "opencode:ses_130dd3842ffeBS97qpBb3rh1tJ",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-16T06:34:46.686Z",
+          "started_at": "2026-06-16T06:34:22.789Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T06:34:46.686Z",
+          "elapsed_ms": 23897
+        },
+        "todo:21": {
+          "task_key": "todo:21",
+          "task_label": "21",
+          "task_title": "Add Playwright tests and run full stack",
+          "session_id": "opencode:ses_130db82c7ffetH3g1KUZVa3big",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-16T12:36:15.973Z",
+          "started_at": "2026-06-16T07:03:35.651Z",
+          "status": "completed",
+          "ended_at": "2026-06-16T12:36:15.973Z",
+          "elapsed_ms": 19960322
+        },
+        "final-wave:f1": {
+          "task_key": "final-wave:f1",
+          "task_label": "F1",
+          "task_title": "**Plan Compliance Audit** — `oracle`",
+          "session_id": "opencode:ses_12f5a459cffeQn2aD3fA7a192v",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "started_at": "2026-06-16T12:30:54.313Z",
+          "status": "completed",
+          "updated_at": "2026-06-17T02:55:01.006Z",
+          "ended_at": "2026-06-17T02:55:01.006Z",
+          "elapsed_ms": 51846693
+        },
+        "final-wave:f2": {
+          "task_key": "final-wave:f2",
+          "task_label": "F2",
+          "task_title": "Code Quality Review for the EchoState web-ui work. Run the verification commands, review changed code for anti-patterns and AI slop, and produce a verdict.",
+          "session_id": "opencode:ses_12f8ffcb6ffeh5F7ndZ2qME34g",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-17T02:55:13.055Z",
+          "started_at": "2026-06-16T12:47:41.052Z",
+          "status": "completed",
+          "ended_at": "2026-06-17T02:55:13.055Z",
+          "elapsed_ms": 50852003
+        },
+        "final-wave:f4": {
+          "task_key": "final-wave:f4",
+          "task_label": "F4",
+          "task_title": "Re-run Scope Fidelity Check for `echostate-web-ui`. The previous check flagged several apparent violations that are actually covered by the plan's **Defaults Applied** section (lines 98-108) or are pre-existing files from other plans. Re-read the plan carefully, including Defaults Applied, and verify 1:1 scope compliance.",
+          "session_id": "opencode:ses_12f6b0afaffeV2zipyzWsewkuj",
+          "agent": "Sisyphus-Junior",
+          "category": "deep",
+          "started_at": "2026-06-16T12:47:44.258Z",
+          "status": "completed",
+          "updated_at": "2026-06-17T02:55:17.135Z",
+          "ended_at": "2026-06-17T02:55:17.135Z",
+          "elapsed_ms": 50852877
+        },
+        "final-wave:f3": {
+          "task_key": "final-wave:f3",
+          "task_label": "F3",
+          "task_title": "Re-run Real Manual QA for `echostate-web-ui`. The previous QA rejected rate limiting because 31 sequential scans all returned 200. That test was flawed: the rate limiter is a token bucket (30 tokens, 30/min refill), and sequential scans are spaced by the scan duration (~5s), so they remain below 30/min. The correct test uses parallel or rapid requests. Re-run the QA scenarios with the corrected rate-limit test.",
+          "session_id": "opencode:ses_12f6b45b5ffegcdzqDdauUY4L9",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "started_at": "2026-06-16T13:04:16.927Z",
+          "status": "completed",
+          "updated_at": "2026-06-17T02:55:15.311Z",
+          "ended_at": "2026-06-17T02:55:15.311Z",
+          "elapsed_ms": 49858384
+        }
+      },
+      "ended_at": "2026-06-17T02:55:56.144Z",
+      "elapsed_ms": 82294857
     }
   },
-  "active_plan": "/Users/house/Documents/gitlab/echostate/.omo/plans/echostate-tasks-4-and-1.md",
-  "started_at": "2026-06-15T23:12:15.409Z",
-  "status": "active",
-  "updated_at": "2026-06-15T23:49:27.079Z",
+  "active_plan": "/Users/house/Documents/gitlab/echostate/.omo/plans/echostate-web-ui.md",
+  "started_at": "2026-06-16T04:04:21.287Z",
+  "status": "completed",
+  "updated_at": "2026-06-17T02:55:56.144Z",
   "session_ids": [
     "opencode:ses_132837265ffeDXU2VzWZqy4dgg"
   ],
   "session_origins": {
     "opencode:ses_132837265ffeDXU2VzWZqy4dgg": "direct"
   },
-  "plan_name": "echostate-tasks-4-and-1",
+  "plan_name": "echostate-web-ui",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Clean up `.github/FUNDING.yml`",
-      "session_id": "opencode:ses_132517c68ffeTXT7wpv9H56cZM",
+      "task_title": "Add `client_ip` to snapshots, update model, and capture IP in scan handler",
+      "session_id": "opencode:ses_13164d100ffe5ohr7LO8TGuxMA",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-06-16T04:11:19.905Z",
+      "started_at": "2026-06-16T04:08:21.242Z",
+      "status": "completed",
+      "ended_at": "2026-06-16T04:11:19.904Z",
+      "elapsed_ms": 178662
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "Add browse API endpoints",
+      "session_id": "opencode:ses_1315e95e0ffetiw0MoeN5AD7OQ",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-06-16T04:22:08.542Z",
+      "started_at": "2026-06-16T04:20:38.404Z",
+      "status": "completed",
+      "ended_at": "2026-06-16T04:22:08.542Z",
+      "elapsed_ms": 90138
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Create async pwhois worker",
+      "session_id": "opencode:ses_1314f3c2bffewBPHtiRMV83pI9",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "started_at": "2026-06-16T04:28:02.527Z",
+      "status": "completed",
+      "updated_at": "2026-06-16T04:33:42.158Z",
+      "ended_at": "2026-06-16T04:33:42.158Z",
+      "elapsed_ms": 339631
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "Initialize Next.js 14+ App Router + shadcn/ui in `frontend/`",
+      "session_id": "opencode:ses_131497756ffet2t7qitKSL4dnB",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-06-16T04:42:13.589Z",
+      "started_at": "2026-06-16T04:41:28.103Z",
+      "status": "completed",
+      "ended_at": "2026-06-16T04:42:13.589Z",
+      "elapsed_ms": 45486
+    },
+    "todo:11": {
+      "task_key": "todo:11",
+      "task_label": "11",
+      "task_title": "Create shared layout + navigation",
+      "session_id": "opencode:ses_13142f525ffeTLZqrNgg3tDyse",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-06-16T04:47:48.396Z",
+      "started_at": "2026-06-16T04:47:06.147Z",
+      "status": "completed",
+      "ended_at": "2026-06-16T04:47:48.396Z",
+      "elapsed_ms": 42249
+    },
+    "todo:13": {
+      "task_key": "todo:13",
+      "task_label": "13",
+      "task_title": "Build browse targets page",
+      "session_id": "opencode:ses_130e773c8ffeADnRE77ydfp15h",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "started_at": "2026-06-16T06:21:06.993Z",
+      "status": "completed",
+      "updated_at": "2026-06-16T06:24:26.045Z",
+      "ended_at": "2026-06-16T06:24:26.045Z",
+      "elapsed_ms": 199052
+    },
+    "todo:18": {
+      "task_key": "todo:18",
+      "task_label": "18",
+      "task_title": "Add frontend Dockerfile",
+      "session_id": "opencode:ses_130e4b0e7ffeeEtFqpZzGCoY6N",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-06-16T06:32:52.497Z",
+      "started_at": "2026-06-16T06:31:10.523Z",
+      "status": "completed",
+      "ended_at": "2026-06-16T06:32:52.497Z",
+      "elapsed_ms": 101974
+    },
+    "todo:19": {
+      "task_key": "todo:19",
+      "task_label": "19",
+      "task_title": "Update docker-compose.yml with frontend service",
+      "session_id": "opencode:ses_130dd3842ffeBS97qpBb3rh1tJ",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-06-16T06:34:46.686Z",
+      "started_at": "2026-06-16T06:34:22.789Z",
+      "status": "completed",
+      "ended_at": "2026-06-16T06:34:46.686Z",
+      "elapsed_ms": 23897
+    },
+    "todo:21": {
+      "task_key": "todo:21",
+      "task_label": "21",
+      "task_title": "Add Playwright tests and run full stack",
+      "session_id": "opencode:ses_130db82c7ffetH3g1KUZVa3big",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-06-16T12:36:15.973Z",
+      "started_at": "2026-06-16T07:03:35.651Z",
+      "status": "completed",
+      "ended_at": "2026-06-16T12:36:15.973Z",
+      "elapsed_ms": 19960322
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "opencode:ses_12f5a459cffeQn2aD3fA7a192v",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "started_at": "2026-06-16T12:30:54.313Z",
+      "status": "completed",
+      "updated_at": "2026-06-17T02:55:01.006Z",
+      "ended_at": "2026-06-17T02:55:01.006Z",
+      "elapsed_ms": 51846693
+    },
+    "final-wave:f2": {
+      "task_key": "final-wave:f2",
+      "task_label": "F2",
+      "task_title": "Code Quality Review for the EchoState web-ui work. Run the verification commands, review changed code for anti-patterns and AI slop, and produce a verdict.",
+      "session_id": "opencode:ses_12f8ffcb6ffeh5F7ndZ2qME34g",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-06-17T02:55:13.055Z",
+      "started_at": "2026-06-16T12:47:41.052Z",
+      "status": "completed",
+      "ended_at": "2026-06-17T02:55:13.055Z",
+      "elapsed_ms": 50852003
+    },
+    "final-wave:f4": {
+      "task_key": "final-wave:f4",
+      "task_label": "F4",
+      "task_title": "Re-run Scope Fidelity Check for `echostate-web-ui`. The previous check flagged several apparent violations that are actually covered by the plan's **Defaults Applied** section (lines 98-108) or are pre-existing files from other plans. Re-read the plan carefully, including Defaults Applied, and verify 1:1 scope compliance.",
+      "session_id": "opencode:ses_12f6b0afaffeV2zipyzWsewkuj",
       "agent": "Sisyphus-Junior",
       "category": "deep",
-      "started_at": "2026-06-15T23:20:40.038Z",
-      "status": "running",
-      "updated_at": "2026-06-15T23:49:27.079Z"
+      "started_at": "2026-06-16T12:47:44.258Z",
+      "status": "completed",
+      "updated_at": "2026-06-17T02:55:17.135Z",
+      "ended_at": "2026-06-17T02:55:17.135Z",
+      "elapsed_ms": 50852877
+    },
+    "final-wave:f3": {
+      "task_key": "final-wave:f3",
+      "task_label": "F3",
+      "task_title": "Re-run Real Manual QA for `echostate-web-ui`. The previous QA rejected rate limiting because 31 sequential scans all returned 200. That test was flawed: the rate limiter is a token bucket (30 tokens, 30/min refill), and sequential scans are spaced by the scan duration (~5s), so they remain below 30/min. The correct test uses parallel or rapid requests. Re-run the QA scenarios with the corrected rate-limit test.",
+      "session_id": "opencode:ses_12f6b45b5ffegcdzqDdauUY4L9",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "started_at": "2026-06-16T13:04:16.927Z",
+      "status": "completed",
+      "updated_at": "2026-06-17T02:55:15.311Z",
+      "ended_at": "2026-06-17T02:55:15.311Z",
+      "elapsed_ms": 49858384
     }
   },
-  "agent": "atlas"
+  "agent": "atlas",
+  "ended_at": "2026-06-17T02:55:56.144Z",
+  "elapsed_ms": 82294857
 }
