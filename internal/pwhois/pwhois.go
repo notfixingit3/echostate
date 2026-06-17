@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pwhoislib "github.com/georgestarcher/pwhois"
+	"github.com/notfixingit3/echostate/internal/config"
 )
 
 const (
@@ -77,8 +78,13 @@ func Lookup(ctx context.Context, ips []string) ([]PWHOISRecord, error) {
 		return nil, fmt.Errorf("no valid IP addresses")
 	}
 
+	settings := config.GetSettings()
+	serverStr := settings.PwhoisServer
+	if serverStr == "" {
+		serverStr = WhoisServer.Server
+	}
 	server := &pwhoislib.WhoisServer{
-		Server:       WhoisServer.Server,
+		Server:       serverStr,
 		Port:         WhoisServer.Port,
 		BatchMaxSize: maxBatchSize,
 	}

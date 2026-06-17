@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.1-beta.1] - 2026-06-17
+
+### Added
+- Advanced Side-by-Side Diffs for raw snapshot data comparison.
+- Target Tagging & Grouping using an interactive UI.
+- DNS Resolvers and pWhois Address can now be configured dynamically in the System Configuration settings.
+- Global API Rate Limit configurable via UI.
+
 ## [0.0.1-beta.0] - 2026-06-17
 
 First public beta — API, web UI, PDF reports, and Docker Compose stack.
@@ -29,4 +37,5 @@ First public beta — API, web UI, PDF reports, and Docker Compose stack.
 - Trusted proxy configuration for accurate client IP behind reverse proxies.
 - Report error responses sanitized; Slowloris mitigation on HTTP server.
 
+[0.0.1-beta.1]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.1
 [0.0.1-beta.0]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.0

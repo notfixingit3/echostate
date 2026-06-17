@@ -34,9 +34,9 @@ func (h *Handler) listTargets(c *gin.Context) {
 	args := []any{}
 	n := 1
 	if q != "" {
-		where += fmt.Sprintf(" AND t.host ILIKE $%d", n)
-		args = append(args, "%"+q+"%")
-		n++
+		where += fmt.Sprintf(" AND (t.host ILIKE $%d OR $%d = ANY(t.tags))", n, n+1)
+		args = append(args, "%"+q+"%", q)
+		n += 2
 	}
 
 	var total int
@@ -53,7 +53,7 @@ func (h *Handler) listTargets(c *gin.Context) {
 	listArgs = append(listArgs, limit, (page-1)*limit)
 
 	rows, err := h.db.Pool.Query(ctx, fmt.Sprintf(`
-		SELECT t.id, t.host, t.created_at,
+		SELECT t.id, t.host, t.tags, t.created_at,
 			COALESCE((SELECT COUNT(*) FROM snapshots s WHERE s.target_id = t.id), 0) AS snapshot_count,
 			(SELECT MAX(s.scanned_at) FROM snapshots s WHERE s.target_id = t.id) AS latest_snapshot_at,
 			(SELECT s.raw_data->'asn'->>'asn' FROM snapshots s WHERE s.target_id = t.id ORDER BY s.scanned_at DESC LIMIT 1) AS latest_asn,
@@ -75,7 +75,7 @@ func (h *Handler) listTargets(c *gin.Context) {
 		var t models.TargetSummary
 		var latestAt *time.Time
 		err := rows.Scan(
-			&t.ID, &t.Host, &t.CreatedAt, &t.SnapshotCount, &latestAt,
+			&t.ID, &t.Host, &t.Tags, &t.CreatedAt, &t.SnapshotCount, &latestAt,
 			&t.LatestAsn, &t.LatestAsName, &t.LatestWebTitle,
 		)
 		if err != nil {
@@ -110,7 +110,7 @@ func (h *Handler) getTarget(c *gin.Context) {
 	var detail models.TargetDetail
 	var latestAt *time.Time
 	err := h.db.Pool.QueryRow(ctx, `
-		SELECT t.id, t.host, t.created_at,
+		SELECT t.id, t.host, t.tags, t.created_at,
 			COALESCE((SELECT COUNT(*) FROM snapshots s WHERE s.target_id = t.id), 0) AS snapshot_count,
 			(SELECT MAX(s.scanned_at) FROM snapshots s WHERE s.target_id = t.id) AS latest_snapshot_at,
 			(SELECT s.raw_data->'asn'->>'asn' FROM snapshots s WHERE s.target_id = t.id ORDER BY s.scanned_at DESC LIMIT 1) AS latest_asn,
@@ -119,7 +119,7 @@ func (h *Handler) getTarget(c *gin.Context) {
 		FROM targets t
 		WHERE t.id = $1
 	`, targetID).Scan(
-		&detail.ID, &detail.Host, &detail.CreatedAt, &detail.SnapshotCount, &latestAt,
+		&detail.ID, &detail.Host, &detail.Tags, &detail.CreatedAt, &detail.SnapshotCount, &latestAt,
 		&detail.LatestAsn, &detail.LatestAsName, &detail.LatestWebTitle,
 	)
 	if err != nil {
@@ -471,5 +471,70 @@ func parseBrowsePagination(c *gin.Context) (page, limit int, ok bool) {
 	}
 
 	return page, limit, true
+}
+
+func (h *Handler) updateTargetTags(c *gin.Context) {
+	targetID, ok := h.parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Tags []string `json:"tags"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	_, err := h.db.Pool.Exec(ctx, `
+		UPDATE targets SET tags = $1 WHERE id = $2
+	`, req.Tags, targetID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update tags"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) getSnapshotDiff(c *gin.Context) {
+	snapshotID, ok := h.parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var currentRawData map[string]any
+	var targetID uuid.UUID
+	var scannedAt time.Time
+
+	err := h.db.Pool.QueryRow(ctx, `SELECT target_id, scanned_at, raw_data FROM snapshots WHERE id = $1`, snapshotID).Scan(&targetID, &scannedAt, &currentRawData)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	var previousRawData map[string]any
+	err = h.db.Pool.QueryRow(ctx, `
+		SELECT raw_data FROM snapshots
+		WHERE target_id = $1 AND scanned_at < $2
+		ORDER BY scanned_at DESC LIMIT 1
+	`, targetID, scannedAt).Scan(&previousRawData)
+	
+	if err != nil && err != pgx.ErrNoRows {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch previous snapshot"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"current": currentRawData,
+		"previous": previousRawData,
+	})
 }
 

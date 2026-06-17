@@ -6,6 +6,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/notfixingit3/echostate/internal/config"
 )
 
 const (
@@ -39,7 +41,20 @@ func gatherASN(ctx context.Context, host string) (string, map[string]any, error)
 	ctx, cancel := context.WithTimeout(ctx, asnGatherTimeout)
 	defer cancel()
 
-	resolver := &net.Resolver{}
+	var resolver *net.Resolver
+	settings := config.GetSettings()
+	if settings.DNSServers != "" {
+		servers := strings.Split(settings.DNSServers, ",")
+		resolver = &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{Timeout: dnsLookupTimeout}
+				return d.DialContext(ctx, "udp", strings.TrimSpace(servers[0])+":53")
+			},
+		}
+	} else {
+		resolver = &net.Resolver{}
+	}
 
 	ip := host
 	if parsed := net.ParseIP(host); parsed == nil || parsed.To4() == nil {

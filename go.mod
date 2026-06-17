@@ -52,6 +52,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.21 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/neo4j/neo4j-go-driver/v5 v5.28.4 // indirect
 	github.com/pdfcpu/pdfcpu v0.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/phpdave11/gofpdf v1.4.3 // indirect

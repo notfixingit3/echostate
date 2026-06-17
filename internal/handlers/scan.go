@@ -17,6 +17,7 @@ import (
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/reports"
 	"github.com/notfixingit3/echostate/internal/scanner"
+	"github.com/notfixingit3/echostate/internal/webhooks"
 )
 
 // scanRunner is the subset of *scanner.Scanner used by the handlers, extracted
@@ -27,20 +28,31 @@ type scanRunner interface {
 
 // Handler carries dependencies for HTTP handlers.
 type Handler struct {
-	db      *db.DB
-	config  *config.Config
-	scanner scanRunner
-	worker  *reports.Worker
+	db          *db.DB
+	neo4jClient *db.Neo4jClient
+	config      *config.Config
+	scanner     scanRunner
+	worker      *reports.Worker
 }
 
 // Register wires routes into the Gin router and returns the report worker so
 // the caller can manage its lifecycle.
-func Register(router *gin.Engine, database *db.DB, cfg *config.Config, rateLimiter *middleware.RateLimiter) *reports.Worker {
+func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, cfg *config.Config, rateLimiter *middleware.RateLimiter) *reports.Worker {
 	h := &Handler{
-		db:      database,
-		config:  cfg,
-		scanner: scanner.NewScanner(cfg.BrowserWSURL),
-		worker:  newWorker(database),
+		db:          database,
+		neo4jClient: neo4jClient,
+		config:      cfg,
+		scanner:     scanner.NewScanner(cfg.BrowserWSURL),
+		worker:      newWorker(database),
+	}
+
+	var valBytes []byte
+	err := database.Pool.QueryRow(context.Background(), `SELECT value FROM settings WHERE key = 'app_settings'`).Scan(&valBytes)
+	if err == nil {
+		var s config.SystemSettings
+		if err := json.Unmarshal(valBytes, &s); err == nil {
+			config.UpdateSettings(s)
+		}
 	}
 
 	router.GET("/health", h.health)
@@ -53,11 +65,21 @@ func Register(router *gin.Engine, database *db.DB, cfg *config.Config, rateLimit
 
 	router.GET("/api/targets", h.listTargets)
 	router.GET("/api/targets/:id", h.getTarget)
+	router.PUT("/api/targets/:id/tags", h.updateTargetTags)
 	router.GET("/api/targets/:id/snapshots", h.listTargetSnapshots)
 
 	router.GET("/api/snapshots", h.listSnapshots)
 	router.GET("/api/snapshots/:id", h.getSnapshot)
+	router.GET("/api/snapshots/:id/diff", h.getSnapshotDiff)
 	router.GET("/api/snapshots/:id/report", h.snapshotReport)
+
+	router.GET("/api/webhooks", h.listWebhooks)
+	router.POST("/api/webhooks", h.createWebhook)
+	router.PUT("/api/webhooks/:id", h.updateWebhook)
+	router.DELETE("/api/webhooks/:id", h.deleteWebhook)
+
+	router.GET("/api/settings", h.getSettings)
+	router.PUT("/api/settings", h.updateSettings)
 
 	return h.worker
 }
@@ -188,6 +210,19 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 	if err != nil {
 		return nil, fmt.Errorf("insert snapshot: %w", err)
 	}
+
+	if h.neo4jClient != nil {
+		target := &models.Target{
+			ID:        targetID,
+			Host:      result.Host,
+			CreatedAt: time.Now().UTC(),
+		}
+		go func() {
+			_ = h.neo4jClient.SyncSnapshot(context.Background(), target, snapshot)
+		}()
+	}
+
+	go webhooks.Dispatch(context.Background(), h.db, result.Host, snapshot, h.config.FrontendURL)
 
 	return snapshot, nil
 }

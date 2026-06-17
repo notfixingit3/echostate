@@ -40,6 +40,16 @@ func main() {
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	defer cancelWorker()
 
+	var neo4jClient *db.Neo4jClient
+	if cfg.Neo4jURI != "" {
+		neo4jClient, err = db.NewNeo4jClient(cfg.Neo4jURI, cfg.Neo4jUser, cfg.Neo4jPassword)
+		if err != nil {
+			log.Printf("failed to connect to neo4j: %v", err)
+		} else {
+			defer neo4jClient.Close(context.Background())
+		}
+	}
+
 	var pwhoisWorker *pwhois.Worker
 	if cfg.PwhoisEnabled {
 		pwhoisWorker = pwhois.NewWorker(database, nil, time.Duration(cfg.PwhoisCacheTTLHours)*time.Hour)
@@ -62,7 +72,7 @@ func main() {
 	rateLimiter := middleware.NewRateLimiter()
 	defer rateLimiter.Stop()
 
-	worker := handlers.Register(router, database, cfg, rateLimiter)
+	worker := handlers.Register(router, database, neo4jClient, cfg, rateLimiter)
 	if err := worker.Start(workerCtx); err != nil {
 		log.Fatalf("failed to start report worker: %v", err)
 	}

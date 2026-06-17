@@ -192,6 +192,7 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
       </div>
 
       <IntelPanels
+        snapshotId={snapshot.id}
         raw={snapshot.raw_data}
         changes={snapshot.changes}
         pwhois={snapshot.pwhois_data}

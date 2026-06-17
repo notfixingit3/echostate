@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/notfixingit3/echostate/internal/config"
 )
 
 const (
-	maxTokens   = 30
-	refillRate  = 30.0          // tokens per minute
+	maxTokens   = 30.0
 	refillEvery = 2 * time.Second // refill 1 token every 2 seconds
 	cleanupAge  = 10 * time.Minute
 	cleanupTick = 1 * time.Minute
@@ -64,17 +64,23 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 		}
 
 		// Refill based on elapsed time since last refill.
+		settings := config.GetSettings()
+		rate := settings.RateLimit
+		if rate <= 0 {
+			rate = 30.0 // fallback
+		}
+
 		elapsed := now.Sub(b.updatedAt)
-		b.tokens += elapsed.Seconds() * (refillRate / 60.0)
-		if b.tokens > maxTokens {
-			b.tokens = maxTokens
+		b.tokens += elapsed.Seconds() * (rate / 60.0)
+		if b.tokens > float64(maxTokens) {
+			b.tokens = float64(maxTokens)
 		}
 		b.updatedAt = now
 		b.lastSeen = now
 
 		if b.tokens < 1 {
 			rl.mu.Unlock()
-			retryAfter := int((1 - b.tokens) * 60.0 / refillRate)
+			retryAfter := int((1 - b.tokens) * 60.0 / rate)
 			if retryAfter < 1 {
 				retryAfter = 1
 			}

@@ -21,6 +21,7 @@ const navLinks = [
   { href: "/targets", label: "Targets" },
   { href: "/snapshots", label: "Snapshots" },
   { href: "/reports", label: "Reports" },
+  { href: "/settings", label: "Settings" },
 ]
 
 export function Nav() {
@@ -42,7 +43,7 @@ export function Nav() {
             alt="EchoState"
             width={128}
             height={32}
-            className="h-7 w-auto"
+            className="h-7 w-auto dark:invert"
             priority
           />
         </Link>
@@ -96,7 +97,7 @@ export function Nav() {
                     alt="EchoState"
                     width={128}
                     height={32}
-                    className="h-7 w-auto"
+                    className="h-7 w-auto dark:invert"
                     priority
                   />
                 </Link>
