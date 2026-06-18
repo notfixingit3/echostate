@@ -13,8 +13,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useAuth } from "@/components/auth-provider"
 import { cn } from "@/lib/utils"
-import { MenuIcon } from "lucide-react"
+import { LogOutIcon, MenuIcon } from "lucide-react"
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -29,6 +30,7 @@ const navLinks = [
 
 export function Nav() {
   const pathname = usePathname()
+  const { user, config, signOut } = useAuth()
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/70">
@@ -66,6 +68,26 @@ export function Nav() {
               )
             })}
           </nav>
+          {user ? (
+            <div className="hidden items-center gap-2 md:flex">
+              <span className="max-w-32 truncate text-xs text-muted-foreground">
+                {user.display_name}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => void signOut()}>
+                <LogOutIcon data-icon="inline-start" />
+                Sign out
+              </Button>
+            </div>
+          ) : config?.auth_required ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden md:inline-flex"
+              render={<Link href="/login" />}
+            >
+              Sign in
+            </Button>
+          ) : null}
           <ThemeToggle />
           <Sheet>
           <SheetTrigger

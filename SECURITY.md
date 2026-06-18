@@ -16,6 +16,9 @@ Do not open public issues for security-sensitive bugs.
 
 ## Notes
 
-- EchoState has **no authentication** — browse endpoints and submitter IPs are publicly visible by design.
+- **Authentication (beta.20+)** — Optional passkey + enrollment-code auth. Until the first admin is bootstrapped (`echostate auth bootstrap-admin`), the API behaves as before. After users exist, protected routes require a session cookie.
+- Set `ECHOSTATE_AUTH_PEPPER` in production for enrollment-code and session hashing.
+- Set `ECHOSTATE_BREAK_GLASS_SECRET` for CLI recovery codes (`echostate auth issue-admin-code`).
+- Auth defaults (code length/TTL, session lifetime, attempt limits, WebAuthn RP ID/origin) are admin-configurable in **Settings**.
 - Deploy behind a reverse proxy with TLS in production.
 - Configure Gin `TrustedProxies` appropriately when running behind load balancers.

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/notfixingit3/echostate/internal/auth"
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/middleware"
@@ -30,12 +31,13 @@ type scanRunner interface {
 
 // Handler carries dependencies for HTTP handlers.
 type Handler struct {
-	db          *db.DB
-	neo4jClient *db.Neo4jClient
-	config      *config.Config
-	scanner     scanRunner
+	db           *db.DB
+	neo4jClient  *db.Neo4jClient
+	config       *config.Config
+	scanner      scanRunner
 	reportWorker *reports.Worker
 	scanWorker   *scans.Worker
+	auth         *auth.Service
 }
 
 // Register wires routes into the Gin router and returns background workers.
@@ -57,65 +59,87 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 		}
 	}
 
+	h.auth = auth.NewService(database, cfg.FrontendURL)
 	h.scanWorker = scans.New(database, h.scanner, h, config.GetSettings().ScanConcurrency)
 
-	auth := middleware.APIKeyAuth()
+	requireScanner := middleware.RequireAuthRole(h.auth, auth.RoleScanner)
+	requireAdmin := middleware.RequireAuthRole(h.auth, auth.RoleAdmin)
 
 	router.GET("/health", h.health)
 	router.GET("/api/version", h.getVersion)
-	router.POST("/api/scan", auth, rateLimiter.Middleware(), h.createScan)
-	router.GET("/api/scans/:id", h.getScan)
 
-	router.GET("/api/reports", h.listReports)
-	router.POST("/api/reports", auth, h.createReport)
-	router.GET("/api/reports/:id", h.getReport)
-	router.GET("/api/reports/:id/download", h.downloadReport)
+	api := router.Group("/api")
+	api.Use(middleware.SessionAuth(h.auth))
 
-	router.GET("/api/targets", h.listTargets)
-	router.GET("/api/targets/:id", h.getTarget)
-	router.PUT("/api/targets/:id/tags", auth, h.updateTargetTags)
-	router.GET("/api/targets/:id/snapshots", h.listTargetSnapshots)
-	router.GET("/api/targets/:id/screenshots", h.listTargetScreenshots)
+	api.GET("/auth/config", h.authConfig)
+	api.GET("/auth/session", h.authSession)
+	api.POST("/auth/enroll/verify", h.enrollVerify)
+	api.POST("/auth/webauthn/register/begin", h.webauthnRegisterBegin)
+	api.POST("/auth/webauthn/register/finish", h.webauthnRegisterFinish)
+	api.POST("/auth/webauthn/login/begin", h.webauthnLoginBegin)
+	api.POST("/auth/webauthn/login/finish", h.webauthnLoginFinish)
+	api.POST("/auth/logout", h.authLogout)
+	api.POST("/auth/device-code", requireScanner, h.issueDeviceCode)
 
-	router.GET("/api/snapshots", h.listSnapshots)
-	router.GET("/api/snapshots/:id", h.getSnapshot)
-	router.GET("/api/snapshots/:id/diff", h.getSnapshotDiff)
-	router.GET("/api/snapshots/:id/report", h.snapshotReport)
+	api.POST("/scan", requireScanner, rateLimiter.Middleware(), h.createScan)
+	api.GET("/scans/:id", requireScanner, h.getScan)
 
-	router.GET("/api/webhooks", h.listWebhooks)
-	router.POST("/api/webhooks", auth, h.createWebhook)
-	router.PUT("/api/webhooks/:id", auth, h.updateWebhook)
-	router.DELETE("/api/webhooks/:id", auth, h.deleteWebhook)
+	api.GET("/reports", requireScanner, h.listReports)
+	api.POST("/reports", requireScanner, h.createReport)
+	api.GET("/reports/:id", requireScanner, h.getReport)
+	api.GET("/reports/:id/download", requireScanner, h.downloadReport)
 
-	router.GET("/api/settings", h.getSettings)
-	router.PUT("/api/settings", auth, h.updateSettings)
+	api.GET("/targets", requireScanner, h.listTargets)
+	api.GET("/targets/:id", requireScanner, h.getTarget)
+	api.PUT("/targets/:id/tags", requireAdmin, h.updateTargetTags)
+	api.GET("/targets/:id/snapshots", requireScanner, h.listTargetSnapshots)
+	api.GET("/targets/:id/screenshots", requireScanner, h.listTargetScreenshots)
 
-	router.GET("/api/graph", h.getGraph)
+	api.GET("/snapshots", requireScanner, h.listSnapshots)
+	api.GET("/snapshots/:id", requireScanner, h.getSnapshot)
+	api.GET("/snapshots/:id/diff", requireScanner, h.getSnapshotDiff)
+	api.GET("/snapshots/:id/report", requireScanner, h.snapshotReport)
 
-	router.GET("/api/collections", h.listCollections)
-	router.POST("/api/collections", auth, h.createCollection)
-	router.GET("/api/collections/:id", h.getCollection)
-	router.PUT("/api/collections/:id", auth, h.updateCollection)
-	router.DELETE("/api/collections/:id", auth, h.deleteCollection)
-	router.POST("/api/collections/:id/targets", auth, h.addCollectionTarget)
-	router.DELETE("/api/collections/:id/targets/:targetId", auth, h.removeCollectionTarget)
-	router.POST("/api/collections/:id/rescan", auth, h.rescanCollection)
+	api.GET("/webhooks", requireAdmin, h.listWebhooks)
+	api.POST("/webhooks", requireAdmin, h.createWebhook)
+	api.PUT("/webhooks/:id", requireAdmin, h.updateWebhook)
+	api.DELETE("/webhooks/:id", requireAdmin, h.deleteWebhook)
 
-	router.GET("/api/notes", h.listNotes)
-	router.GET("/api/notes/:id", h.getNote)
-	router.POST("/api/notes", auth, h.createNote)
-	router.PUT("/api/notes/:id", auth, h.updateNote)
-	router.POST("/api/notes/:id/archive", auth, h.archiveNote)
-	router.POST("/api/notes/:id/unarchive", auth, h.unarchiveNote)
-	router.POST("/api/notes/:id/trash", auth, h.trashNote)
-	router.POST("/api/notes/:id/restore", auth, h.restoreNote)
-	router.DELETE("/api/notes/:id", auth, h.deleteNote)
+	api.GET("/settings", requireAdmin, h.getSettings)
+	api.PUT("/settings", requireAdmin, h.updateSettings)
 
-	router.GET("/api/graph/views", h.listGraphViews)
-	router.POST("/api/graph/views", auth, h.createGraphView)
-	router.GET("/api/graph/views/:id", h.getGraphView)
-	router.PUT("/api/graph/views/:id", auth, h.updateGraphView)
-	router.DELETE("/api/graph/views/:id", auth, h.deleteGraphView)
+	api.GET("/graph", requireScanner, h.getGraph)
+
+	api.GET("/collections", requireScanner, h.listCollections)
+	api.POST("/collections", requireAdmin, h.createCollection)
+	api.GET("/collections/:id", requireScanner, h.getCollection)
+	api.PUT("/collections/:id", requireAdmin, h.updateCollection)
+	api.DELETE("/collections/:id", requireAdmin, h.deleteCollection)
+	api.POST("/collections/:id/targets", requireAdmin, h.addCollectionTarget)
+	api.DELETE("/collections/:id/targets/:targetId", requireAdmin, h.removeCollectionTarget)
+	api.POST("/collections/:id/rescan", requireAdmin, h.rescanCollection)
+
+	api.GET("/notes", requireScanner, h.listNotes)
+	api.GET("/notes/:id", requireScanner, h.getNote)
+	api.POST("/notes", requireAdmin, h.createNote)
+	api.PUT("/notes/:id", requireAdmin, h.updateNote)
+	api.POST("/notes/:id/archive", requireAdmin, h.archiveNote)
+	api.POST("/notes/:id/unarchive", requireAdmin, h.unarchiveNote)
+	api.POST("/notes/:id/trash", requireAdmin, h.trashNote)
+	api.POST("/notes/:id/restore", requireAdmin, h.restoreNote)
+	api.DELETE("/notes/:id", requireAdmin, h.deleteNote)
+
+	api.GET("/graph/views", requireScanner, h.listGraphViews)
+	api.POST("/graph/views", requireAdmin, h.createGraphView)
+	api.GET("/graph/views/:id", requireScanner, h.getGraphView)
+	api.PUT("/graph/views/:id", requireAdmin, h.updateGraphView)
+	api.DELETE("/graph/views/:id", requireAdmin, h.deleteGraphView)
+
+	api.GET("/users", requireAdmin, h.listUsers)
+	api.POST("/users", requireAdmin, h.createUser)
+	api.POST("/users/:id/codes", requireAdmin, h.issueUserCode)
+	api.GET("/users/:id/credentials", requireScanner, h.listUserCredentials)
+	api.DELETE("/users/:id/credentials/:credId", requireScanner, h.deleteUserCredential)
 
 	return &Workers{
 		Reports:   h.reportWorker,
