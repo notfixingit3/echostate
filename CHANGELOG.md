@@ -6,11 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.17] - 2026-06-17
+
+### Added
+
+- **Target collections** — `target_collections` tables, CRUD API (`/api/collections`), member management, and bulk rescan enqueue; `/collections` UI with watchlist manager.
+- **Graph export** — PNG (canvas snapshot) and SVG (node positions) download buttons on the graph toolbar.
+- **Settings tooltips** — `HelpTip` / `LabelWithHelp` across Settings sections; expanded `help-copy.ts` for collections and export.
+
+### Changed
+
+- **JA3S CI fix** — Removed `dreadl0ck/ja3` / `gopacket` dependency; inline TLS ServerHello parse and JA3S hashing (`tls_server_hello.go`, `ja3s_hash.go`).
+- Graph shows a rescan hint when a target has fewer than two snapshots (temporal history needs multiple scans).
+
+## [0.0.1-beta.16] - 2026-06-17
+
 ### Changed
 
 - Traceroute external vantage label renamed to **External vantage** (no HackerTarget wording in the UI).
-
-## [0.0.1-beta.16] - 2026-06-17
 
 ### Added
 
@@ -199,6 +212,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.17]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.17
 [0.0.1-beta.16]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.16
 [0.0.1-beta.15]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.15
 [0.0.1-beta.14]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.14

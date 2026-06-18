@@ -154,6 +154,24 @@ func Migrate(db *DB) error {
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			UNIQUE (snapshot_id, kind)
 		);
+
+		CREATE TABLE IF NOT EXISTS target_collections (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name TEXT NOT NULL UNIQUE,
+			description TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		CREATE TABLE IF NOT EXISTS target_collection_members (
+			collection_id UUID NOT NULL REFERENCES target_collections(id) ON DELETE CASCADE,
+			target_id UUID NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
+			added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			PRIMARY KEY (collection_id, target_id)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_target_collection_members_target
+			ON target_collection_members(target_id);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

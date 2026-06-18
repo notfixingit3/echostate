@@ -97,6 +97,17 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | G13 | Rules engine on graph changes | ✅ Done | BGP origin/path, RPKI, traceroute drift in `change_details` + alert rules |
 | G14 | Screenshot timeline | ✅ Done | `/api/targets/:id/screenshots`, intel timeline tab |
 | G15 | Wire new intel into graph | ✅ Done | `IntelEvent`/`EnrichmentHit` Neo4j sync, DMARC nodes, `/graph` events panel |
+| G16 | Graph PNG/SVG export | ✅ Done | Canvas toolbar export buttons + `graph-export.ts` |
+
+---
+
+## Platform & workflows
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| — | Target collections | ✅ Done | CRUD API, bulk rescan, `/collections` UI |
+| — | Settings tooltips | ✅ Done | Dense `HelpTip` coverage on Settings page |
+| — | JA3S CI hotfix | ✅ Done | Inline TLS parse; no `gopacket` / `libpcap` on Linux CI |
 
 ---
 
@@ -104,8 +115,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 42 items (core + graph + platform batch) |
+| **Done** | 46 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 2 (agents, OIDC/RBAC) |
 
-**Suggested next picks:** graph PNG export → investigation workflows (collections, saved views) → OIDC/RBAC
+**Suggested next picks:** saved graph views → investigation notes → OIDC/RBAC

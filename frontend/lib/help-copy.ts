@@ -58,6 +58,19 @@ export const HELP_COPY: Record<string, string> = {
   "graph.toolbar.fit": "Fit the full graph into view.",
   "graph.toolbar.reset": "Clear pinned node positions and re-run the layout simulation.",
   "graph.toolbar.fullscreen": "Expand the graph canvas to fullscreen.",
+  "graph.toolbar.export_png":
+    "Download the current canvas view as a PNG image, including zoom and pan state.",
+  "graph.toolbar.export_svg":
+    "Download node positions and edges as a lightweight SVG for reports or slides.",
+  "graph.rescan_hint":
+    "Temporal graph edges are versioned per snapshot. Rescan to accumulate history for the slider and compare modes.",
+
+  "page.collections":
+    "Watchlists of related targets. Add members and queue bulk rescans from one place.",
+  "collections.create": "Name and optional description for a new target collection.",
+  "collections.list": "Select a collection to add or remove targets and queue bulk rescans.",
+  "collections.rescan":
+    "Enqueue an async scan job for every target in the selected collection.",
 
   "intel.cert_expires": "TLS certificate not-after date from the leaf cert.",
   "intel.cert_issuer": "Certificate authority that signed the active TLS certificate.",
@@ -76,17 +89,35 @@ export const HELP_COPY: Record<string, string> = {
   "intel.wp_plugins": "WordPress plugins detected passively from page assets.",
   "intel.wp_themes": "Active WordPress theme slug and version when available.",
 
+  "settings.webhooks":
+    "Outbound Slack, Discord, MS Teams, or Pushover integrations for snapshot diff alerts.",
+  "settings.webhook_url":
+    "Incoming webhook URL from your chat platform. EchoState posts change summaries with target links.",
   "settings.dns_servers":
     "Comma-separated DNS resolvers used by gatherers (default 8.8.8.8, 1.1.1.1).",
+  "settings.pwhois_server": "pWhois server hostname for async client-IP ASN and org enrichment.",
+  "settings.rate_limit": "Maximum API requests per minute per client IP.",
   "settings.scan_concurrency": "Maximum scan jobs processed in parallel by the API worker pool.",
+  "settings.scan_timeouts":
+    "Per-gatherer timeouts in seconds. Increase for slow CT or traceroute targets.",
   "settings.retention":
     "Per-target snapshot keep-N policy. Older snapshots are pruned after each scan.",
   "settings.scheduler":
     "Background job that rescans stale targets on a configurable interval.",
+  "settings.schedule_tags":
+    "Optional comma-separated tag filter. Only matching targets are scheduled for rescan.",
   "settings.api_key": "Optional write API key required for scan and mutation endpoints.",
   "settings.shodan_key": "Shodan API key for host enrichment after each snapshot.",
+  "settings.censys_keys": "Censys API ID and secret for certificate and host correlation.",
+  "settings.hibp_key": "Have I Been Pwned API key for breach checks on WHOIS contact emails.",
+  "settings.riskiq_keys":
+    "RiskIQ / PassiveTotal credentials for passive DNS enrichment on scanned hosts.",
   "settings.alert_rules":
     "Filter which change_details events trigger webhook notifications.",
+  "settings.alert_match_types":
+    "Comma-separated change types. Leave empty to match all severities above the minimum.",
+  "settings.alert_webhooks":
+    "Limit delivery to specific integrations. Empty means all enabled webhooks.",
 
   "reports.status": "queued, running, completed, or failed PDF generation state.",
   "reports.snapshot": "Snapshot used as the source data for this report.",

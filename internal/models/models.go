@@ -212,6 +212,45 @@ type ReportSummary struct {
 	CompletedAt *time.Time   `json:"completed_at,omitempty"`
 }
 
+type TargetCollectionSummary struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	TargetCount int       `json:"target_count"`
+}
+
+type TargetCollectionDetail struct {
+	TargetCollectionSummary
+	Targets []TargetSummary `json:"targets"`
+}
+
+type CreateTargetCollectionRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+}
+
+type UpdateTargetCollectionRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+}
+
+type CollectionTargetRequest struct {
+	TargetID uuid.UUID `json:"target_id" binding:"required"`
+}
+
+type CollectionRescanJob struct {
+	TargetID uuid.UUID `json:"target_id"`
+	Host     string    `json:"host"`
+	JobID    uuid.UUID `json:"job_id"`
+}
+
+type CollectionRescanResponse struct {
+	CollectionID uuid.UUID             `json:"collection_id"`
+	Jobs         []CollectionRescanJob `json:"jobs"`
+}
+
 type Webhook struct {
 	ID        uuid.UUID      `json:"id"`
 	Name      string         `json:"name"`

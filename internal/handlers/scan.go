@@ -92,6 +92,15 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 
 	router.GET("/api/graph", h.getGraph)
 
+	router.GET("/api/collections", h.listCollections)
+	router.POST("/api/collections", auth, h.createCollection)
+	router.GET("/api/collections/:id", h.getCollection)
+	router.PUT("/api/collections/:id", auth, h.updateCollection)
+	router.DELETE("/api/collections/:id", auth, h.deleteCollection)
+	router.POST("/api/collections/:id/targets", auth, h.addCollectionTarget)
+	router.DELETE("/api/collections/:id/targets/:targetId", auth, h.removeCollectionTarget)
+	router.POST("/api/collections/:id/rescan", auth, h.rescanCollection)
+
 	return &Workers{
 		Reports:   h.reportWorker,
 		Scans:     h.scanWorker,
