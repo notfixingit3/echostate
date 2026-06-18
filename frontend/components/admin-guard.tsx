@@ -16,8 +16,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
         <p className="text-muted-foreground">Admin access required.</p>
-        <Button variant="link" className="mt-2" render={<Link href="/settings/account" />}>
-          Go to Account & passkeys
+        <Button variant="link" className="mt-2" render={<Link href="/profile" />}>
+          Go to Profile
         </Button>
       </div>
     )

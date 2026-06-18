@@ -17,7 +17,7 @@ import { useAuth } from "@/components/auth-provider"
 import { cn } from "@/lib/utils"
 import { LogOutIcon, MenuIcon } from "lucide-react"
 
-const navLinks = [
+const appNavLinks = [
   { href: "/", label: "Home" },
   { href: "/targets", label: "Targets" },
   { href: "/collections", label: "Collections" },
@@ -25,12 +25,16 @@ const navLinks = [
   { href: "/snapshots", label: "Snapshots" },
   { href: "/graph", label: "Graph" },
   { href: "/reports", label: "Reports" },
-  { href: "/settings", label: "Admin" },
-]
+] as const
 
 export function Nav() {
   const pathname = usePathname()
   const { user, config, signOut } = useAuth()
+
+  const navLinks = [
+    ...appNavLinks,
+    ...(user?.role === "admin" ? [{ href: "/admin", label: "Admin" as const }] : []),
+  ]
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/70">
@@ -70,11 +74,16 @@ export function Nav() {
           </nav>
           {user ? (
             <div className="hidden items-center gap-2 md:flex">
-              <span className="max-w-32 truncate text-xs text-muted-foreground">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "max-w-40 truncate",
+                  pathname.startsWith("/profile") && "bg-primary/10 text-primary"
+                )}
+                render={<Link href="/profile" />}
+              >
                 {user.display_name}
-              </span>
-              <Button variant="ghost" size="sm" render={<Link href="/settings/account" />}>
-                Profile
               </Button>
               <Button variant="ghost" size="sm" onClick={() => void signOut()}>
                 <LogOutIcon data-icon="inline-start" />
@@ -130,14 +139,22 @@ export function Nav() {
               {user ? (
                 <>
                   <div className="my-2 border-t border-border/60" />
-                  <p className="px-3 py-1 text-xs text-muted-foreground">{user.display_name}</p>
                   <Button
-                    variant={pathname.startsWith("/settings/account") ? "secondary" : "ghost"}
+                    variant={pathname.startsWith("/profile") ? "secondary" : "ghost"}
                     className="justify-start"
-                    render={<Link href="/settings/account" />}
+                    render={<Link href="/profile" />}
                   >
-                    Profile
+                    {user.display_name}
                   </Button>
+                  {user.role === "admin" ? (
+                    <Button
+                      variant={pathname.startsWith("/admin") ? "secondary" : "ghost"}
+                      className="justify-start"
+                      render={<Link href="/admin" />}
+                    >
+                      Administration
+                    </Button>
+                  ) : null}
                   <Button
                     variant="ghost"
                     className="justify-start"

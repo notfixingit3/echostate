@@ -9,9 +9,9 @@ export const HELP_COPY: Record<string, string> = {
     "Interactive relationship maps synced from Neo4j. Filter by target and scrub snapshot history to see how topology changed.",
   "page.settings":
     "Runtime configuration for DNS, enrichment keys, scan workers, retention, alert rules, and outbound webhooks.",
-  "page.admin":
-    "Administration hub: account passkeys, integrations, system tuning, authentication defaults, and user management.",
-  "settings.nav.profile": "Your profile: timezone preferences, passkeys, and registered devices.",
+  "page.profile": "Your personal settings: timezone, passkeys, and registered devices.",
+  "page.administration":
+    "Server-wide configuration: integrations, system tuning, authentication defaults, and user management.",
   "settings.nav.integrations": "Slack, Discord, Teams, and Pushover webhook integrations.",
   "settings.nav.system": "DNS, scan workers, scheduler, retention, enrichment API keys, and alert rules.",
   "settings.nav.authentication": "Passkey enrollment defaults, session lifetime, and WebAuthn relying party settings.",

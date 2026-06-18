@@ -1,7 +1,5 @@
-"use client"
+import { redirect } from "next/navigation"
 
-import { AccountProfilePanel } from "@/components/account-profile"
-
-export default function AccountSettingsPage() {
-  return <AccountProfilePanel />
+export default function LegacyAccountSettingsPage() {
+  redirect("/profile")
 }
