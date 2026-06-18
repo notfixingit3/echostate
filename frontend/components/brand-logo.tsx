@@ -67,7 +67,7 @@ export function BrandLogo({
 
   return (
     <svg
-      viewBox="0 0 320 64"
+      viewBox="0 0 280 64"
       role="img"
       aria-label={title}
       className={cn("h-auto w-auto", className)}
@@ -84,18 +84,7 @@ export function BrandLogo({
         fontWeight="600"
         letterSpacing="-0.02em"
       >
-        Echo
-      </text>
-      <text
-        x="152"
-        y="41"
-        className="fill-foreground font-heading"
-        fontSize="28"
-        fontWeight="500"
-        opacity="0.82"
-        letterSpacing="-0.02em"
-      >
-        State
+        EchoState
       </text>
     </svg>
   )

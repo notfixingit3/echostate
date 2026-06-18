@@ -17,6 +17,7 @@ import (
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/reports"
 	"github.com/notfixingit3/echostate/internal/scanner"
+	"github.com/notfixingit3/echostate/internal/version"
 	"github.com/notfixingit3/echostate/internal/webhooks"
 )
 
@@ -67,6 +68,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	router.GET("/api/targets/:id", h.getTarget)
 	router.PUT("/api/targets/:id/tags", h.updateTargetTags)
 	router.GET("/api/targets/:id/snapshots", h.listTargetSnapshots)
+	router.GET("/api/targets/:id/screenshots", h.listTargetScreenshots)
 
 	router.GET("/api/snapshots", h.listSnapshots)
 	router.GET("/api/snapshots/:id", h.getSnapshot)
@@ -81,11 +83,17 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	router.GET("/api/settings", h.getSettings)
 	router.PUT("/api/settings", h.updateSettings)
 
+	router.GET("/api/graph", h.getGraph)
+
 	return h.worker
 }
 
 func (h *Handler) health(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "env": h.config.Env})
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"env":     h.config.Env,
+		"version": version.Version,
+	})
 }
 
 func (h *Handler) createScan(c *gin.Context) {
@@ -95,7 +103,7 @@ func (h *Handler) createScan(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 100*time.Second)
 	defer cancel()
 
 	result, err := h.scanner.Run(ctx, req.Host)

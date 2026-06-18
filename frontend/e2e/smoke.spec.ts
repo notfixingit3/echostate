@@ -10,28 +10,16 @@ test.describe("Smoke", () => {
     await expect(page.getByTestId("nav-logo")).toBeVisible()
     await expect(page.getByTestId("theme-toggle")).toBeVisible()
 
-    for (const label of ["Home", "Targets", "Snapshots", "Reports"]) {
+    for (const label of ["Home", "Targets", "Snapshots", "Graph", "Reports"]) {
       await expect(
         page.getByTestId(`nav-link-${label.toLowerCase()}`)
       ).toBeVisible()
     }
-  })
 
-  test("clicking a target opens the target detail page", async ({ page }) => {
-    await page.goto("/targets")
-
-    const firstRow = page.locator('[data-testid^="target-row-"]').first()
-    await expect(firstRow).toBeVisible()
-
-    const testId = await firstRow.getAttribute("data-testid")
-    const targetId = testId?.replace("target-row-", "")
-    expect(targetId).toBeTruthy()
-
-    await firstRow.click()
-    await expect(page).toHaveURL(`/targets/${targetId}`)
-    await expect(
-      page.getByRole("heading", { name: "Target detail" })
-    ).toBeVisible()
+    await expect(page.getByTestId("footer")).toBeVisible()
+    await expect(page.getByTestId("footer-version")).toHaveText(/v0\.0\.1-beta\.\d+/)
+    await expect(page.getByTestId("scan-submit-button")).toBeVisible()
+    await expect(page.getByTestId("scan-and-report-button")).toBeVisible()
   })
 
   test("scan submission shows result card with snapshot link", async ({
@@ -45,7 +33,7 @@ test.describe("Smoke", () => {
     await page.getByTestId("scan-submit-button").click()
 
     const resultCard = page.getByTestId("scan-result-card")
-    await expect(resultCard).toBeVisible()
+    await expect(resultCard).toBeVisible({ timeout: 120_000 })
 
     const snapshotId = page.getByTestId("scan-result-snapshot-id")
     await expect(snapshotId).toHaveText(UUID_REGEX)
@@ -54,6 +42,24 @@ test.describe("Smoke", () => {
     const href = await viewLink.getAttribute("href")
     const id = await snapshotId.textContent()
     expect(href).toBe(`/snapshot?id=${id}`)
+  })
+
+  test("clicking a target opens the target detail page", async ({ page }) => {
+    await page.goto("/targets")
+
+    const firstRow = page.locator('[data-testid^="target-row-"]').first()
+    await expect(firstRow).toBeVisible()
+
+    const testId = await firstRow.getAttribute("data-testid")
+    const targetId = testId?.replace("target-row-", "")
+    expect(targetId).toBeTruthy()
+
+    await firstRow.click()
+    await expect(page).toHaveURL(`/target?id=${targetId}`)
+    await expect(
+      page.getByRole("heading", { name: "Target detail" })
+    ).toBeVisible()
+    await expect(page.getByTestId("target-rescan-button")).toBeVisible()
   })
 
   test("targets page renders table", async ({ page }) => {

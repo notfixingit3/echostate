@@ -11,7 +11,7 @@ test.describe("Report flow", () => {
     await page.getByTestId("scan-submit-button").click()
 
     const resultCard = page.getByTestId("scan-result-card")
-    await expect(resultCard).toBeVisible()
+    await expect(resultCard).toBeVisible({ timeout: 120_000 })
 
     const snapshotId = await page
       .getByTestId("scan-result-snapshot-id")

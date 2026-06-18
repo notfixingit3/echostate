@@ -72,6 +72,9 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 					"asn":       asnVal,
 					"target_id": target.ID.String(),
 				})
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 		
@@ -88,10 +91,84 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 					"ip":        ipVal,
 					"target_id": target.ID.String(),
 				})
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 
-		return nil, err
+		if tlsMap, ok := snapshot.RawData["tls"].(map[string]any); ok {
+			if jarm, ok := tlsMap["jarm"].(string); ok && jarm != "" {
+				jarmQuery := `
+					MERGE (j:JARM {hash: $hash})
+					WITH j
+					MATCH (t:Target {id: $target_id})
+					MERGE (t)-[:HAS_JARM]->(j)
+				`
+				_, err = tx.Run(ctx, jarmQuery, map[string]any{
+					"hash":      jarm,
+					"target_id": target.ID.String(),
+				})
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			if issuer, ok := tlsMap["issuer"].(string); ok && issuer != "" {
+				issuerQuery := `
+					MERGE (c:CertIssuer {name: $name})
+					WITH c
+					MATCH (t:Target {id: $target_id})
+					MERGE (t)-[:SIGNED_BY]->(c)
+				`
+				_, err = tx.Run(ctx, issuerQuery, map[string]any{
+					"name":      issuer,
+					"target_id": target.ID.String(),
+				})
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		if favMap, ok := snapshot.RawData["favicon"].(map[string]any); ok {
+			if mmh3, ok := favMap["mmh3"].(string); ok && mmh3 != "" {
+				favQuery := `
+					MERGE (f:Favicon {mmh3: $mmh3})
+					WITH f
+					MATCH (t:Target {id: $target_id})
+					MERGE (t)-[:HAS_FAVICON]->(f)
+				`
+				_, err = tx.Run(ctx, favQuery, map[string]any{
+					"mmh3":      mmh3,
+					"target_id": target.ID.String(),
+				})
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		if err = syncBGPGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+			return nil, err
+		}
+		if err = syncPeeringGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+			return nil, err
+		}
+		if err = syncCTGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+			return nil, err
+		}
+		if err = syncDNSGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+			return nil, err
+		}
+		if err = syncTracerouteGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+			return nil, err
+		}
+		if err = syncCertSANGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	})
 
 	return err

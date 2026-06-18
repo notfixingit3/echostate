@@ -61,11 +61,20 @@ Thank you for your interest in contributing.
 
 ## Releases
 
-Releases are tagged on `main` (or `dev` for betas) with a `v` prefix, e.g. `v0.0.1-beta.1`.
+The canonical version lives in the root `VERSION` file. Before tagging, bump that file and sync the frontend manifest:
 
 ```bash
-git tag -a v0.0.1-beta.1 -m "v0.0.1-beta.1"
-git push origin v0.0.1-beta.1
+echo "0.0.1-beta.10" > VERSION
+./scripts/sync-version.sh
+```
+
+Releases are tagged on `main` (or `dev` for betas) with a `v` prefix, e.g. `v0.0.1-beta.10`.
+
+```bash
+git tag -a v0.0.1-beta.10 -m "v0.0.1-beta.10"
+git push origin v0.0.1-beta.10
 ```
 
 Tag pushes trigger GitHub Release binaries and GHCR image builds via Actions.
+
+Update `TODO.md` and `CHANGELOG.md` when completing roadmap items or shipping user-facing changes.

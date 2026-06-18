@@ -49,6 +49,16 @@ func enrichRouting(ctx context.Context, ip, originASN, prefix string) (map[strin
 		appendNote(routing, note)
 	}
 
+	resource := ip
+	if prefix != "" {
+		resource = prefix
+	}
+	if paths, err := fetchASPathsFunc(ctx, resource); err == nil && len(paths) > 0 {
+		routing["as_paths"] = paths
+	} else if err != nil {
+		appendNote(routing, "as-path lookup failed: "+err.Error())
+	}
+
 	if prefix != "" {
 		if rpki, err := ripeStat(ctx, "rpki-validation", prefix); err == nil {
 			routing["rpki"] = rpki["data"]

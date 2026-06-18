@@ -2,6 +2,7 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
+ARG VERSION=dev
 RUN apk add --no-cache git ca-certificates
 
 COPY go.mod go.sum ./
@@ -9,11 +10,13 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o echostate ./main.go
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s -X github.com/notfixingit3/echostate/internal/version.Version=${VERSION}" \
+    -o echostate ./main.go
 
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates chromium
+RUN apk add --no-cache ca-certificates chromium traceroute
 
 WORKDIR /app
 

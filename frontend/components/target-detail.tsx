@@ -20,8 +20,9 @@ import { TargetSnapshotsChart } from "@/components/target-snapshots-chart"
 import { TargetTags } from "@/components/target-tags"
 import { CountryFlag } from "@/components/country-flag"
 import { Button } from "@/components/ui/button"
+import { RescanTargetButton } from "@/components/rescan-target-button"
 import { extractIntel } from "@/lib/intel"
-import type { TargetDetail } from "@/lib/types"
+import type { ScanResponse, TargetDetail } from "@/lib/types"
 import {
   GlobeIcon,
   CalendarIcon,
@@ -31,7 +32,15 @@ import {
   AlertCircleIcon,
 } from "lucide-react"
 
-export function TargetDetailView({ target }: { target: TargetDetail }) {
+export function TargetDetailView({
+  target,
+  refreshKey = 0,
+  onRescanned,
+}: {
+  target: TargetDetail
+  refreshKey?: number
+  onRescanned?: (result: ScanResponse) => void | Promise<void>
+}) {
   const latest = target.latest_snapshot
   const intel = latest
     ? extractIntel(latest.raw_data, latest)
@@ -138,26 +147,29 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
             </span>
           </div>
         </CardContent>
-        {latest ? (
-          <CardFooter className="flex flex-wrap gap-3 border-t border-border/50 bg-muted/10">
-            <Button
-              render={<Link href={`/snapshot?id=${latest.id}`} />}
-              nativeButton={false}
-              data-testid="target-view-latest-snapshot"
-            >
-              <ExternalLinkIcon data-icon="inline-start" />
-              View latest snapshot
-            </Button>
-            <Button
-              variant="outline"
-              render={<Link href={`/targets/${target.id}/snapshots`} />}
-              nativeButton={false}
-            >
-              <HistoryIcon data-icon="inline-start" />
-              All snapshots
-            </Button>
-          </CardFooter>
-        ) : null}
+        <CardFooter className="flex flex-wrap gap-3 border-t border-border/50 bg-muted/10">
+          <RescanTargetButton host={target.host} onSuccess={onRescanned} />
+          {latest ? (
+            <>
+              <Button
+                render={<Link href={`/snapshot?id=${latest.id}`} />}
+                nativeButton={false}
+                data-testid="target-view-latest-snapshot"
+              >
+                <ExternalLinkIcon data-icon="inline-start" />
+                View latest snapshot
+              </Button>
+              <Button
+                variant="outline"
+                render={<Link href={`/target/snapshots?id=${target.id}`} />}
+                nativeButton={false}
+              >
+                <HistoryIcon data-icon="inline-start" />
+                All snapshots
+              </Button>
+            </>
+          ) : null}
+        </CardFooter>
       </Card>
 
       {latest ? (
@@ -176,7 +188,9 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
           </div>
 
           <IntelPanels
+            key={`intel-${refreshKey}`}
             snapshotId={latest.id}
+            targetId={target.id}
             raw={latest.raw_data}
             changes={latest.changes}
             pwhois={latest.pwhois_data}
@@ -187,11 +201,9 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <RadarIcon className="size-8 text-muted-foreground" />
             <p className="text-muted-foreground">
-              No snapshots yet for this target. Run a scan from the home page.
+              No snapshots yet for this target. Run a rescan to collect intelligence.
             </p>
-            <Button render={<Link href="/" />} nativeButton={false}>
-              Start a scan
-            </Button>
+            <RescanTargetButton host={target.host} onSuccess={onRescanned} />
           </CardContent>
         </Card>
       )}
@@ -200,8 +212,14 @@ export function TargetDetailView({ target }: { target: TargetDetail }) {
         <h2 className="font-heading text-lg font-semibold tracking-tight">
           Snapshot history
         </h2>
-        <TargetSnapshotsChart targetId={target.id} />
-        <TargetSnapshotsTable targetId={target.id} />
+        <TargetSnapshotsChart
+          key={`chart-${refreshKey}`}
+          targetId={target.id}
+        />
+        <TargetSnapshotsTable
+          key={`table-${refreshKey}`}
+          targetId={target.id}
+        />
       </div>
     </div>
   )

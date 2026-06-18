@@ -3,11 +3,7 @@ import { Suspense } from "react"
 import { TargetDetailPageContent } from "@/components/target-detail-page"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export function generateStaticParams() {
-  return [{ id: "placeholder" }]
-}
-
-export default function TargetDetailPage() {
+export default function TargetPage() {
   return (
     <Suspense
       fallback={

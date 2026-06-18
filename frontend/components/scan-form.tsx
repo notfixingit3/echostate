@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -21,24 +22,28 @@ import type { ScanResponse, Report } from "@/lib/types"
 import { Loader2Icon, ScanIcon, AlertCircleIcon, CheckCircleIcon, FileTextIcon } from "lucide-react"
 
 export function ScanForm() {
+  const searchParams = useSearchParams()
   const [host, setHost] = React.useState("")
+
+  React.useEffect(() => {
+    const preset = searchParams.get("scan")?.trim()
+    if (preset) {
+      setHost(preset)
+    }
+  }, [searchParams])
   const [result, setResult] = React.useState<ScanResponse | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
   const [report, setReport] = React.useState<Report | null>(null)
   const [reportError, setReportError] = React.useState<string | null>(null)
   const [isCreatingReport, setIsCreatingReport] = React.useState(false)
+  const [withReport, setWithReport] = React.useState(false)
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const busy = isLoading || isCreatingReport
 
-    const trimmedHost = host.trim()
-    if (!trimmedHost) {
-      setError("Please enter a host, IP address, or URL.")
-      return
-    }
-
+  async function runScan(trimmedHost: string, queueReport: boolean) {
     setIsLoading(true)
+    setWithReport(queueReport)
     setError(null)
     setResult(null)
     setReport(null)
@@ -48,6 +53,24 @@ export function ScanForm() {
     try {
       const scanResult = await scanHost(trimmedHost)
       setResult(scanResult)
+
+      if (queueReport) {
+        setIsCreatingReport(true)
+        try {
+          const created = await createReport(scanResult.snapshot_id)
+          setReport(created)
+        } catch (err) {
+          if (err instanceof ApiError) {
+            setReportError(err.message)
+          } else if (err instanceof Error) {
+            setReportError(err.message)
+          } else {
+            setReportError("Failed to create report")
+          }
+        } finally {
+          setIsCreatingReport(false)
+        }
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 429 && typeof err.retryAfter === "number") {
         setError(`Too many scans. Try again in ${err.retryAfter} seconds.`)
@@ -62,7 +85,30 @@ export function ScanForm() {
       setError("Something went wrong. Please try again.")
     } finally {
       setIsLoading(false)
+      setWithReport(false)
     }
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const trimmedHost = host.trim()
+    if (!trimmedHost) {
+      setError("Please enter a host, IP address, or URL.")
+      return
+    }
+
+    await runScan(trimmedHost, false)
+  }
+
+  const handleScanAndReport = async () => {
+    const trimmedHost = host.trim()
+    if (!trimmedHost) {
+      setError("Please enter a host, IP address, or URL.")
+      return
+    }
+
+    await runScan(trimmedHost, true)
   }
 
   const handleGenerateReport = async () => {
@@ -132,30 +178,55 @@ export function ScanForm() {
             placeholder="example.com, 8.8.8.8, or https://example.com"
             value={host}
             onChange={(event) => setHost(event.target.value)}
-            disabled={isLoading}
+            disabled={busy}
             aria-invalid={!!error}
             data-testid="scan-host-input"
           />
         </div>
 
-        <Button
-          type="submit"
-          disabled={isLoading || !host.trim()}
-          className="self-start"
-          data-testid="scan-submit-button"
-        >
-          {isLoading ? (
-            <>
-              <Loader2Icon data-icon="inline-start" className="animate-spin" />
-              Scanning…
-            </>
-          ) : (
-            <>
-              <ScanIcon data-icon="inline-start" />
-              Start Scan
-            </>
-          )}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="submit"
+            disabled={busy || !host.trim()}
+            data-testid="scan-submit-button"
+          >
+            {isLoading && !withReport ? (
+              <>
+                <Loader2Icon data-icon="inline-start" className="animate-spin" />
+                Scanning…
+              </>
+            ) : (
+              <>
+                <ScanIcon data-icon="inline-start" />
+                Start Scan
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={busy || !host.trim()}
+            onClick={() => void handleScanAndReport()}
+            data-testid="scan-and-report-button"
+          >
+            {isLoading && withReport ? (
+              <>
+                <Loader2Icon data-icon="inline-start" className="animate-spin" />
+                Scanning…
+              </>
+            ) : isCreatingReport ? (
+              <>
+                <Loader2Icon data-icon="inline-start" className="animate-spin" />
+                Building PDF…
+              </>
+            ) : (
+              <>
+                <FileTextIcon data-icon="inline-start" />
+                Scan & Report
+              </>
+            )}
+          </Button>
+        </div>
       </form>
 
       {error && (
@@ -240,7 +311,7 @@ export function ScanForm() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  render={<Link href={`/targets/${result.target_id}`} />}
+                  render={<Link href={`/target?id=${result.target_id}`} />}
                   nativeButton={false}
                   data-testid="scan-result-target-link"
                 >

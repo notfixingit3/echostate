@@ -6,19 +6,21 @@
 
 EchoState is a passive reconnaissance platform: a Go API plus Next.js web UI for scanning hosts, tracking changes over time, and downloading PDF reports.
 
-Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certificate, and webpage intelligence concurrently. Snapshots are never deleted — rescans highlight diffs. Submitter IPs are enriched asynchronously via [pWhois](https://pwhois.org/).
+Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certificate, traceroute, certificate transparency, and webpage intelligence concurrently. Snapshots are never deleted — rescans highlight diffs. Submitter IPs are enriched asynchronously via [pWhois](https://pwhois.org/).
 
 ## Features
 
-- **Passive recon** — WHOIS, Team Cymru ASN/BGP (with RIPEstat hijack-risk heuristics), DNS, TLS + JARM, favicon MMH3, robots/sitemap crawl, cloud bucket hints, HTTP security headers, tech-stack fingerprinting, and headless Chrome web scraping.
-- **Web UI** — Scan form, target detail with tags, snapshot browser, side-by-side raw diffs, settings, and report downloads.
+- **Passive recon** — WHOIS, Team Cymru ASN/BGP (RIPEstat hijack-risk heuristics, AS-path enrichment, PeeringDB IX data), DNS, TLS + JARM, crt.sh subdomain discovery, multi-vantage traceroute (local + HackerTarget), favicon MMH3, robots/sitemap crawl, cloud bucket hints, HTTP security headers and full response headers from the final page load, tech-stack fingerprinting, headless Chrome web scraping, and JPEG screenshot thumbnails.
+- **Web UI** — Scan form, target detail with tags and rescan, intel tabs (WHOIS, ASN, DNS, TLS, Web, Favicon, Crawl, Storage, CT, Traceroute, Screenshots, Submitter), snapshot browser, side-by-side raw diffs, settings, and report downloads. Light mode default; version shown in footer.
 - **Historical tracking** — Snapshots persist; identical rescans update `last_seen` and record field-level changes.
 - **PDF reports** — Async worker renders HTML → PDF via headless Chrome.
 - **IP enrichment** — pWhois worker enriches submitter IPs (org, ASN, geo).
 - **Notifications** — Slack, Discord, MS Teams webhooks, and Pushover mobile alerts on snapshot changes.
 - **Settings** — Configure DNS resolvers, pWhois server, and global scan rate limit from the UI.
-- **Neo4j graph** — Optional relationship sync for infrastructure linking (Compose included).
+- **Neo4j graph** — Relationship sync on scan plus interactive `/graph` UI with infra, CT, DNS, cert SAN, BGP, traceroute, and peering views; route diff, shared hops, and infra clusters.
 - **Containerized** — Docker Compose: API, frontend, PostgreSQL, browserless Chrome, Neo4j.
+
+> **Production note:** EchoState has **no authentication**. Browse endpoints and submitter IPs are publicly visible. Deploy behind a reverse proxy with TLS and network access controls. See [SECURITY.md](SECURITY.md).
 
 ## Quick Start
 
@@ -42,6 +44,7 @@ The UI proxies `/api` to the Go backend inside Docker — no CORS setup required
 
 ```bash
 curl http://localhost:8080/health
+# {"status":"ok","env":"development","version":"0.0.1-beta.10"}
 ```
 
 ### Scan a target
@@ -52,7 +55,9 @@ curl -X POST http://localhost:8080/api/scan \
   -d '{"host":"example.com"}'
 ```
 
-Returns a snapshot with `raw_data` containing `whois`, `asn`, `dns`, `tls`, `web`, and any `errors`.
+Returns a snapshot with `raw_data` containing `whois`, `asn`, `dns`, `tls`, `web` (title, final URL, `header_url`, `headers`, `security_headers`, `tech_stack`), `ct` (crt.sh subdomains), `traceroute` (multi-vantage hops), `screenshot` (JPEG thumbnail), `favicon`, `crawl`, `storage`, and any `errors`.
+
+Rescanning a target uses the same endpoint — there is no separate rescan API.
 
 ### Browse & manage
 
@@ -62,14 +67,17 @@ Returns a snapshot with `raw_data` containing `whois`, `asn`, `dns`, `tls`, `web
 | `GET /api/targets/:id` | Target detail + latest snapshot |
 | `PUT /api/targets/:id/tags` | Update target tags |
 | `GET /api/targets/:id/snapshots` | Snapshots for a target |
+| `GET /api/targets/:id/screenshots` | Screenshot timeline (base64 JPEG thumbnails) |
 | `GET /api/snapshots` | All snapshots (`target_id` filter) |
 | `GET /api/snapshots/:id` | Full snapshot with pWhois data |
 | `GET /api/snapshots/:id/diff` | Raw JSON diff vs previous snapshot |
+| `GET /api/snapshots/:id/report` | Queue or fetch report for a snapshot |
 | `GET /api/reports` | Report list (`status`, `snapshot_id`) |
 | `POST /api/reports` | Queue PDF (`{"snapshot_id":"..."}`) |
 | `GET /api/reports/:id/download` | Download completed PDF |
 | `GET/POST/PUT/DELETE /api/webhooks` | Webhook management |
 | `GET/PUT /api/settings` | System settings (DNS, pWhois, rate limit) |
+| `GET /api/graph` | Infrastructure graph (`?target_id=` optional; `?view=` = `infra`, `ct`, `dns`, `cert`, `bgp`, `traceroute`, `peering`) |
 
 ## Development
 
@@ -118,14 +126,15 @@ echostate/
 ├── main.go                 # Entry point, workers, HTTP server
 ├── internal/
 │   ├── config/             # Environment + runtime settings
-│   ├── db/                 # PostgreSQL migrations + Neo4j client
-│   ├── handlers/           # Gin routes (scan, browse, reports, settings)
+│   ├── db/                 # PostgreSQL migrations + Neo4j graph sync
+│   ├── handlers/           # Gin routes (scan, browse, graph, reports, settings)
 │   ├── middleware/         # CORS, rate limiting
 │   ├── models/             # Domain types
 │   ├── pwhois/             # Async IP enrichment worker
 │   ├── reports/            # Async PDF worker
-│   ├── scanner/            # WHOIS, ASN, DNS, TLS, web gatherers
-│   ├── webhooks/           # Snapshot notification dispatcher
+│   ├── scanner/            # WHOIS, ASN, DNS, TLS, CT, traceroute, favicon, crawl, storage, web, screenshot gatherers
+│   ├── version/            # Build-time version injection
+│   ├── webhooks/           # Snapshot notification dispatcher (Slack, Discord, Teams, Pushover)
 │   └── pdf/                # Report HTML renderer
 └── frontend/               # Next.js static export + nginx
 ```
@@ -138,6 +147,8 @@ Tagged releases (`v*`) trigger:
 - **GHCR images** — `ghcr.io/notfixingit3/echostate` (API) and `ghcr.io/notfixingit3/echostate-frontend`
 
 Pre-release tags containing `beta`, `alpha`, or `rc` are marked as GitHub pre-releases.
+
+Bump the root `VERSION` file and run `./scripts/sync-version.sh` before tagging. Set `ECHOSTATE_VERSION` in `.env` for local Docker builds to match.
 
 ## License
 

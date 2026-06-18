@@ -150,12 +150,16 @@ func mockGatherer(key string, value map[string]any, err error) Gatherer {
 	}
 }
 
+func mockTimedGatherer(key string, value map[string]any, err error) timedGatherer {
+	return timedGatherer{timeout: defaultGathererTimeout, fn: mockGatherer(key, value, err)}
+}
+
 func TestRun_SuccessfulGatherer(t *testing.T) {
 	t.Parallel()
 
 	s := &Scanner{
-		gatherers: []Gatherer{
-			mockGatherer("whois", map[string]any{"domain": "test.com"}, nil),
+		gatherers: []timedGatherer{
+			mockTimedGatherer("whois", map[string]any{"domain": "test.com"}, nil),
 		},
 	}
 
@@ -177,8 +181,8 @@ func TestRun_FailingGatherer(t *testing.T) {
 	t.Parallel()
 
 	s := &Scanner{
-		gatherers: []Gatherer{
-			mockGatherer("whois", nil, errors.New("connection refused")),
+		gatherers: []timedGatherer{
+			mockTimedGatherer("whois", nil, errors.New("connection refused")),
 		},
 	}
 
@@ -200,10 +204,10 @@ func TestRun_MultipleGatherersAggregate(t *testing.T) {
 	t.Parallel()
 
 	s := &Scanner{
-		gatherers: []Gatherer{
-			mockGatherer("whois", map[string]any{"domain": "test.com"}, nil),
-			mockGatherer("asn", map[string]any{"asn": "15169"}, nil),
-			mockGatherer("web", map[string]any{"title": "Test"}, nil),
+		gatherers: []timedGatherer{
+			mockTimedGatherer("whois", map[string]any{"domain": "test.com"}, nil),
+			mockTimedGatherer("asn", map[string]any{"asn": "15169"}, nil),
+			mockTimedGatherer("web", map[string]any{"title": "Test"}, nil),
 		},
 	}
 
@@ -228,10 +232,10 @@ func TestRun_MixedSuccessAndFailure(t *testing.T) {
 	t.Parallel()
 
 	s := &Scanner{
-		gatherers: []Gatherer{
-			mockGatherer("whois", map[string]any{"domain": "test.com"}, nil),
-			mockGatherer("asn", nil, errors.New("dns timeout")),
-			mockGatherer("web", map[string]any{"title": "Test"}, nil),
+		gatherers: []timedGatherer{
+			mockTimedGatherer("whois", map[string]any{"domain": "test.com"}, nil),
+			mockTimedGatherer("asn", nil, errors.New("dns timeout")),
+			mockTimedGatherer("web", map[string]any{"title": "Test"}, nil),
 		},
 	}
 
@@ -265,7 +269,7 @@ func TestRun_ContextCancellation(t *testing.T) {
 	}
 
 	s := &Scanner{
-		gatherers: []Gatherer{blocking},
+		gatherers: []timedGatherer{{timeout: defaultGathererTimeout, fn: blocking}},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -298,7 +302,7 @@ func TestRun_ContextTimeout(t *testing.T) {
 	}
 
 	s := &Scanner{
-		gatherers: []Gatherer{sleepy},
+		gatherers: []timedGatherer{{timeout: defaultGathererTimeout, fn: sleepy}},
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -321,8 +325,8 @@ func TestRun_FailingGathererMergesPartialData(t *testing.T) {
 	t.Parallel()
 
 	s := &Scanner{
-		gatherers: []Gatherer{
-			mockGatherer("whois", map[string]any{"domain": "partial.com"}, errors.New("partial failure")),
+		gatherers: []timedGatherer{
+			mockTimedGatherer("whois", map[string]any{"domain": "partial.com"}, errors.New("partial failure")),
 		},
 	}
 
@@ -347,7 +351,7 @@ func TestRun_EmptyGatherers(t *testing.T) {
 	t.Parallel()
 
 	s := &Scanner{
-		gatherers: []Gatherer{},
+		gatherers: []timedGatherer{},
 	}
 
 	ctx := context.Background()

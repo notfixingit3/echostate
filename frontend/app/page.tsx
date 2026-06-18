@@ -1,3 +1,5 @@
+import { Suspense } from "react"
+
 import { BrandLogo } from "@/components/brand-logo"
 import { ScanForm } from "@/components/scan-form"
 import { Badge } from "@/components/ui/badge"
@@ -44,7 +46,9 @@ export default function Page() {
       </div>
 
       <div className="w-full max-w-5xl rounded-2xl border border-border/60 bg-card/80 p-6 shadow-sm backdrop-blur-sm md:p-8">
-        <ScanForm />
+        <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted/40" />}>
+          <ScanForm />
+        </Suspense>
       </div>
 
       <div className="grid w-full max-w-4xl gap-4 sm:grid-cols-3">
