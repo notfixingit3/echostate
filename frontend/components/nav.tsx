@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 
+import { BrandLogo } from "@/components/brand-logo"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
-import { MenuIcon, RadarIcon } from "lucide-react"
+import { MenuIcon } from "lucide-react"
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -35,17 +35,7 @@ export function Nav() {
           className="group flex items-center gap-3"
           data-testid="nav-logo"
         >
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-            <RadarIcon className="size-4" />
-          </div>
-          <Image
-            src="/logo-banner.png"
-            alt="EchoState"
-            width={128}
-            height={32}
-            className="h-7 w-auto dark:invert"
-            priority
-          />
+          <BrandLogo variant="banner" className="h-8 w-auto" />
         </Link>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -91,15 +81,7 @@ export function Nav() {
             <SheetHeader>
               <SheetTitle>
                 <Link href="/" className="flex items-center gap-2">
-                  <RadarIcon className="size-4 text-primary" />
-                  <Image
-                    src="/logo-banner.png"
-                    alt="EchoState"
-                    width={128}
-                    height={32}
-                    className="h-7 w-auto dark:invert"
-                    priority
-                  />
+                  <BrandLogo variant="banner" className="h-7 w-auto" />
                 </Link>
               </SheetTitle>
             </SheetHeader>
