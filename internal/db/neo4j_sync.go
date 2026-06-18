@@ -13,7 +13,7 @@ const (
 	graphCertSANLimit     = 50
 )
 
-func syncBGPGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID string, rawData map[string]any) error {
+func syncBGPGraph(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, rawData map[string]any) error {
 	asnMap, ok := rawData["asn"].(map[string]any)
 	if !ok {
 		return nil
@@ -34,13 +34,13 @@ func syncBGPGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 		SET p.hijack_risk = $hijack_risk, p.rpki_status = $rpki_status
 		WITH p
 		MATCH (t:Target {id: $target_id})
-		MERGE (t)-[:IN_PREFIX]->(p)
-	`, map[string]any{
+		MERGE (t)-[r:IN_PREFIX]->(p)
+		SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+	`, meta.with(map[string]any{
 		"prefix":      prefix,
-		"target_id":   targetID,
 		"hijack_risk": hijackRisk,
 		"rpki_status": rpkiStatus,
-	})
+	}))
 	if err != nil {
 		return err
 	}
@@ -52,13 +52,14 @@ func syncBGPGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 			WITH a
 			MATCH (p:Prefix {cidr: $prefix})
 			MERGE (a)-[r:ANNOUNCES]->(p)
-			SET r.matches_origin = true, r.risk = $risk, r.rpki_status = $rpki_status
-		`, map[string]any{
+			SET r.matches_origin = true, r.risk = $risk, r.rpki_status = $rpki_status,
+			    r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at, r.target_id = $target_id
+		`, meta.with(map[string]any{
 			"asn":         originASN,
 			"prefix":      prefix,
 			"risk":        originRisk,
 			"rpki_status": rpkiStatus,
-		})
+		}))
 		if err != nil {
 			return err
 		}
@@ -70,7 +71,7 @@ func syncBGPGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 
 	origins, ok := routing["visible_origins"].([]any)
 	if !ok {
-		return syncASPaths(ctx, tx, targetID, prefix, routing)
+		return syncASPaths(ctx, tx, meta, prefix, routing)
 	}
 
 	for _, origin := range origins {
@@ -86,39 +87,24 @@ func syncBGPGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 			WITH a
 			MATCH (p:Prefix {cidr: $prefix})
 			MERGE (a)-[r:VISIBLE_ORIGIN]->(p)
-			SET r.matches_origin = $matches_origin, r.risk = $risk, r.rpki_status = $rpki_status
-		`, map[string]any{
+			SET r.matches_origin = $matches_origin, r.risk = $risk, r.rpki_status = $rpki_status,
+			    r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at, r.target_id = $target_id
+		`, meta.with(map[string]any{
 			"asn":            asn,
 			"prefix":         prefix,
 			"matches_origin": matchesOrigin,
 			"risk":           edgeRisk,
 			"rpki_status":    asnRPki,
-		})
+		}))
 		if err != nil {
 			return err
 		}
 	}
 
-	return syncASPaths(ctx, tx, targetID, prefix, routing)
+	return syncASPaths(ctx, tx, meta, prefix, routing)
 }
 
-func syncASPaths(ctx context.Context, tx neo4j.ManagedTransaction, targetID, prefix string, routing map[string]any) error {
-	_, err := tx.Run(ctx, `
-		MATCH (t:Target {id: $target_id})-[r:HAS_AS_PATH]->()
-		DELETE r
-	`, map[string]any{"target_id": targetID})
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Run(ctx, `
-		MATCH ()-[r:AS_PATH_NEXT {target_id: $target_id}]->()
-		DELETE r
-	`, map[string]any{"target_id": targetID})
-	if err != nil {
-		return err
-	}
-
+func syncASPaths(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, prefix string, routing map[string]any) error {
 	pathsAny, ok := routing["as_paths"].([]any)
 	if !ok || len(pathsAny) == 0 {
 		return nil
@@ -140,7 +126,7 @@ func syncASPaths(ctx context.Context, tx neo4j.ManagedTransaction, targetID, pre
 				continue
 			}
 
-			_, err = tx.Run(ctx, `
+			_, err := tx.Run(ctx, `
 				MERGE (a:ASN {number: $asn})
 			`, map[string]any{"asn": asn})
 			if err != nil {
@@ -151,12 +137,12 @@ func syncASPaths(ctx context.Context, tx neo4j.ManagedTransaction, targetID, pre
 				_, err = tx.Run(ctx, `
 					MATCH (t:Target {id: $target_id})
 					MATCH (a:ASN {number: $asn})
-					MERGE (t)-[:HAS_AS_PATH {path_index: $path_index, position: 0}]->(a)
-				`, map[string]any{
-					"target_id":  targetID,
+					MERGE (t)-[r:HAS_AS_PATH {path_index: $path_index, position: 0}]->(a)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+				`, meta.with(map[string]any{
 					"asn":        asn,
 					"path_index": pathIndex,
-				})
+				}))
 				if err != nil {
 					return err
 				}
@@ -167,14 +153,14 @@ func syncASPaths(ctx context.Context, tx neo4j.ManagedTransaction, targetID, pre
 				_, err = tx.Run(ctx, `
 					MATCH (prev:ASN {number: $prev_asn})
 					MATCH (next:ASN {number: $asn})
-					MERGE (prev)-[:AS_PATH_NEXT {target_id: $target_id, path_index: $path_index, position: $position}]->(next)
-				`, map[string]any{
+					MERGE (prev)-[r:AS_PATH_NEXT {target_id: $target_id, path_index: $path_index, position: $position}]->(next)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+				`, meta.with(map[string]any{
 					"prev_asn":   prevASN,
 					"asn":        asn,
-					"target_id":  targetID,
 					"path_index": pathIndex,
 					"position":   i,
-				})
+				}))
 				if err != nil {
 					return err
 				}
@@ -183,16 +169,16 @@ func syncASPaths(ctx context.Context, tx neo4j.ManagedTransaction, targetID, pre
 
 		lastASN := strings.TrimPrefix(strings.ToUpper(strings.TrimSpace(asns[len(asns)-1])), "AS")
 		if prefix != "" && lastASN != "" {
-			_, err = tx.Run(ctx, `
+			_, err := tx.Run(ctx, `
 				MATCH (a:ASN {number: $asn})
 				MATCH (p:Prefix {cidr: $prefix})
-				MERGE (a)-[:PATH_TO_PREFIX {target_id: $target_id, path_index: $path_index}]->(p)
-			`, map[string]any{
+				MERGE (a)-[r:PATH_TO_PREFIX {target_id: $target_id, path_index: $path_index}]->(p)
+				SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+			`, meta.with(map[string]any{
 				"asn":        lastASN,
 				"prefix":     prefix,
-				"target_id":  targetID,
 				"path_index": pathIndex,
-			})
+			}))
 			if err != nil {
 				return err
 			}
@@ -202,7 +188,8 @@ func syncASPaths(ctx context.Context, tx neo4j.ManagedTransaction, targetID, pre
 	return nil
 }
 
-func syncCTGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID string, rawData map[string]any) error {
+func syncCTGraph(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, rawData map[string]any) error {
+	targetID := meta.TargetID
 	ctMap, ok := rawData["ct"].(map[string]any)
 	if !ok {
 		return nil
@@ -216,15 +203,8 @@ func syncCTGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID stri
 		return nil
 	}
 
-	_, err := tx.Run(ctx, `
-		MATCH (t:Target {id: $target_id})-[r:DISCOVERED_VIA_CT]->()
-		DELETE r
-	`, map[string]any{"target_id": targetID})
-	if err != nil {
-		return err
-	}
-
 	count := 0
+	var err error
 	for _, subAny := range subdomainsAny {
 		if count >= graphCTSubdomainLimit {
 			break
@@ -242,11 +222,9 @@ func syncCTGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID stri
 			MERGE (s:Subdomain {host: $host})
 			WITH s
 			MATCH (t:Target {id: $target_id})
-			MERGE (t)-[:DISCOVERED_VIA_CT]->(s)
-		`, map[string]any{
-			"host":      host,
-			"target_id": targetID,
-		})
+			MERGE (t)-[r:DISCOVERED_VIA_CT]->(s)
+			SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+		`, meta.with(map[string]any{"host": host}))
 		if err != nil {
 			return err
 		}
@@ -270,7 +248,8 @@ func syncCTGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID stri
 	return nil
 }
 
-func syncCertSANGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID string, rawData map[string]any) error {
+func syncCertSANGraph(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, rawData map[string]any) error {
+	targetID := meta.TargetID
 	tlsMap, ok := rawData["tls"].(map[string]any)
 	if !ok {
 		return nil
@@ -281,15 +260,8 @@ func syncCertSANGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID
 		return nil
 	}
 
-	_, err := tx.Run(ctx, `
-		MATCH (t:Target {id: $target_id})-[r:HAS_SAN]->()
-		DELETE r
-	`, map[string]any{"target_id": targetID})
-	if err != nil {
-		return err
-	}
-
 	seen := make(map[string]struct{})
+	var err error
 	count := 0
 	for _, sanAny := range sansAny {
 		if count >= graphCertSANLimit {
@@ -308,11 +280,9 @@ func syncCertSANGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID
 			MERGE (s:CertSAN {name: $name})
 			WITH s
 			MATCH (t:Target {id: $target_id})
-			MERGE (t)-[:HAS_SAN]->(s)
-		`, map[string]any{
-			"name":      name,
-			"target_id": targetID,
-		})
+			MERGE (t)-[r:HAS_SAN]->(s)
+			SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+		`, meta.with(map[string]any{"name": name}))
 		if err != nil {
 			return err
 		}
@@ -342,27 +312,20 @@ func normalizeSAN(name string) string {
 	return strings.ToLower(name)
 }
 
-func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID string, rawData map[string]any) error {
+func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, rawData map[string]any) error {
 	dnsMap, ok := rawData["dns"].(map[string]any)
 	if !ok {
 		return nil
 	}
 
-	_, err := tx.Run(ctx, `
-		MATCH (t:Target {id: $target_id})-[r:USES_NS|USES_MX|ALIASES_TO|HAS_DMARC|HAS_SOA]->()
-		DELETE r
-	`, map[string]any{"target_id": targetID})
-	if err != nil {
-		return err
-	}
-
+	var err error
 	if nsAny, ok := dnsMap["NS"].([]any); ok {
 		for _, item := range nsAny {
 			host := normalizeDNSHost(item)
 			if host == "" {
 				continue
 			}
-			if err = mergeDNSRelation(ctx, tx, targetID, host, "USES_NS"); err != nil {
+			if err = mergeDNSRelation(ctx, tx, meta, host, "USES_NS"); err != nil {
 				return err
 			}
 		}
@@ -374,7 +337,7 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 			if host == "" {
 				continue
 			}
-			if err = mergeDNSRelation(ctx, tx, targetID, host, "USES_MX"); err != nil {
+			if err = mergeDNSRelation(ctx, tx, meta, host, "USES_MX"); err != nil {
 				return err
 			}
 		}
@@ -383,7 +346,7 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 	if cname, ok := dnsMap["CNAME"].(string); ok {
 		host := normalizeDNSHost(cname)
 		if host != "" {
-			if err = mergeDNSRelation(ctx, tx, targetID, host, "ALIASES_TO"); err != nil {
+			if err = mergeDNSRelation(ctx, tx, meta, host, "ALIASES_TO"); err != nil {
 				return err
 			}
 		}
@@ -398,13 +361,13 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 					d.record = $record
 				WITH d
 				MATCH (t:Target {id: $target_id})
-				MERGE (t)-[:HAS_DMARC]->(d)
-			`, map[string]any{
-				"policy":            policy,
-				"subdomain_policy":  strings.TrimSpace(fmt.Sprint(parsed["subdomain_policy"])),
-				"record":            strings.TrimSpace(fmt.Sprint(parsed["record"])),
-				"target_id":         targetID,
-			})
+				MERGE (t)-[r:HAS_DMARC]->(d)
+				SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+			`, meta.with(map[string]any{
+				"policy":           policy,
+				"subdomain_policy": strings.TrimSpace(fmt.Sprint(parsed["subdomain_policy"])),
+				"record":           strings.TrimSpace(fmt.Sprint(parsed["record"])),
+			}))
 			if err != nil {
 				return err
 			}
@@ -425,15 +388,15 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 					z.record = $record
 				WITH z
 				MATCH (t:Target {id: $target_id})
-				MERGE (t)-[:HAS_SOA]->(z)
-			`, map[string]any{
-				"zone":      zone,
-				"mname":     strings.TrimSpace(fmt.Sprint(soa["mname"])),
-				"rname":     strings.TrimSpace(fmt.Sprint(soa["rname"])),
-				"serial":    intProp(soa, "serial"),
-				"record":    strings.TrimSpace(fmt.Sprint(soa["record"])),
-				"target_id": targetID,
-			})
+				MERGE (t)-[r:HAS_SOA]->(z)
+				SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+			`, meta.with(map[string]any{
+				"zone":   zone,
+				"mname":  strings.TrimSpace(fmt.Sprint(soa["mname"])),
+				"rname":  strings.TrimSpace(fmt.Sprint(soa["rname"])),
+				"serial": intProp(soa, "serial"),
+				"record": strings.TrimSpace(fmt.Sprint(soa["record"])),
+			}))
 			if err != nil {
 				return err
 			}
@@ -443,16 +406,14 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 	return nil
 }
 
-func mergeDNSRelation(ctx context.Context, tx neo4j.ManagedTransaction, targetID, host, relType string) error {
+func mergeDNSRelation(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, host, relType string) error {
 	_, err := tx.Run(ctx, fmt.Sprintf(`
 		MERGE (d:DNSHost {host: $host})
 		WITH d
 		MATCH (t:Target {id: $target_id})
-		MERGE (t)-[:%s]->(d)
-	`, relType), map[string]any{
-		"host":      host,
-		"target_id": targetID,
-	})
+		MERGE (t)-[r:%s]->(d)
+		SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+	`, relType), meta.with(map[string]any{"host": host}))
 	return err
 }
 
@@ -471,7 +432,7 @@ func parseMXHost(value any) string {
 	return normalizeDNSHost(parts[1])
 }
 
-func syncTracerouteGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID string, rawData map[string]any) error {
+func syncTracerouteGraph(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, rawData map[string]any) error {
 	trMap, ok := rawData["traceroute"].(map[string]any)
 	if !ok {
 		return nil
@@ -485,23 +446,8 @@ func syncTracerouteGraph(ctx context.Context, tx neo4j.ManagedTransaction, targe
 		return nil
 	}
 
-	_, err := tx.Run(ctx, `
-		MATCH (t:Target {id: $target_id})-[r:TRACEROUTE_HOP]->()
-		DELETE r
-	`, map[string]any{"target_id": targetID})
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Run(ctx, `
-		MATCH (h:Hop {target_id: $target_id})
-		DETACH DELETE h
-	`, map[string]any{"target_id": targetID})
-	if err != nil {
-		return err
-	}
-
 	var resolvedIP string
+	var err error
 	if asnMap, ok := rawData["asn"].(map[string]any); ok {
 		resolvedIP = stringProp(asnMap, "ip")
 	}
@@ -538,16 +484,16 @@ func syncTracerouteGraph(ctx context.Context, tx neo4j.ManagedTransaction, targe
 			longitude := floatProp(hopMap, "longitude")
 
 			_, err = tx.Run(ctx, `
-				MERGE (h:Hop {target_id: $target_id, hop: $hop, vantage: $vantage})
+				MERGE (h:Hop {target_id: $target_id, hop: $hop, vantage: $vantage, snapshot_id: $snapshot_id})
 				SET h.ip = $ip, h.timeout = $timeout, h.rtt_ms = $rtt_ms,
 				    h.country = $country, h.city = $city,
 				    h.latitude = $latitude, h.longitude = $longitude,
-				    h.vantage_label = $vantage_label
+				    h.vantage_label = $vantage_label, h.scanned_at = $scanned_at
 				WITH h
 				MATCH (t:Target {id: $target_id})
-				MERGE (t)-[:TRACEROUTE_HOP {order: $hop, vantage: $vantage}]->(h)
-			`, map[string]any{
-				"target_id":     targetID,
+				MERGE (t)-[r:TRACEROUTE_HOP {order: $hop, vantage: $vantage}]->(h)
+				SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+			`, meta.with(map[string]any{
 				"hop":           hopNum,
 				"vantage":       vantageID,
 				"vantage_label": vantageLabel,
@@ -558,22 +504,22 @@ func syncTracerouteGraph(ctx context.Context, tx neo4j.ManagedTransaction, targe
 				"city":          city,
 				"latitude":      latitude,
 				"longitude":     longitude,
-			})
+			}))
 			if err != nil {
 				return err
 			}
 
 			if prevHop > 0 {
 				_, err = tx.Run(ctx, `
-					MATCH (prev:Hop {target_id: $target_id, hop: $prev_hop, vantage: $vantage})
-					MATCH (next:Hop {target_id: $target_id, hop: $hop, vantage: $vantage})
-					MERGE (prev)-[:NEXT_HOP]->(next)
-				`, map[string]any{
-					"target_id": targetID,
-					"prev_hop":  prevHop,
-					"hop":       hopNum,
-					"vantage":   vantageID,
-				})
+					MATCH (prev:Hop {target_id: $target_id, hop: $prev_hop, vantage: $vantage, snapshot_id: $snapshot_id})
+					MATCH (next:Hop {target_id: $target_id, hop: $hop, vantage: $vantage, snapshot_id: $snapshot_id})
+					MERGE (prev)-[r:NEXT_HOP]->(next)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+				`, meta.with(map[string]any{
+					"prev_hop": prevHop,
+					"hop":      hopNum,
+					"vantage":  vantageID,
+				}))
 				if err != nil {
 					return err
 				}
@@ -583,14 +529,14 @@ func syncTracerouteGraph(ctx context.Context, tx neo4j.ManagedTransaction, targe
 				_, err = tx.Run(ctx, `
 					MERGE (s:SharedHop {ip: $ip})
 					WITH s
-					MATCH (h:Hop {target_id: $target_id, hop: $hop, vantage: $vantage})
-					MERGE (h)-[:SHARED_AT]->(s)
-				`, map[string]any{
-					"ip":        ip,
-					"target_id": targetID,
-					"hop":       hopNum,
-					"vantage":   vantageID,
-				})
+					MATCH (h:Hop {target_id: $target_id, hop: $hop, vantage: $vantage, snapshot_id: $snapshot_id})
+					MERGE (h)-[r:SHARED_AT]->(s)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+				`, meta.with(map[string]any{
+					"ip":      ip,
+					"hop":     hopNum,
+					"vantage": vantageID,
+				}))
 				if err != nil {
 					return err
 				}
@@ -600,14 +546,14 @@ func syncTracerouteGraph(ctx context.Context, tx neo4j.ManagedTransaction, targe
 				_, err = tx.Run(ctx, `
 					MERGE (i:IP {address: $ip})
 					WITH i
-					MATCH (h:Hop {target_id: $target_id, hop: $hop, vantage: $vantage})
-					MERGE (h)-[:REACHES]->(i)
-				`, map[string]any{
-					"ip":        ip,
-					"target_id": targetID,
-					"hop":       hopNum,
-					"vantage":   vantageID,
-				})
+					MATCH (h:Hop {target_id: $target_id, hop: $hop, vantage: $vantage, snapshot_id: $snapshot_id})
+					MERGE (h)-[r:REACHES]->(i)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+				`, meta.with(map[string]any{
+					"ip":      ip,
+					"hop":     hopNum,
+					"vantage": vantageID,
+				}))
 				if err != nil {
 					return err
 				}
@@ -647,7 +593,7 @@ func tracerouteVantagesFromRaw(trMap map[string]any) []map[string]any {
 	}
 }
 
-func syncPeeringGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID string, rawData map[string]any) error {
+func syncPeeringGraph(ctx context.Context, tx neo4j.ManagedTransaction, meta graphSyncMeta, rawData map[string]any) error {
 	asnMap, ok := rawData["asn"].(map[string]any)
 	if !ok {
 		return nil
@@ -668,14 +614,6 @@ func syncPeeringGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID
 		return nil
 	}
 
-	_, err := tx.Run(ctx, `
-		MATCH (a:ASN {number: $asn})-[r:PRESENT_AT_IX]->()
-		DELETE r
-	`, map[string]any{"asn": asn})
-	if err != nil {
-		return err
-	}
-
 	for _, item := range ixlanAny {
 		row, ok := item.(map[string]any)
 		if !ok {
@@ -692,21 +630,21 @@ func syncPeeringGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID
 		city := stringProp(row, "city")
 		speed := intProp(row, "speed")
 
-		_, err = tx.Run(ctx, `
+		_, err := tx.Run(ctx, `
 			MERGE (x:IX {id: $ix_id})
 			SET x.name = $name, x.country = $country, x.city = $city
 			WITH x
 			MERGE (a:ASN {number: $asn})
 			MERGE (a)-[r:PRESENT_AT_IX]->(x)
-			SET r.speed = $speed
-		`, map[string]any{
+			SET r.speed = $speed, r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at, r.target_id = $target_id
+		`, meta.with(map[string]any{
 			"ix_id":   ixID,
 			"asn":     asn,
 			"name":    ixName,
 			"country": country,
 			"city":    city,
 			"speed":   speed,
-		})
+		}))
 		if err != nil {
 			return err
 		}

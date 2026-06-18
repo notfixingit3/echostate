@@ -3,23 +3,60 @@
 import * as React from "react"
 import Link from "next/link"
 
+import { HelpTip } from "@/components/help-tip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { fetchApi } from "@/lib/api"
 import type { GraphRouteDiff, PaginatedResponse, SnapshotSummary } from "@/lib/types"
 
+export type GraphCompareMode = "previous" | "latest"
+
+function resolveCompareId(
+  snapshots: SnapshotSummary[],
+  index: number,
+  compareMode: GraphCompareMode
+): string | undefined {
+  if (compareMode === "latest" && index > 0) {
+    return snapshots[0]?.id
+  }
+  if (compareMode === "previous") {
+    return snapshots[index + 1]?.id
+  }
+  return undefined
+}
+
 export function GraphHistoryBar({
   targetId,
-  viewMode,
   routeDiff,
+  snapshotId,
+  compareMode,
+  onSnapshotChange,
+  onCompareModeChange,
 }: {
   targetId: string
-  viewMode: "bgp" | "traceroute" | string
   routeDiff?: GraphRouteDiff
+  snapshotId?: string
+  compareMode: GraphCompareMode
+  onSnapshotChange: (
+    snapshotId: string | undefined,
+    compareSnapshotId?: string,
+    mode?: GraphCompareMode
+  ) => void
+  onCompareModeChange: (mode: GraphCompareMode) => void
 }) {
   const [snapshots, setSnapshots] = React.useState<SnapshotSummary[]>([])
   const [index, setIndex] = React.useState(0)
   const [loading, setLoading] = React.useState(false)
+
+  const emitChange = React.useCallback(
+    (nextIndex: number, mode: GraphCompareMode, rows: SnapshotSummary[]) => {
+      if (rows.length === 0) return
+      const current = nextIndex === 0 ? undefined : rows[nextIndex]?.id
+      const compare = resolveCompareId(rows, nextIndex, mode)
+      onSnapshotChange(current, compare, mode)
+    },
+    [onSnapshotChange]
+  )
 
   React.useEffect(() => {
     let cancelled = false
@@ -29,8 +66,14 @@ export function GraphHistoryBar({
     )
       .then((result) => {
         if (!cancelled) {
-          setSnapshots(result.data ?? [])
-          setIndex(0)
+          const rows = result.data ?? []
+          setSnapshots(rows)
+          const found = snapshotId
+            ? rows.findIndex((row) => row.id === snapshotId)
+            : 0
+          const nextIndex = found >= 0 ? found : 0
+          setIndex(nextIndex)
+          emitChange(nextIndex, compareMode, rows)
         }
       })
       .catch(() => {
@@ -45,17 +88,10 @@ export function GraphHistoryBar({
     }
   }, [targetId])
 
-  if (viewMode !== "bgp" && viewMode !== "traceroute") {
-    return (
-      <p className="text-xs text-muted-foreground">
-        Graph topology reflects the latest scan. Open{" "}
-        <Link href={`/target/snapshots?id=${targetId}`} className="text-primary hover:underline">
-          target snapshots
-        </Link>{" "}
-        for full history.
-      </p>
-    )
-  }
+  React.useEffect(() => {
+    if (snapshots.length === 0) return
+    emitChange(index, compareMode, snapshots)
+  }, [compareMode])
 
   if (loading) {
     return <p className="text-xs text-muted-foreground">Loading snapshot history…</p>
@@ -71,11 +107,16 @@ export function GraphHistoryBar({
 
   const selected = snapshots[index]
   const isLatest = index === 0
-  const compareLabel = isLatest
-    ? routeDiff?.has_previous
-      ? "Comparing latest scan to previous snapshot"
-      : "Latest scan (no previous snapshot to compare)"
-    : `Selected snapshot from ${new Date(selected.scanned_at).toLocaleString()}`
+  const compareLabel =
+    compareMode === "latest" && !isLatest
+      ? "Comparing to latest scan"
+      : compareMode === "previous" && snapshots[index + 1]
+        ? "Comparing to previous snapshot"
+        : isLatest
+          ? routeDiff?.has_previous
+            ? "Latest scan (diff vs previous available)"
+            : "Latest scan"
+          : `Snapshot ${new Date(selected.scanned_at).toLocaleString()}`
 
   return (
     <div
@@ -83,13 +124,38 @@ export function GraphHistoryBar({
       data-testid="graph-history-bar"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm font-medium">Snapshot history</div>
-        {selected.changes?.length ? (
-          <Badge variant="secondary" className="font-mono text-xs">
-            {selected.changes.length} change
-            {selected.changes.length === 1 ? "" : "s"}
-          </Badge>
-        ) : null}
+        <div className="inline-flex items-center gap-1.5 text-sm font-medium">
+          Snapshot history
+          <HelpTip id="graph.history_slider" />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-md border border-border/60 p-0.5">
+            <Button
+              type="button"
+              variant={compareMode === "previous" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => onCompareModeChange("previous")}
+            >
+              vs previous
+            </Button>
+            <Button
+              type="button"
+              variant={compareMode === "latest" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => onCompareModeChange("latest")}
+            >
+              vs latest
+            </Button>
+          </div>
+          {selected.changes?.length ? (
+            <Badge variant="secondary" className="font-mono text-xs">
+              {selected.changes.length} change
+              {selected.changes.length === 1 ? "" : "s"}
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       <input
@@ -97,7 +163,11 @@ export function GraphHistoryBar({
         min={0}
         max={Math.max(0, snapshots.length - 1)}
         value={index}
-        onChange={(event) => setIndex(Number(event.target.value))}
+        onChange={(event) => {
+          const nextIndex = Number(event.target.value)
+          setIndex(nextIndex)
+          emitChange(nextIndex, compareMode, snapshots)
+        }}
         className="w-full accent-primary"
         data-testid="graph-history-slider"
       />
@@ -118,23 +188,11 @@ export function GraphHistoryBar({
           Open snapshot
         </Button>
         {!isLatest ? (
-          <Button
-            variant="outline"
-            size="sm"
-            render={<Link href={`/snapshot?id=${selected.id}`} />}
-          >
-            View diff context
-          </Button>
-        ) : null}
-        {isLatest && routeDiff?.previous_snapshot_id ? (
-          <Button
-            variant="outline"
-            size="sm"
-            render={
-              <Link href={`/snapshot?id=${routeDiff.previous_snapshot_id}`} />
-            }
-          >
-            Previous snapshot
+          <Button variant="outline" size="sm" onClick={() => {
+            setIndex(0)
+            emitChange(0, compareMode, snapshots)
+          }}>
+            Jump to latest
           </Button>
         ) : null}
       </div>

@@ -11,6 +11,90 @@ import (
 	"github.com/notfixingit3/echostate/internal/models"
 )
 
+func (d *DB) GetRouteDiffForSnapshots(ctx context.Context, targetID uuid.UUID, currentSnapshotID, compareSnapshotID string) (*models.GraphRouteDiff, error) {
+	if currentSnapshotID == "" && compareSnapshotID == "" {
+		return d.GetRouteDiffForTarget(ctx, targetID)
+	}
+
+	current, previous, err := d.loadSnapshotPair(ctx, targetID, currentSnapshotID, compareSnapshotID)
+	if err != nil {
+		return nil, err
+	}
+
+	diff := &models.GraphRouteDiff{
+		HasPrevious:       previous != nil,
+		CurrentSnapshotID: current.id.String(),
+	}
+	if previous != nil {
+		diff.PreviousSnapshotID = previous.id.String()
+		diff.BGP = compareBGPRoutes(previous.rawData, current.rawData)
+		diff.Traceroute = compareTracerouteRoutes(previous.rawData, current.rawData)
+	}
+	return diff, nil
+}
+
+type routeDiffSnapshot struct {
+	id      uuid.UUID
+	rawData map[string]any
+}
+
+func (d *DB) loadSnapshotPair(ctx context.Context, targetID uuid.UUID, currentID, compareID string) (routeDiffSnapshot, *routeDiffSnapshot, error) {
+	load := func(snapshotID string) (*routeDiffSnapshot, error) {
+		if snapshotID == "" {
+			return nil, nil
+		}
+		var s routeDiffSnapshot
+		err := d.Pool.QueryRow(ctx, `
+			SELECT id, raw_data FROM snapshots WHERE id = $1 AND target_id = $2
+		`, snapshotID, targetID).Scan(&s.id, &s.rawData)
+		if err != nil {
+			return nil, err
+		}
+		return &s, nil
+	}
+
+	current, err := load(currentID)
+	if err != nil {
+		return routeDiffSnapshot{}, nil, err
+	}
+	if current == nil {
+		var s routeDiffSnapshot
+		err := d.Pool.QueryRow(ctx, `
+			SELECT id, raw_data FROM snapshots WHERE target_id = $1 ORDER BY scanned_at DESC LIMIT 1
+		`, targetID).Scan(&s.id, &s.rawData)
+		if err != nil {
+			return routeDiffSnapshot{}, nil, err
+		}
+		current = &s
+	}
+
+	var previous *routeDiffSnapshot
+	if compareID != "" {
+		previous, err = load(compareID)
+		if err != nil {
+			return routeDiffSnapshot{}, nil, err
+		}
+	} else {
+		var s routeDiffSnapshot
+		err := d.Pool.QueryRow(ctx, `
+			SELECT id, raw_data FROM snapshots
+			WHERE target_id = $1 AND scanned_at < (
+				SELECT scanned_at FROM snapshots WHERE id = $2
+			)
+			ORDER BY scanned_at DESC LIMIT 1
+		`, targetID, current.id).Scan(&s.id, &s.rawData)
+		if err != nil {
+			if err != pgx.ErrNoRows {
+				return routeDiffSnapshot{}, nil, err
+			}
+		} else {
+			previous = &s
+		}
+	}
+
+	return *current, previous, nil
+}
+
 func (d *DB) GetRouteDiffForTarget(ctx context.Context, targetID uuid.UUID) (*models.GraphRouteDiff, error) {
 	rows, err := d.Pool.Query(ctx, `
 		SELECT id, raw_data

@@ -6,6 +6,7 @@ export default function TargetsPage() {
     <section className="container flex flex-1 flex-col gap-8 py-8 md:py-10">
       <PageHeader
         title="Targets"
+        helpId="page.targets"
         description="Browse hosts and IPs under surveillance, with ASN and web intel from the latest snapshot."
       />
       <TargetsTable />

@@ -27,6 +27,22 @@ const INSPECTOR_FIELDS: Record<string, string[]> = {
   IX: ["name", "country", "city"],
 }
 
+const CROSS_VIEW_LINKS: Record<string, string[]> = {
+  ASN: ["bgp", "peering"],
+  DNSHost: ["dns"],
+  SOAZone: ["dns"],
+  DMARCPolicy: ["dns"],
+  CertSAN: ["cert"],
+  CertIssuer: ["cert"],
+  Subdomain: ["ct"],
+  Hop: ["traceroute"],
+  SharedHop: ["traceroute"],
+  IX: ["peering"],
+  JARM: ["infra"],
+  Favicon: ["infra"],
+  IP: ["infra"],
+}
+
 function formatPropValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—"
   if (typeof value === "number") return String(value)
@@ -39,12 +55,14 @@ export function GraphNodeInspector({
   edges,
   onSelectNode,
   onFilterTarget,
+  onJumpToView,
 }: {
   selected: GraphNode | null
   nodes: GraphNode[]
   edges: GraphEdge[]
   onSelectNode: (node: GraphNode) => void
   onFilterTarget?: (targetId: string) => void
+  onJumpToView?: (view: string) => void
 }) {
   if (!selected) {
     return (
@@ -70,6 +88,8 @@ export function GraphNodeInspector({
       ? String(props.id ?? "")
       : String(props.target_id ?? "")
 
+  const crossViews = CROSS_VIEW_LINKS[selected.type] ?? []
+
   return (
     <div className="flex flex-col gap-3 text-sm" data-testid="graph-node-inspector">
       <div>
@@ -88,6 +108,22 @@ export function GraphNodeInspector({
         <Badge variant="outline" className="w-fit font-mono text-xs">
           Hijack risk: {props.hijack_risk}
         </Badge>
+      ) : null}
+
+      {crossViews.length > 0 && onJumpToView ? (
+        <div className="flex flex-wrap gap-1.5">
+          {crossViews.map((view) => (
+            <Button
+              key={view}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs capitalize"
+              onClick={() => onJumpToView(view)}
+            >
+              Open {view} view
+            </Button>
+          ))}
+        </div>
       ) : null}
 
       <dl className="flex flex-col gap-2">

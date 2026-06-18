@@ -154,12 +154,26 @@ type GraphIntelEvent struct {
 	Source     string `json:"source,omitempty"`
 }
 
+// GraphTopologyDiff highlights graph changes between two snapshots.
+type GraphTopologyDiff struct {
+	AddedNodeIDs   []string `json:"added_node_ids,omitempty"`
+	RemovedNodeIDs []string `json:"removed_node_ids,omitempty"`
+	AddedEdgeIDs   []string `json:"added_edge_ids,omitempty"`
+	RemovedEdgeIDs []string `json:"removed_edge_ids,omitempty"`
+	Changed        bool     `json:"changed"`
+}
+
 // GraphResponse is returned by GET /api/graph.
 type GraphResponse struct {
 	View  string         `json:"view"`
 	Nodes []GraphNode    `json:"nodes"`
 	Edges []GraphEdge    `json:"edges"`
 	Stats map[string]int `json:"stats"`
+	SnapshotID          string               `json:"snapshot_id,omitempty"`
+	ScannedAt           int64                `json:"scanned_at,omitempty"`
+	CompareSnapshotID   string               `json:"compare_snapshot_id,omitempty"`
+	CompareMode         string               `json:"compare_mode,omitempty"`
+	TopologyDiff        *GraphTopologyDiff   `json:"topology_diff,omitempty"`
 	Paths    []GraphPath     `json:"paths,omitempty"`
 	Geo      []GraphGeoPoint `json:"geo,omitempty"`
 	ASPaths    []GraphASPath    `json:"as_paths,omitempty"`
