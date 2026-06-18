@@ -113,8 +113,9 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | — | Snapshot create-report UX | ✅ Done | Poll status, in-card progress, credentialed PDF download (beta.27) |
 | — | Report state hydration | ✅ Done | Snapshot page restores latest report on load (beta.28) |
 | — | Scan-form report download | ✅ Done | Home scan result card Download PDF parity (beta.28) |
-| — | Richer PDF reports | ✅ Done | Logo, screenshot, changes, DNS/TLS, intel highlights (beta.28) |
+| — | Richer PDF reports | ✅ Done | beta.28 foundation only (logo, screenshot, changes, DNS/TLS blocks) — layout + coverage gaps remain; see **PDF report overhaul** |
 | — | Report E2E on snapshot page | ✅ Done | Playwright waits on snapshot + `snapshot-download-report-button` (beta.28) |
+| — | PDF report overhaul | 🔲 Next | **Layout:** WHOIS text (especially raw record) overlaps ASN/BGP — fixed 6mm key/value rows do not wrap/paginate. **Coverage:** reports still show little beyond WHOIS + BGP in practice; expand to match intel tabs: DNS (full), TLS/cert chain, web (title, headers, tech stack, security headers), favicon hashes, crawl (robots/sitemap paths), storage bucket hints, CT subdomains, traceroute hops, mail posture (SPF/DKIM/DMARC), BGP routing/hijack/path stability, snapshot changes, screenshot, gatherer errors. Omit graph PNGs and raw JSON dumps. |
 
 ---
 
@@ -123,7 +124,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | | Count |
 |---|------|
 | **Done** | 53 items (core + graph + platform batch) |
+| **Next** | 1 (PDF report overhaul) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 2 (agents, OIDC/RBAC) |
 
-**Suggested next picks:** OIDC/RBAC → distributed scanning agents
+**Suggested next picks:** PDF report overhaul → OIDC/RBAC → distributed scanning agents
