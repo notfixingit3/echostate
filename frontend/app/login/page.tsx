@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { KeyRoundIcon, ShieldCheckIcon } from "lucide-react"
 
@@ -103,8 +102,7 @@ export default function LoginPage() {
   const codeLength = config?.enrollment_code_length ?? 8
 
   return (
-    <div className="container flex min-h-[70vh] max-w-lg items-center py-12">
-      <Card className="w-full border-border/60 bg-card/70 backdrop-blur-sm">
+    <Card className="w-full border-border/60 bg-card/70 shadow-lg backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl">
             <ShieldCheckIcon className="size-6 text-primary" />
@@ -204,14 +202,9 @@ export default function LoginPage() {
           ) : null}
 
           <p className="text-center text-xs text-muted-foreground">
-            Already signed in elsewhere?{" "}
-            <Link href="/settings/account" className="text-primary hover:underline">
-              Manage passkeys
-            </Link>{" "}
-            after signing in.
+            After signing in, use Account in the nav to add passkeys on additional devices.
           </p>
         </CardContent>
       </Card>
-    </div>
   )
 }
