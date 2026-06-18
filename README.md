@@ -10,7 +10,7 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 
 ## Features
 
-- **Passive recon** — WHOIS, Team Cymru ASN/BGP, DNS (A/MX/NS/TXT/DMARC), TLS certs, and headless Chrome web scraping.
+- **Passive recon** — WHOIS, Team Cymru ASN/BGP, DNS (A/MX/NS/TXT/CNAME/DMARC), TLS certs, HTTP security headers, tech-stack hints, and headless Chrome web scraping.
 - **Web UI** — Scan form, target detail with tags, snapshot browser, side-by-side raw diffs, settings, and report downloads.
 - **Historical tracking** — Snapshots persist; identical rescans update `last_seen` and record field-level changes.
 - **PDF reports** — Async worker renders HTML → PDF via headless Chrome.

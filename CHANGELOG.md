@@ -10,8 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - DNS gatherer — A/AAAA, MX, NS, TXT, CNAME, and DMARC records via configurable resolvers.
 - TLS gatherer — certificate issuer, SANs, validity window, and signature algorithm.
-- Web gatherer enhancements — HTTP security headers and basic tech-stack fingerprinting.
-- Intel UI — DNS and TLS tabs, cert expiry and A-record summary cards.
+- Web gatherer enhancements — HTTP security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options) and `Server`/`X-Powered-By` tech-stack hints.
+- Intel UI — DNS and TLS tabs, cert expiry and A-record summary cards; security headers and tech stack in the Web tab.
+- `TODO.md` roadmap — items 1–4 (TLS, DNS, tech fingerprinting, security headers) marked complete.
 
 ### Fixed
 
