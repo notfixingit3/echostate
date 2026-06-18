@@ -142,6 +142,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.GET("/users/:id/credentials", requireScanner, h.listUserCredentials)
 	api.DELETE("/users/:id/credentials/:credId", requireScanner, h.deleteUserCredential)
 	api.PATCH("/users/:id/credentials/:credId", requireScanner, h.renameUserCredential)
+	api.PUT("/users/:id/credentials/:credId", requireScanner, h.renameUserCredential)
 
 	return &Workers{
 		Reports:   h.reportWorker,
