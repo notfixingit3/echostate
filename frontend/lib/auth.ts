@@ -1,10 +1,13 @@
 import { fetchApi } from "@/lib/api"
 
+export type UserTheme = "light" | "dark" | "system"
+
 export type AuthUser = {
   id: string
   display_name: string
   role: "admin" | "scanner"
   timezone?: string
+  theme?: UserTheme
   disabled: boolean
 }
 
@@ -223,10 +226,10 @@ export async function logout() {
   await fetchApi("/api/auth/logout", { method: "POST", body: "{}" })
 }
 
-export async function updateProfile(timezone: string) {
+export async function updateProfile(updates: { timezone?: string; theme?: UserTheme }) {
   return fetchApi<{ user: AuthUser }>("/api/auth/profile", {
     method: "PATCH",
-    body: JSON.stringify({ timezone }),
+    body: JSON.stringify(updates),
   })
 }
 

@@ -4,6 +4,7 @@ import "./globals.css"
 import { AppShell } from "@/components/app-shell"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import { UserThemeSync } from "@/components/user-theme-sync"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <AuthProvider>
+            <UserThemeSync />
             <TooltipProvider>
               <AppShell>{children}</AppShell>
             </TooltipProvider>

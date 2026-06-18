@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { KeyRoundIcon, PencilIcon, SaveIcon, Trash2Icon, XIcon } from "lucide-react"
+import { useTheme } from "next-themes"
+import { KeyRoundIcon, MonitorIcon, MoonIcon, PencilIcon, SaveIcon, SunIcon, Trash2Icon, XIcon } from "lucide-react"
 
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,14 @@ import {
   renameCredential,
   updateProfile,
   type AuthCredential,
+  type UserTheme,
 } from "@/lib/auth"
+
+const THEME_OPTIONS: { value: UserTheme; label: string; icon: typeof SunIcon }[] = [
+  { value: "light", label: "Light", icon: SunIcon },
+  { value: "dark", label: "Dark", icon: MoonIcon },
+  { value: "system", label: "System", icon: MonitorIcon },
+]
 
 const COMMON_TIMEZONES = [
   "UTC",
@@ -60,11 +68,13 @@ function formatTimestamp(value: string, timezone: string) {
 
 export function AccountProfilePanel() {
   const { user, refresh, setUser } = useAuth()
+  const { setTheme } = useTheme()
   const [credentials, setCredentials] = React.useState<AuthCredential[]>([])
   const [loading, setLoading] = React.useState(true)
   const [nickname, setNickname] = React.useState("")
   const [timezone, setTimezone] = React.useState("UTC")
-  const [savingTimezone, setSavingTimezone] = React.useState(false)
+  const [theme, setThemePreference] = React.useState<UserTheme>("system")
+  const [savingPreferences, setSavingPreferences] = React.useState(false)
   const [editingCredId, setEditingCredId] = React.useState<string | null>(null)
   const [editingNickname, setEditingNickname] = React.useState("")
   const [busy, setBusy] = React.useState(false)
@@ -81,7 +91,8 @@ export function AccountProfilePanel() {
 
   React.useEffect(() => {
     setTimezone(user?.timezone || browserTimezone())
-  }, [user?.timezone])
+    setThemePreference(user?.theme || "system")
+  }, [user?.timezone, user?.theme])
 
   async function loadCredentials() {
     if (!user) return
@@ -122,19 +133,20 @@ export function AccountProfilePanel() {
     }
   }
 
-  async function handleSaveTimezone(e: React.FormEvent) {
+  async function handleSavePreferences(e: React.FormEvent) {
     e.preventDefault()
-    setSavingTimezone(true)
+    setSavingPreferences(true)
     setError(null)
     setMessage(null)
     try {
-      const result = await updateProfile(timezone)
+      const result = await updateProfile({ timezone, theme })
       setUser(result.user)
+      setTheme(theme)
       setMessage("Profile preferences saved.")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save timezone")
+      setError(err instanceof Error ? err.message : "Failed to save preferences")
     } finally {
-      setSavingTimezone(false)
+      setSavingPreferences(false)
     }
   }
 
@@ -216,11 +228,32 @@ export function AccountProfilePanel() {
             Preferences
             <HelpTip id="settings.preferences" />
           </CardTitle>
-          <CardDescription>How dates and times are shown across the UI.</CardDescription>
+          <CardDescription>Theme and timezone follow you across browsers when signed in.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSaveTimezone} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-2">
+          <form onSubmit={handleSavePreferences} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="theme">Theme</Label>
+              <Select value={theme} onValueChange={(val) => val && setThemePreference(val as UserTheme)}>
+                <SelectTrigger id="theme" className="w-full">
+                  <SelectValue placeholder="Select theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {THEME_OPTIONS.map((option) => {
+                    const Icon = option.icon
+                    return (
+                      <SelectItem key={option.value} value={option.value}>
+                        <span className="inline-flex items-center gap-2">
+                          <Icon className="size-4" />
+                          {option.label}
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
               <Select value={timezone} onValueChange={(val) => val && setTimezone(val)}>
                 <SelectTrigger id="timezone" className="w-full">
@@ -236,9 +269,9 @@ export function AccountProfilePanel() {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" disabled={savingTimezone} className="w-full sm:w-auto">
+            <Button type="submit" disabled={savingPreferences} className="w-full sm:w-auto">
               <SaveIcon data-icon="inline-start" />
-              {savingTimezone ? "Saving…" : "Save preferences"}
+              {savingPreferences ? "Saving…" : "Save preferences"}
             </Button>
           </form>
         </CardContent>

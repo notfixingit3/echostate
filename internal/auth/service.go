@@ -45,6 +45,7 @@ type User struct {
 	DisplayName string    `json:"display_name"`
 	Role        string    `json:"role"`
 	Timezone    string    `json:"timezone"`
+	Theme       string    `json:"theme"`
 	Disabled    bool      `json:"disabled"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -158,9 +159,9 @@ func (s *Service) LoadWebAuthnUser(ctx context.Context, userID uuid.UUID) (*WebA
 func (s *Service) GetUser(ctx context.Context, userID uuid.UUID) (*User, error) {
 	var user User
 	err := s.db.Pool.QueryRow(ctx, `
-		SELECT id, display_name, role, timezone, disabled, created_at, updated_at
+		SELECT id, display_name, role, timezone, theme, disabled, created_at, updated_at
 		FROM users WHERE id = $1
-	`, userID).Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Disabled, &user.CreatedAt, &user.UpdatedAt)
+	`, userID).Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Theme, &user.Disabled, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +170,7 @@ func (s *Service) GetUser(ctx context.Context, userID uuid.UUID) (*User, error) 
 
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	rows, err := s.db.Pool.Query(ctx, `
-		SELECT id, display_name, role, timezone, disabled, created_at, updated_at
+		SELECT id, display_name, role, timezone, theme, disabled, created_at, updated_at
 		FROM users ORDER BY created_at ASC
 	`)
 	if err != nil {
@@ -180,7 +181,7 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var user User
-		if err := rows.Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Disabled, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		if err := rows.Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Theme, &user.Disabled, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, err
 		}
 		users = append(users, user)
@@ -197,8 +198,8 @@ func (s *Service) CreateUser(ctx context.Context, displayName, role string) (*Us
 	err := s.db.Pool.QueryRow(ctx, `
 		INSERT INTO users (display_name, role)
 		VALUES ($1, $2)
-		RETURNING id, display_name, role, timezone, disabled, created_at, updated_at
-	`, displayName, role).Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Disabled, &user.CreatedAt, &user.UpdatedAt)
+		RETURNING id, display_name, role, timezone, theme, disabled, created_at, updated_at
+	`, displayName, role).Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Theme, &user.Disabled, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -384,12 +385,12 @@ func (s *Service) SessionUser(ctx context.Context, token string) (*User, error) 
 	var user User
 	var sessionID uuid.UUID
 	err := s.db.Pool.QueryRow(ctx, `
-		SELECT s.id, u.id, u.display_name, u.role, u.timezone, u.disabled, u.created_at, u.updated_at
+		SELECT s.id, u.id, u.display_name, u.role, u.timezone, u.theme, u.disabled, u.created_at, u.updated_at
 		FROM sessions s
 		JOIN users u ON u.id = s.user_id
 		WHERE s.token_hash = $1 AND s.expires_at > NOW() AND u.disabled = FALSE
 	`, HashCode(token)).Scan(
-		&sessionID, &user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Disabled, &user.CreatedAt, &user.UpdatedAt,
+		&sessionID, &user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Theme, &user.Disabled, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -491,20 +492,59 @@ func (s *Service) RenameCredential(ctx context.Context, userID, credID uuid.UUID
 	return nil
 }
 
-func (s *Service) UpdateUserProfile(ctx context.Context, userID uuid.UUID, timezone string) (*User, error) {
-	timezone = stringsTrim(timezone)
-	if timezone == "" {
-		timezone = "UTC"
+type ProfileUpdate struct {
+	Timezone *string
+	Theme    *string
+}
+
+func normalizeTheme(value string) (string, error) {
+	switch stringsTrim(strings.ToLower(value)) {
+	case "light", "dark", "system":
+		return stringsTrim(strings.ToLower(value)), nil
+	default:
+		return "", fmt.Errorf("invalid theme")
 	}
-	if _, err := time.LoadLocation(timezone); err != nil {
-		return nil, fmt.Errorf("invalid timezone")
+}
+
+func (s *Service) UpdateUserProfile(ctx context.Context, userID uuid.UUID, update ProfileUpdate) (*User, error) {
+	current, err := s.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
 	}
+	if current.Disabled {
+		return nil, ErrUserDisabled
+	}
+
+	timezone := current.Timezone
+	theme := current.Theme
+	if theme == "" {
+		theme = "system"
+	}
+
+	if update.Timezone != nil {
+		timezone = stringsTrim(*update.Timezone)
+		if timezone == "" {
+			timezone = "UTC"
+		}
+		if _, err := time.LoadLocation(timezone); err != nil {
+			return nil, fmt.Errorf("invalid timezone")
+		}
+	}
+	if update.Theme != nil {
+		theme, err = normalizeTheme(*update.Theme)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var user User
-	err := s.db.Pool.QueryRow(ctx, `
-		UPDATE users SET timezone = $1, updated_at = NOW()
-		WHERE id = $2 AND disabled = FALSE
-		RETURNING id, display_name, role, timezone, disabled, created_at, updated_at
-	`, timezone, userID).Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Disabled, &user.CreatedAt, &user.UpdatedAt)
+	err = s.db.Pool.QueryRow(ctx, `
+		UPDATE users SET timezone = $1, theme = $2, updated_at = NOW()
+		WHERE id = $3 AND disabled = FALSE
+		RETURNING id, display_name, role, timezone, theme, disabled, created_at, updated_at
+	`, timezone, theme, userID).Scan(
+		&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Theme, &user.Disabled, &user.CreatedAt, &user.UpdatedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -559,10 +599,10 @@ func (s *Service) UpdateCredentialSignCount(ctx context.Context, userID uuid.UUI
 func (s *Service) FindAdminUser(ctx context.Context) (*User, error) {
 	var user User
 	err := s.db.Pool.QueryRow(ctx, `
-		SELECT id, display_name, role, timezone, disabled, created_at, updated_at
+		SELECT id, display_name, role, timezone, theme, disabled, created_at, updated_at
 		FROM users WHERE role = $1 AND disabled = FALSE
 		ORDER BY created_at ASC LIMIT 1
-	`, RoleAdmin).Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Disabled, &user.CreatedAt, &user.UpdatedAt)
+	`, RoleAdmin).Scan(&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Theme, &user.Disabled, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

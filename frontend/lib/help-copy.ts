@@ -9,7 +9,7 @@ export const HELP_COPY: Record<string, string> = {
     "Interactive relationship maps synced from Neo4j. Filter by target and scrub snapshot history to see how topology changed.",
   "page.settings":
     "Runtime configuration for DNS, enrichment keys, scan workers, retention, alert rules, and outbound webhooks.",
-  "page.profile": "Your personal settings: timezone, passkeys, and registered devices.",
+  "page.profile": "Your personal settings: theme, timezone, passkeys, and registered devices.",
   "page.administration":
     "Server-wide configuration: integrations, system tuning, authentication defaults, and user management.",
   "settings.nav.integrations": "Slack, Discord, Teams, and Pushover webhook integrations.",
@@ -17,7 +17,7 @@ export const HELP_COPY: Record<string, string> = {
   "settings.nav.authentication": "Passkey enrollment defaults, session lifetime, and WebAuthn relying party settings.",
   "settings.nav.users": "Create users and issue enrollment or recovery codes.",
   "settings.profile": "Your signed-in identity, preferences, and registered passkeys.",
-  "settings.preferences": "Timezone used when displaying timestamps in the UI.",
+  "settings.preferences": "Default theme and timezone for your account across devices.",
   "settings.passkeys": "Register, rename, or remove passkeys for each browser or security key.",
   "page.reports":
     "PDF intelligence reports generated from snapshot data. Reports queue asynchronously after you request them.",
