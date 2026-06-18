@@ -110,6 +110,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | — | Target collections | ✅ Done | CRUD API, bulk rescan, `/collections` UI |
 | — | Settings tooltips | ✅ Done | Dense `HelpTip` coverage on Settings page |
 | — | JA3S CI hotfix | ✅ Done | Inline TLS parse; no `gopacket` / `libpcap` on Linux CI |
+| — | Snapshot create-report UX | ✅ Done | Poll status, in-card progress, credentialed PDF download (beta.27) |
 
 ---
 
@@ -117,7 +118,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 48 items (core + graph + platform batch) |
+| **Done** | 49 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 2 (agents, OIDC/RBAC) |
 

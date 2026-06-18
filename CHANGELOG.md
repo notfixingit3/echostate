@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.27] - 2026-06-18
+
+### Fixed
+
+- **Snapshot create report** — Snapshot detail now polls report status, shows in-card progress, and offers **View report** / **Download PDF** when complete (previously only a brief “queued” alert).
+- **Report downloads** — Shared `downloadReport()` helper uses credentialed fetch so PDF downloads work behind auth on snapshot, report detail, and reports table pages.
+
+### Changed
+
+- **Reports list** — `/reports?snapshot_id=` pre-fills the snapshot filter from the snapshot page **View reports** link.
+
 ## [0.0.1-beta.26] - 2026-06-18
 
 ### Changed

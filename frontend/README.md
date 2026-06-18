@@ -42,9 +42,9 @@ Built as `echostate-frontend` via `docker compose up --build`. Inside Compose, `
 | `/target?id=` | Target detail, intel tabs, rescan button |
 | `/target/snapshots?id=` | Snapshot history for a target |
 | `/snapshots` | Browse all snapshots |
-| `/snapshot?id=` | Snapshot detail |
-| `/reports` | Browse reports |
-| `/report?id=` | Report status + PDF download |
+| `/snapshot?id=` | Snapshot detail; **Create report** polls until PDF is ready, then download |
+| `/reports` | Browse reports (`?snapshot_id=` filter supported) |
+| `/report?id=` | Report status (auto-refresh) + credentialed PDF download |
 | `/profile` | Display name, theme, timezone, passkeys, device enrollment codes |
 | `/admin` | Server settings: integrations, system, authentication, user management |
 | `/settings/*` | Legacy redirects to `/profile` or `/admin` |
