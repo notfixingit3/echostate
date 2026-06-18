@@ -326,6 +326,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.27]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.27
+[0.0.1-beta.26]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.26
+[0.0.1-beta.25]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.25
+[0.0.1-beta.24]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.24
 [0.0.1-beta.23]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.23
 [0.0.1-beta.22]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.22
 [0.0.1-beta.21]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.21
