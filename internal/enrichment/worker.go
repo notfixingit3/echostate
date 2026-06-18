@@ -21,7 +21,7 @@ const httpTimeout = 12 * time.Second
 // EnrichSnapshot augments snapshot raw_data with passive third-party correlation.
 func EnrichSnapshot(ctx context.Context, database *db.DB, snapshotID uuid.UUID) error {
 	settings := config.GetSettings()
-	if settings.ShodanAPIKey == "" && settings.CensysAPIID == "" {
+	if !hasEnrichmentKeys(settings) {
 		return nil
 	}
 
@@ -51,6 +51,20 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, snapshotID uuid.UUID) 
 			enrichment["censys_error"] = err.Error()
 		}
 	}
+	if settings.HIBPAPIKey != "" {
+		if hibp, err := queryHIBP(ctx, settings.HIBPAPIKey, payload); err == nil && len(hibp) > 0 {
+			enrichment["hibp"] = hibp
+		} else if err != nil {
+			enrichment["hibp_error"] = err.Error()
+		}
+	}
+	if settings.RiskIQAPIUser != "" && settings.RiskIQAPIKey != "" {
+		if riskiq, err := queryRiskIQ(ctx, settings.RiskIQAPIUser, settings.RiskIQAPIKey, payload); err == nil && len(riskiq) > 0 {
+			enrichment["riskiq"] = riskiq
+		} else if err != nil {
+			enrichment["riskiq_error"] = err.Error()
+		}
+	}
 
 	if len(enrichment) == 0 {
 		return nil
@@ -68,6 +82,13 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, snapshotID uuid.UUID) 
 	}
 	log.Printf("enrichment: updated snapshot %s", snapshotID)
 	return nil
+}
+
+func hasEnrichmentKeys(settings config.SystemSettings) bool {
+	return settings.ShodanAPIKey != "" ||
+		(settings.CensysAPIID != "" && settings.CensysAPISecret != "") ||
+		settings.HIBPAPIKey != "" ||
+		(settings.RiskIQAPIUser != "" && settings.RiskIQAPIKey != "")
 }
 
 func queryShodan(ctx context.Context, apiKey string, payload map[string]any) (map[string]any, error) {
@@ -101,8 +122,8 @@ func queryShodan(ctx context.Context, apiKey string, payload map[string]any) (ma
 		return nil, err
 	}
 	return map[string]any{
-		"query":  query,
-		"total":  body["total"],
+		"query":   query,
+		"total":   body["total"],
 		"matches": truncateMatches(body["matches"]),
 	}, nil
 }
@@ -142,7 +163,7 @@ func queryCensys(ctx context.Context, apiID, apiSecret string, payload map[strin
 		return nil, err
 	}
 	return map[string]any{
-		"query": jarm,
+		"query":  jarm,
 		"result": parsed["result"],
 	}, nil
 }

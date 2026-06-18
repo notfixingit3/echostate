@@ -43,6 +43,7 @@ func Compute(previous map[string]any, current *models.ScanResult) []Entry {
 	var entries []Entry
 	entries = append(entries, diffTLS(previous, currentMap)...)
 	entries = append(entries, diffBGP(previous, currentMap)...)
+	entries = append(entries, diffGraph(previous, currentMap)...)
 	entries = append(entries, diffCT(previous, currentMap)...)
 	entries = append(entries, diffDMARC(previous, currentMap)...)
 	entries = append(entries, diffWeb(previous, currentMap)...)

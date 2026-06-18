@@ -32,6 +32,7 @@ import {
   CT_FIELDS,
   TRACEROUTE_FIELDS,
   SCREENSHOT_FIELDS,
+  ENRICHMENT_FIELDS,
   formatFieldLabel,
   formatValue,
 } from "@/lib/intel"
@@ -417,6 +418,7 @@ export function IntelPanels({
           ) : null}
         </TabsTrigger>
         <TabsTrigger value="storage">Storage</TabsTrigger>
+        <TabsTrigger value="enrichment">Enrichment</TabsTrigger>
         <TabsTrigger value="pwhois">Submitter</TabsTrigger>
         <TabsTrigger value="errors" className="gap-1.5">
           Errors
@@ -680,6 +682,26 @@ export function IntelPanels({
                 </Button>
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="enrichment" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Third-party enrichment</CardTitle>
+            <CardDescription>
+              Async Shodan, Censys, HIBP, and RiskIQ correlation (when API keys are configured).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {raw?.enrichment && Object.keys(raw.enrichment).length > 0 ? (
+              <DataGrid data={raw.enrichment} fields={ENRICHMENT_FIELDS} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No enrichment data yet. Configure API keys in Settings and rescan.
+              </p>
+            )}
           </CardContent>
         </Card>
       </TabsContent>
