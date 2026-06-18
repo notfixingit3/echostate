@@ -4,11 +4,14 @@ import * as React from "react"
 import { useTheme } from "next-themes"
 import { MoonIcon, SunIcon, MonitorIcon } from "lucide-react"
 
+import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
+import { updateProfile, type UserTheme } from "@/lib/auth"
 
-const themes = ["light", "dark", "system"] as const
+const themes: UserTheme[] = ["light", "dark", "system"]
 
 export function ThemeToggle() {
+  const { user, setUser } = useAuth()
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
 
@@ -17,10 +20,15 @@ export function ThemeToggle() {
   }, [])
 
   const cycleTheme = () => {
-    const current = theme ?? "system"
-    const index = themes.indexOf(current as (typeof themes)[number])
+    const current = (theme ?? "system") as UserTheme
+    const index = themes.indexOf(current)
     const next = themes[(index + 1) % themes.length]
     setTheme(next)
+    if (user) {
+      void updateProfile({ theme: next })
+        .then((result) => setUser(result.user))
+        .catch(() => {})
+    }
   }
 
   const Icon =

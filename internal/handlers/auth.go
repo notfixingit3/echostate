@@ -227,15 +227,23 @@ func (h *Handler) authUpdateProfile(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Timezone string `json:"timezone"`
+		Timezone *string `json:"timezone"`
+		Theme    *string `json:"theme"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	user, err := h.auth.UpdateUserProfile(c.Request.Context(), actor.ID, req.Timezone)
+	if req.Timezone == nil && req.Theme == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "timezone or theme required"})
+		return
+	}
+	user, err := h.auth.UpdateUserProfile(c.Request.Context(), actor.ID, auth.ProfileUpdate{
+		Timezone: req.Timezone,
+		Theme:    req.Theme,
+	})
 	if err != nil {
-		if err.Error() == "invalid timezone" {
+		if err.Error() == "invalid timezone" || err.Error() == "invalid theme" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
