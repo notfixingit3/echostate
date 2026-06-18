@@ -1,0 +1,11 @@
+# Production overlay — pull stable images built from the main branch.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    image: ghcr.io/notfixingit3/echostate:main
+
+  frontend:
+    image: ghcr.io/notfixingit3/echostate-frontend:main
