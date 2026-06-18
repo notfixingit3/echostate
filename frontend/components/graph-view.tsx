@@ -227,6 +227,11 @@ export function GraphView() {
   const [compareMode, setCompareMode] = React.useState<GraphCompareMode>("previous")
   const [pinnedNodes, setPinnedNodes] = React.useState<Record<string, { x: number; y: number }>>({})
   const [snapshotCount, setSnapshotCount] = React.useState<number | null>(null)
+  const selectedRef = React.useRef<GraphNode | null>(null)
+
+  React.useEffect(() => {
+    selectedRef.current = selected
+  }, [selected])
 
   const loadGraph = React.useCallback(
     async (
@@ -240,7 +245,9 @@ export function GraphView() {
     ): Promise<GraphResponse | null> => {
       setLoading(true)
       setError(null)
-      const previousID = preserveSelection ? selected?.id : restoreNodeId ?? null
+      const previousID = preserveSelection
+        ? selectedRef.current?.id
+        : restoreNodeId ?? null
       if (!preserveSelection && !restoreNodeId) {
         setSelected(null)
       }
@@ -268,7 +275,7 @@ export function GraphView() {
         setLoading(false)
       }
     },
-    [selected]
+    []
   )
 
   const handleSnapshotChange = React.useCallback(
@@ -831,13 +838,20 @@ export function GraphView() {
                           }}
                           onNodeClick={(node) => setSelected(node as GraphNode)}
                           onNodeDragEnd={(node) => {
-                            const n = node as ForceNode & { x?: number; y?: number }
+                            const n = node as ForceNode & {
+                              x?: number
+                              y?: number
+                              fx?: number
+                              fy?: number
+                            }
                             if (typeof n.x !== "number" || typeof n.y !== "number") return
-                            const x = n.x
-                            const y = n.y
+                            // Library clears fx/fy after drag unless they were set before drag started.
+                            // Re-pin on the live simulation node so it does not snap back on release.
+                            n.fx = n.x
+                            n.fy = n.y
                             setPinnedNodes((prev) => ({
                               ...prev,
-                              [n.id]: { x, y },
+                              [n.id]: { x: n.x, y: n.y },
                             }))
                           }}
 
