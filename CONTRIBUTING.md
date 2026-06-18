@@ -9,10 +9,15 @@ Thank you for your interest in contributing.
 3. Start the full stack:
 
    ```bash
-   docker compose up --build
+   docker compose pull
+   docker compose up -d
    ```
 
+   Or build from source: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`
+
 4. Open the UI at http://localhost:3001 and the API at http://localhost:8080.
+
+5. Optional — enable passkey auth: see [Authentication](README.md#authentication) in the README (`docker compose run --rm api auth bootstrap-admin`).
 
 ### Local development (without full compose)
 
