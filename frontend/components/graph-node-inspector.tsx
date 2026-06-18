@@ -20,6 +20,7 @@ const INSPECTOR_FIELDS: Record<string, string[]> = {
   Favicon: ["mmh3"],
   CertIssuer: ["name"],
   DMARCPolicy: ["policy", "subdomain_policy"],
+  SOAZone: ["zone", "mname", "serial", "rname", "refresh", "expire"],
   Subdomain: ["host"],
   DNSHost: ["host"],
   CertSAN: ["name"],

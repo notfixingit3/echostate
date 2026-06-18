@@ -349,7 +349,7 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 	}
 
 	_, err := tx.Run(ctx, `
-		MATCH (t:Target {id: $target_id})-[r:USES_NS|USES_MX|ALIASES_TO]->()
+		MATCH (t:Target {id: $target_id})-[r:USES_NS|USES_MX|ALIASES_TO|HAS_DMARC|HAS_SOA]->()
 		DELETE r
 	`, map[string]any{"target_id": targetID})
 	if err != nil {
@@ -404,6 +404,35 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 				"subdomain_policy":  strings.TrimSpace(fmt.Sprint(parsed["subdomain_policy"])),
 				"record":            strings.TrimSpace(fmt.Sprint(parsed["record"])),
 				"target_id":         targetID,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if soa, ok := dnsMap["SOA"].(map[string]any); ok {
+		zone := strings.TrimSpace(fmt.Sprint(soa["zone"]))
+		if zone == "" {
+			zone = strings.TrimSpace(fmt.Sprint(soa["mname"]))
+		}
+		if zone != "" {
+			_, err = tx.Run(ctx, `
+				MERGE (z:SOAZone {zone: $zone})
+				SET z.mname = $mname,
+					z.rname = $rname,
+					z.serial = $serial,
+					z.record = $record
+				WITH z
+				MATCH (t:Target {id: $target_id})
+				MERGE (t)-[:HAS_SOA]->(z)
+			`, map[string]any{
+				"zone":      zone,
+				"mname":     strings.TrimSpace(fmt.Sprint(soa["mname"])),
+				"rname":     strings.TrimSpace(fmt.Sprint(soa["rname"])),
+				"serial":    intProp(soa, "serial"),
+				"record":    strings.TrimSpace(fmt.Sprint(soa["record"])),
+				"target_id": targetID,
 			})
 			if err != nil {
 				return err

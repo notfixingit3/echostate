@@ -41,6 +41,9 @@ export interface IntelHighlights {
   certExpires?: string
   certIssuer?: string
   dnsARecords?: string[]
+  dnsSoaZone?: string
+  dnsSoaMname?: string
+  dnsSoaSerial?: number
   faviconMMH3?: string
   jarm?: string
   hijackRisk?: string
@@ -185,6 +188,12 @@ export function extractIntel(
     certExpires: formatDateField(tls?.not_after),
     certIssuer: asString(tls?.issuer),
     dnsARecords: asStringArray(dns?.A),
+    dnsSoaZone: asString((dns?.SOA as Record<string, unknown> | undefined)?.zone),
+    dnsSoaMname: asString((dns?.SOA as Record<string, unknown> | undefined)?.mname),
+    dnsSoaSerial:
+      typeof (dns?.SOA as Record<string, unknown> | undefined)?.serial === "number"
+        ? ((dns?.SOA as Record<string, unknown>).serial as number)
+        : undefined,
     faviconMMH3: asString(favicon?.mmh3) || asString(favicon?.shodan),
     jarm: asString(tls?.jarm),
     hijackRisk: asString(routing?.hijack_risk),
@@ -333,6 +342,7 @@ export const DNS_FIELDS = [
   "NS",
   "TXT",
   "CNAME",
+  "SOA",
   "DMARC",
   "SPF",
   "DKIM",

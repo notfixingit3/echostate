@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.14] - 2026-06-17
+
+### Added
+
+- **SOA DNS records** — zone authority lookup (walks parent labels on subdomains), parsed fields in the DNS intel tab, snapshot diffs for serial/mname/rname/TTL changes, and `SOAZone` nodes on the DNS graph view.
+
 ## [0.0.1-beta.13] - 2026-06-17
 
 ### Added
@@ -161,6 +167,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.14]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.14
+[0.0.1-beta.13]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.13
 [0.0.1-beta.12]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.12
 [0.0.1-beta.11]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.11
 [0.0.1-beta.10]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.10

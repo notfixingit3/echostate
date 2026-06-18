@@ -96,6 +96,17 @@ func gatherDNS(ctx context.Context, host string) (string, map[string]any, error)
 		}
 	}()
 
+	// SOA (zone authority; walks up labels when queried on a subdomain)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if soa, err := lookupSOAFunc(ctx, host); err == nil && soa != nil {
+			mu.Lock()
+			data["SOA"] = soa
+			mu.Unlock()
+		}
+	}()
+
 	wg.Wait()
 
 	enrichMailSecurity(ctx, resolver, host, data)

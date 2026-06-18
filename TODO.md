@@ -35,7 +35,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 1 | TLS/SSL certificate analysis | ✅ Done | Leaf cert, chain, `days_remaining`, expiry alerts in diff |
-| 2 | DNS security & deep dive | ✅ Done | A/AAAA, MX, NS, TXT, CNAME, DMARC, SPF/DKIM parse; *future:* SOA |
+| 2 | DNS security & deep dive | ✅ Done | A/AAAA, MX, NS, TXT, CNAME, SOA, DMARC, SPF/DKIM parse |
 | 3 | Tech stack fingerprinting | ✅ Done | Final-URL headers + HTML CMS hints; *future:* JS analysis, auto-tagging |
 | 8 | Favicon MMH3/SHA256 hashing | ✅ Done | Shodan-compatible; enrichment worker can correlate |
 | 23 | Async scan job queue | ✅ Done | `POST /api/scan` → 202, worker pool, `GET /api/scans/:id` |
@@ -106,6 +106,6 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 |---|------|
 | **Done** | 41 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
-| **Later / platform** | 4 (graph UX overhaul, SOA, agents, OIDC/RBAC) |
+| **Later / platform** | 3 (graph UX overhaul, agents, OIDC/RBAC) |
 
-**Suggested next picks:** Graph UX overhaul (time-slider topology) → SOA DNS record → agents / OIDC
+**Suggested next picks:** Graph UX overhaul (time-slider topology) → distributed agents → OIDC/RBAC

@@ -136,11 +136,12 @@ const VIEW_META: Record<
   dns: {
     title: "DNS dependency graph",
     description:
-      "Nameserver, mail exchanger, CNAME, and DMARC policy dependencies for each target.",
+      "Nameserver, mail exchanger, CNAME, SOA zone, and DMARC policy dependencies for each target.",
     legend: {
       Target: "#0d9488",
       DNSHost: "#4f46e5",
       DMARCPolicy: "#0f766e",
+      SOAZone: "#7c3aed",
     },
   },
   cert: {
@@ -577,6 +578,10 @@ export function GraphView() {
                         <p>
                           <span className="font-medium text-foreground">ALIASES_TO</span>{" "}
                           — CNAME target
+                        </p>
+                        <p>
+                          <span className="font-medium text-foreground">HAS_SOA</span>{" "}
+                          — authoritative zone (serial + primary NS)
                         </p>
                       </div>
                     ) : null}

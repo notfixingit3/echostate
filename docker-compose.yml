@@ -57,7 +57,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.13}
+        VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.14}
     container_name: echostate-api
     restart: unless-stopped
     environment:
@@ -96,7 +96,7 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_APP_VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.13}
+        NEXT_PUBLIC_APP_VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.14}
     container_name: echostate-frontend
     restart: unless-stopped
     ports:
