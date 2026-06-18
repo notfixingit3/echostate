@@ -16,7 +16,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates chromium traceroute
+# Web scans use browserless/chrome via BROWSER_WS_URL; traceroute for local path probes.
+RUN apk add --no-cache ca-certificates traceroute
 
 WORKDIR /app
 
