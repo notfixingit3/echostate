@@ -62,6 +62,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	auth := middleware.APIKeyAuth()
 
 	router.GET("/health", h.health)
+	router.GET("/api/version", h.getVersion)
 	router.POST("/api/scan", auth, rateLimiter.Middleware(), h.createScan)
 	router.GET("/api/scans/:id", h.getScan)
 
@@ -104,6 +105,15 @@ func (h *Handler) health(c *gin.Context) {
 		"env":     h.config.Env,
 		"version": version.Version,
 	})
+}
+
+func (h *Handler) getVersion(c *gin.Context) {
+	info := version.GetInfo(c.Request.Context(), version.Options{
+		Branch:     h.config.Branch,
+		GitHubRepo: h.config.GitHubRepo,
+		Enabled:    h.config.UpdateCheckEnabled,
+	})
+	c.JSON(http.StatusOK, info)
 }
 
 func (h *Handler) createScan(c *gin.Context) {

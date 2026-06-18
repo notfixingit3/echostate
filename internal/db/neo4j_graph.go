@@ -45,6 +45,7 @@ var graphViewEdgeTypes = map[string][]string{
 		"USES_NS",
 		"USES_MX",
 		"ALIASES_TO",
+		"HAS_DMARC",
 	},
 	"cert": {
 		"HAS_SAN",
@@ -193,6 +194,13 @@ func (c *Neo4jClient) GetGraph(ctx context.Context, targetID, view string) (*mod
 			return nil, err
 		}
 		response.Clusters = clusters
+	}
+
+	if targetID != "" {
+		events, err := c.GetIntelEvents(ctx, targetID, 50)
+		if err == nil {
+			response.Events = events
+		}
 	}
 
 	return response, nil
@@ -860,6 +868,8 @@ func graphNodeID(nodeType string, props map[string]any) string {
 		return "subdomain:" + stringProp(props, "host")
 	case "DNSHost":
 		return "dnshost:" + stringProp(props, "host")
+	case "DMARCPolicy":
+		return "dmarc:" + stringProp(props, "policy")
 	case "SharedHop":
 		return "sharedhop:" + stringProp(props, "ip")
 	case "CertSAN":

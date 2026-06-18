@@ -17,12 +17,14 @@ import (
 const defaultBrowserWSURL = "ws://localhost:3000/"
 
 type pageCapture struct {
-	title     string
-	text      string
-	location  string
-	headerURL string
-	headers   map[string]string
-	htmlHints []string
+	title            string
+	text             string
+	location         string
+	headerURL        string
+	headers          map[string]string
+	htmlHints        []string
+	wordpressPlugins []map[string]any
+	wordpressThemes  []map[string]any
 }
 
 type documentResponse struct {
@@ -86,6 +88,20 @@ func newWebGatherer(browserWSURL string) Gatherer {
 			"security_headers": securityHeaders,
 			"tech_stack":       techStack,
 		}
+		if plugins := capture.wordpressPlugins; len(plugins) > 0 {
+			webData["wordpress_plugins"] = plugins
+		}
+		if themes := capture.wordpressThemes; len(themes) > 0 {
+			themeURL := capture.location
+			if themeURL == "" {
+				themeURL = headerURL
+			}
+			if themeURL == "" {
+				themeURL = "https://" + host
+			}
+			enrichWordPressThemeVersions(ctx, themeURL, themes)
+			webData["wordpress_themes"] = themes
+		}
 
 		if scrapeErr != nil {
 			webData["error"] = scrapeErr.Error()
@@ -132,6 +148,7 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 		}
 	})
 
+	var wpIntel wordpressIntel
 	err := chromedp.Run(ctx,
 		network.Enable(),
 		chromedp.Navigate(url),
@@ -140,10 +157,14 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 		chromedp.Text("body", &capture.text, chromedp.ByQuery),
 		chromedp.Location(&capture.location),
 		chromedp.Evaluate(htmlTechHintsJS, &capture.htmlHints),
+		chromedp.Evaluate(wordpressIntelJS, &wpIntel),
 	)
 	if err != nil {
 		return err
 	}
+
+	capture.wordpressPlugins = normalizeWordPressItems(wpIntel.Plugins)
+	capture.wordpressThemes = normalizeWordPressItems(wpIntel.Themes)
 
 	mu.Lock()
 	capture.headers = lastDoc.headers

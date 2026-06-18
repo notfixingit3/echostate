@@ -67,7 +67,7 @@ func main() {
 	})
 	router.Use(gin.Recovery())
 	router.Use(loggingMiddleware())
-	router.Use(middleware.NewCORS(cfg.FrontendURL))
+	router.Use(middleware.NewCORS(cfg.FrontendURL, cfg.Env))
 
 	rateLimiter := middleware.NewRateLimiter()
 	defer rateLimiter.Stop()

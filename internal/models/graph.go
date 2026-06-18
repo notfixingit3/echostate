@@ -141,6 +141,19 @@ type GraphPeeringIX struct {
 	SpeedMbps   int    `json:"speed_mbps,omitempty"`
 }
 
+// GraphIntelEvent is a diff or enrichment signal tied to a target snapshot.
+type GraphIntelEvent struct {
+	ID         string `json:"id"`
+	Type       string `json:"type"`
+	Severity   string `json:"severity,omitempty"`
+	Summary    string `json:"summary"`
+	Field      string `json:"field,omitempty"`
+	Detail     string `json:"detail,omitempty"`
+	SnapshotID string `json:"snapshot_id,omitempty"`
+	DetectedAt int64  `json:"detected_at,omitempty"`
+	Source     string `json:"source,omitempty"`
+}
+
 // GraphResponse is returned by GET /api/graph.
 type GraphResponse struct {
 	View  string         `json:"view"`
@@ -156,4 +169,5 @@ type GraphResponse struct {
 	RouteDiff           *GraphRouteDiff          `json:"route_diff,omitempty"`
 	VantageDivergence   []GraphVantageDivergence `json:"vantage_divergence,omitempty"`
 	PeeringIX           []GraphPeeringIX         `json:"peering_ix,omitempty"`
+	Events              []GraphIntelEvent        `json:"events,omitempty"`
 }

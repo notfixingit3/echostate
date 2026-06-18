@@ -3,7 +3,7 @@ import { ExternalLinkIcon } from "lucide-react"
 
 import { BrandLogo } from "@/components/brand-logo"
 import { Badge } from "@/components/ui/badge"
-import { APP_VERSION } from "@/lib/version"
+import { VersionBadge } from "@/components/version-badge"
 
 const capabilities = ["WHOIS", "ASN / BGP", "DNS & TLS", "Snapshots", "PDF reports"]
 
@@ -78,13 +78,7 @@ export function Footer() {
                 </a>
               ))}
             </div>
-            <Badge
-              variant="outline"
-              className="font-mono text-xs"
-              data-testid="footer-version"
-            >
-              v{APP_VERSION}
-            </Badge>
+            <VersionBadge />
           </div>
         </div>
 

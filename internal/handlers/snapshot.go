@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,6 +42,10 @@ func (h *Handler) PersistScan(ctx context.Context, clientIP string, result *mode
 		return nil, err
 	}
 
+	if err := h.applyAutoTags(ctx, targetID, snapshot.RawData); err != nil {
+		return nil, fmt.Errorf("apply auto tags: %w", err)
+	}
+
 	if len(thumbnailBytes) > 0 {
 		blobID, err := h.db.StoreSnapshotBlob(ctx, snapshot.ID, db.BlobKindScreenshotThumbnail, "image/jpeg", thumbnailBytes)
 		if err != nil {
@@ -67,7 +72,7 @@ func (h *Handler) PersistScan(ctx context.Context, clientIP string, result *mode
 
 	go webhooks.Dispatch(context.Background(), h.db, result.Host, snapshot, h.frontendURL())
 	go func() {
-		_ = enrichment.EnrichSnapshot(context.Background(), h.db, snapshot.ID)
+		_ = enrichment.EnrichSnapshot(context.Background(), h.db, h.neo4jClient, snapshot.ID)
 	}()
 	go func() {
 		_ = retention.PruneTargetSnapshots(context.Background(), h.db, targetID)
@@ -215,6 +220,45 @@ func decodeChangeDetails(data []byte) ([]models.ChangeDetail, error) {
 		return nil, err
 	}
 	return details, nil
+}
+
+func (h *Handler) applyAutoTags(ctx context.Context, targetID uuid.UUID, rawData map[string]any) error {
+	if !isWordPressSite(rawData) {
+		return nil
+	}
+
+	_, err := h.db.Pool.Exec(ctx, `
+		UPDATE targets
+		SET tags = (
+			SELECT COALESCE(array_agg(DISTINCT tag), '{}')
+			FROM unnest(tags || ARRAY['wordpress']::text[]) AS tag
+		)
+		WHERE id = $1
+	`, targetID)
+	return err
+}
+
+func isWordPressSite(rawData map[string]any) bool {
+	web, ok := rawData["web"].(map[string]any)
+	if !ok {
+		return false
+	}
+	if plugins, ok := web["wordpress_plugins"].([]any); ok && len(plugins) > 0 {
+		return true
+	}
+	if themes, ok := web["wordpress_themes"].([]any); ok && len(themes) > 0 {
+		return true
+	}
+	stack, ok := web["tech_stack"].([]any)
+	if !ok {
+		return false
+	}
+	for _, item := range stack {
+		if strings.Contains(strings.ToLower(fmt.Sprint(item)), "wordpress") {
+			return true
+		}
+	}
+	return false
 }
 
 func toChangeDetails(entries []diff.Entry) []models.ChangeDetail {

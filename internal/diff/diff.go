@@ -237,15 +237,112 @@ func diffWeb(previous, current map[string]any) []Entry {
 			Summary: "Added web",
 		}}
 	}
+	var entries []Entry
+
 	prevTitle := stringVal(prevWeb, "title")
 	curTitle := stringVal(curWeb, "title")
 	if curTitle != "" && curTitle != prevTitle {
-		return []Entry{{
+		entries = append(entries, Entry{
 			Type: "web_title", Severity: SeverityInfo, Field: "web.title",
 			Summary: fmt.Sprintf("Web title changed: %s → %s", emptyDash(prevTitle), curTitle),
-		}}
+		})
 	}
-	return nil
+
+	entries = append(entries, diffWordPressPlugins(prevWeb, curWeb)...)
+	entries = append(entries, diffWordPressThemes(prevWeb, curWeb)...)
+	return entries
+}
+
+func diffWordPressPlugins(prevWeb, curWeb map[string]any) []Entry {
+	return diffWordPressItems(
+		prevWeb["wordpress_plugins"],
+		curWeb["wordpress_plugins"],
+		"plugin",
+		"web.wordpress_plugins",
+		"wp_plugin_added",
+		"wp_plugin_removed",
+		"wp_plugin_version",
+	)
+}
+
+func diffWordPressThemes(prevWeb, curWeb map[string]any) []Entry {
+	return diffWordPressItems(
+		prevWeb["wordpress_themes"],
+		curWeb["wordpress_themes"],
+		"theme",
+		"web.wordpress_themes",
+		"wp_theme_added",
+		"wp_theme_removed",
+		"wp_theme_version",
+	)
+}
+
+func diffWordPressItems(prevRaw, curRaw any, label, field, addedType, removedType, versionType string) []Entry {
+	prevItems := wordpressItemMap(prevRaw)
+	curItems := wordpressItemMap(curRaw)
+	if len(prevItems) == 0 && len(curItems) == 0 {
+		return nil
+	}
+
+	var entries []Entry
+	for slug, curVersion := range curItems {
+		prevVersion, ok := prevItems[slug]
+		if !ok {
+			entries = append(entries, Entry{
+				Type: addedType, Severity: SeverityInfo, Field: field,
+				Summary: fmt.Sprintf("WordPress %s added: %s%s", label, slug, wordpressVersionSuffix(curVersion)),
+			})
+			continue
+		}
+		if curVersion != prevVersion {
+			entries = append(entries, Entry{
+				Type: versionType, Severity: SeverityInfo, Field: field + "." + slug,
+				Summary: fmt.Sprintf(
+					"WordPress %s %s version: %s → %s",
+					label,
+					slug,
+					emptyDash(prevVersion),
+					emptyDash(curVersion),
+				),
+			})
+		}
+	}
+	for slug, prevVersion := range prevItems {
+		if _, ok := curItems[slug]; !ok {
+			entries = append(entries, Entry{
+				Type: removedType, Severity: SeverityInfo, Field: field,
+				Summary: fmt.Sprintf("WordPress %s removed: %s%s", label, slug, wordpressVersionSuffix(prevVersion)),
+			})
+		}
+	}
+	return entries
+}
+
+func wordpressItemMap(raw any) map[string]string {
+	out := make(map[string]string)
+	list, ok := raw.([]any)
+	if !ok {
+		return out
+	}
+	for _, item := range list {
+		plugin, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		slug := strings.ToLower(stringVal(plugin, "slug"))
+		if slug == "" {
+			continue
+		}
+		out[slug] = stringVal(plugin, "version")
+	}
+	return out
+}
+
+func wordpressVersionSuffix(version string) string {
+	if version == "" {
+		return ""
+	}
+	return " (" + version + ")"
 }
 
 func diffGeneric(previous, current map[string]any) []Entry {

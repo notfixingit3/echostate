@@ -21,6 +21,7 @@ import (
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/scanner"
 	"github.com/notfixingit3/echostate/internal/scans"
+	"github.com/notfixingit3/echostate/internal/version"
 )
 
 // mockScanRunner is a test double for scanner.Run that avoids live network or
@@ -59,6 +60,37 @@ func newDBTestHandler(t *testing.T, d *db.DB) *Handler {
 		db:     d,
 		config: testConfig(),
 	}
+}
+
+func TestGetVersion(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	version.ResetUpstreamCache()
+
+	oldVersion := version.Version
+	version.Version = "0.0.1-beta.12"
+	t.Cleanup(func() {
+		version.Version = oldVersion
+		version.ResetUpstreamCache()
+	})
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/version", nil)
+
+	h := &Handler{
+		config: &config.Config{
+			Env:                "test",
+			Branch:             "dev",
+			GitHubRepo:         "notfixingit3/echostate",
+			UpdateCheckEnabled: false,
+		},
+	}
+	h.getVersion(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), `"current":"0.0.1-beta.12"`)
+	require.Contains(t, w.Body.String(), `"branch":"dev"`)
+	require.Contains(t, w.Body.String(), `"update_available":false`)
 }
 
 func TestHealth(t *testing.T) {

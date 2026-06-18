@@ -32,12 +32,18 @@ type TargetsResponse = PaginatedResponse<TargetSummary>
 export function TargetsTable() {
   const router = useRouter()
   const [q, setQ] = React.useState("")
+  const [debouncedQ, setDebouncedQ] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [data, setData] = React.useState<TargetsResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
   const limit = 20
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQ(q), 300)
+    return () => window.clearTimeout(timer)
+  }, [q])
 
   React.useEffect(() => {
     let cancelled = false
@@ -49,7 +55,7 @@ export function TargetsTable() {
       const params = new URLSearchParams()
       params.set("page", String(page))
       params.set("limit", String(limit))
-      if (q.trim()) params.set("q", q.trim())
+      if (debouncedQ.trim()) params.set("q", debouncedQ.trim())
 
       try {
         const result = await fetchApi<TargetsResponse>(
@@ -76,7 +82,7 @@ export function TargetsTable() {
     return () => {
       cancelled = true
     }
-  }, [page, q])
+  }, [page, debouncedQ])
 
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0
 
@@ -139,14 +145,20 @@ export function TargetsTable() {
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                 </TableRow>
               ))
-            ) : data?.data.length === 0 ? (
+            ) : !data ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  {error ? "Could not load targets." : "Loading targets…"}
+                </TableCell>
+              </TableRow>
+            ) : data.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No targets found.
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((target) => (
+              data.data.map((target) => (
                 <TableRow
                   key={target.id}
                   className="cursor-pointer"

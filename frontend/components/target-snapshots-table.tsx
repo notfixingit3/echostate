@@ -114,14 +114,20 @@ export function TargetSnapshotsTable({ targetId }: { targetId: string }) {
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                 </TableRow>
               ))
-            ) : data?.data.length === 0 ? (
+            ) : !data ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  {error ? "Could not load snapshots." : "Loading snapshots…"}
+                </TableCell>
+              </TableRow>
+            ) : data.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No snapshots found for this target.
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((snapshot) => (
+              data.data.map((snapshot) => (
                 <TableRow
                   key={snapshot.id}
                   className="cursor-pointer"

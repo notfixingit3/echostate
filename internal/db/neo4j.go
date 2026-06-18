@@ -168,6 +168,15 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 			return nil, err
 		}
 
+		if err = syncIntelEvents(ctx, tx, target.ID.String(), snapshot); err != nil {
+			return nil, err
+		}
+		if enrich, ok := snapshot.RawData["enrichment"].(map[string]any); ok {
+			if err = syncEnrichmentHits(ctx, tx, target.ID.String(), snapshot.ID.String(), snapshot.ScannedAt.Unix(), enrich); err != nil {
+				return nil, err
+			}
+		}
+
 		return nil, nil
 	})
 
