@@ -190,7 +190,7 @@ export function AccountProfilePanel() {
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="inline-flex items-center gap-1.5">
-            Profile
+            Account
             <HelpTip id="settings.profile" />
           </CardTitle>
           <CardDescription>

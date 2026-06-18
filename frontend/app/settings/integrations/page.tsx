@@ -1,12 +1,5 @@
-"use client"
+import { redirect } from "next/navigation"
 
-import { AdminGuard } from "@/components/admin-guard"
-import { SettingsIntegrationsPanel } from "@/components/settings-integrations-panel"
-
-export default function IntegrationsSettingsPage() {
-  return (
-    <AdminGuard>
-      <SettingsIntegrationsPanel />
-    </AdminGuard>
-  )
+export default function LegacyIntegrationsSettingsPage() {
+  redirect("/admin/integrations")
 }

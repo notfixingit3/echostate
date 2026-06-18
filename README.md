@@ -120,20 +120,19 @@ Set these in `.env` (Docker) or your shell (local `go run`). See `.env.example`.
 
 1. **Returning user** — `/login` → **Sign in with passkey** (uses the passkey registered in this browser).
 2. **New device or first enrollment** — enter an **enrollment code** or **recovery code** → verify → **Register passkey on this device** or sign in with an existing passkey.
-3. **Add passkey while signed in** — **Admin → Account & passkeys** → **Register passkey** (also linked from the nav **Account** button).
+3. **Add passkey while signed in** — click your name in the nav → **Profile** → **Register passkey**.
 4. **Sign out** — nav bar **Sign out** (or `POST /api/auth/logout`).
 
-### Admin console
+### Profile & administration
 
-The nav **Admin** link opens a sidebar with:
+| Area | Path | Who |
+| ---- | ---- | --- |
+| **Profile** (timezone, passkeys) | `/profile` — click your name in the nav | All signed-in users |
+| **Administration** (server settings) | `/admin` — nav **Admin** link | Admin only |
 
-| Section | Path | Who |
-| ------- | ---- | --- |
-| Account & passkeys | `/settings/account` | All signed-in users |
-| Integrations | `/settings/integrations` | Admin |
-| System | `/settings/system` | Admin |
-| Authentication | `/settings/authentication` | Admin |
-| User management | `/settings/users` | Admin |
+Administration sections: Integrations, System, Authentication, User management.
+
+Legacy `/settings/*` URLs redirect to the paths above.
 
 **User management** (admin):
 
