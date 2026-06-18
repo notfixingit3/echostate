@@ -389,6 +389,28 @@ func syncDNSGraph(ctx context.Context, tx neo4j.ManagedTransaction, targetID str
 		}
 	}
 
+	if parsed, ok := dnsMap["DMARC_PARSED"].(map[string]any); ok {
+		policy := strings.TrimSpace(fmt.Sprint(parsed["policy"]))
+		if policy != "" {
+			_, err = tx.Run(ctx, `
+				MERGE (d:DMARCPolicy {policy: $policy})
+				SET d.subdomain_policy = $subdomain_policy,
+					d.record = $record
+				WITH d
+				MATCH (t:Target {id: $target_id})
+				MERGE (t)-[:HAS_DMARC]->(d)
+			`, map[string]any{
+				"policy":            policy,
+				"subdomain_policy":  strings.TrimSpace(fmt.Sprint(parsed["subdomain_policy"])),
+				"record":            strings.TrimSpace(fmt.Sprint(parsed["record"])),
+				"target_id":         targetID,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

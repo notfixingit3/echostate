@@ -33,6 +33,7 @@ type SnapshotsResponse = PaginatedResponse<SnapshotSummary>
 export function SnapshotsTable() {
   const router = useRouter()
   const [targetId, setTargetId] = React.useState("")
+  const [debouncedTargetId, setDebouncedTargetId] = React.useState("")
   const [country, setCountry] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [data, setData] = React.useState<SnapshotsResponse | null>(null)
@@ -40,6 +41,11 @@ export function SnapshotsTable() {
   const [error, setError] = React.useState<string | null>(null)
 
   const limit = 20
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedTargetId(targetId), 300)
+    return () => window.clearTimeout(timer)
+  }, [targetId])
 
   React.useEffect(() => {
     let cancelled = false
@@ -51,7 +57,9 @@ export function SnapshotsTable() {
       const params = new URLSearchParams()
       params.set("page", String(page))
       params.set("limit", String(limit))
-      if (targetId.trim()) params.set("target_id", targetId.trim())
+      if (debouncedTargetId.trim()) {
+        params.set("target_id", debouncedTargetId.trim())
+      }
 
       try {
         const result = await fetchApi<SnapshotsResponse>(
@@ -78,7 +86,7 @@ export function SnapshotsTable() {
     return () => {
       cancelled = true
     }
-  }, [page, targetId])
+  }, [page, debouncedTargetId])
 
   const filteredData = React.useMemo(() => {
     if (!data) return null
@@ -166,14 +174,20 @@ export function SnapshotsTable() {
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                 </TableRow>
               ))
-            ) : filteredData?.data.length === 0 ? (
+            ) : !filteredData ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  {error ? "Could not load snapshots." : "Loading snapshots…"}
+                </TableCell>
+              </TableRow>
+            ) : filteredData.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No snapshots found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData?.data.map((snapshot) => (
+              filteredData.data.map((snapshot) => (
                 <TableRow
                   key={snapshot.id}
                   className="cursor-pointer"

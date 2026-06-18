@@ -19,14 +19,18 @@ import (
 const httpTimeout = 12 * time.Second
 
 // EnrichSnapshot augments snapshot raw_data with passive third-party correlation.
-func EnrichSnapshot(ctx context.Context, database *db.DB, snapshotID uuid.UUID) error {
+func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient, snapshotID uuid.UUID) error {
 	settings := config.GetSettings()
 	if !hasEnrichmentKeys(settings) {
 		return nil
 	}
 
+	var targetID uuid.UUID
+	var scannedAt time.Time
 	var raw []byte
-	err := database.Pool.QueryRow(ctx, `SELECT raw_data FROM snapshots WHERE id = $1`, snapshotID).Scan(&raw)
+	err := database.Pool.QueryRow(ctx, `
+		SELECT target_id, scanned_at, raw_data FROM snapshots WHERE id = $1
+	`, snapshotID).Scan(&targetID, &scannedAt, &raw)
 	if err != nil {
 		return fmt.Errorf("load snapshot: %w", err)
 	}
@@ -81,6 +85,18 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, snapshotID uuid.UUID) 
 		return fmt.Errorf("store enrichment: %w", err)
 	}
 	log.Printf("enrichment: updated snapshot %s", snapshotID)
+
+	if neo4j != nil {
+		go func() {
+			_ = neo4j.SyncEnrichment(
+				context.Background(),
+				targetID.String(),
+				snapshotID.String(),
+				scannedAt.Unix(),
+				enrichment,
+			)
+		}()
+	}
 	return nil
 }
 

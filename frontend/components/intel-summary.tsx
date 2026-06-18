@@ -17,6 +17,8 @@ import {
   CloudIcon,
   FolderSearchIcon,
   ScrollTextIcon,
+  PuzzleIcon,
+  LayoutTemplateIcon,
 } from "lucide-react"
 
 function StatCard({
@@ -174,6 +176,33 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
               ? `${intel.newCtSubdomainCount} new`
               : undefined
           }
+        />
+      ) : null}
+      {intel.wpPluginCount ? (
+        <StatCard
+          label="WP plugins"
+          value={`${intel.wpPluginCount} detected`}
+          icon={PuzzleIcon}
+          badge={
+            intel.newWpPluginCount
+              ? `${intel.newWpPluginCount} new`
+              : undefined
+          }
+        />
+      ) : null}
+      {intel.wpThemeSlug ? (
+        <StatCard
+          label="WP theme"
+          value={intel.wpThemeSlug}
+          icon={LayoutTemplateIcon}
+          badge={
+            intel.newWpThemeCount
+              ? `${intel.newWpThemeCount} new`
+              : intel.wpThemeVersion
+                ? `v${intel.wpThemeVersion}`
+                : undefined
+          }
+          mono
         />
       ) : null}
       <StatCard

@@ -52,6 +52,11 @@ export interface IntelHighlights {
   certDaysRemaining?: number
   certExpired?: boolean
   certStatus?: "ok" | "warning" | "critical"
+  wpPluginCount?: number
+  wpThemeSlug?: string
+  wpThemeVersion?: string
+  newWpPluginCount?: number
+  newWpThemeCount?: number
   errorCount: number
   changeCount: number
 }
@@ -78,6 +83,24 @@ function asStringArray(value: unknown): string[] | undefined {
     .map((item) => (typeof item === "string" ? item.trim() : ""))
     .filter(Boolean)
   return items.length > 0 ? items : undefined
+}
+
+function wordPressItemCount(value: unknown): number | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined
+  return value.length
+}
+
+function wordPressPrimaryItem(
+  value: unknown
+): { slug?: string; version?: string } {
+  if (!Array.isArray(value) || value.length === 0) return {}
+  const first = value[0]
+  if (!first || typeof first !== "object") return {}
+  const item = first as Record<string, unknown>
+  return {
+    slug: asString(item.slug),
+    version: asString(item.version),
+  }
 }
 
 export function extractIntel(
@@ -122,6 +145,13 @@ export function extractIntel(
   const newCtSubdomains = (snapshot?.change_details || []).filter(
     (change) => change.type === "new_ct_subdomain"
   ).length
+  const newWpPlugins = (snapshot?.change_details || []).filter(
+    (change) => change.type === "wp_plugin_added"
+  ).length
+  const newWpThemes = (snapshot?.change_details || []).filter(
+    (change) => change.type === "wp_theme_added"
+  ).length
+  const primaryTheme = wordPressPrimaryItem(web?.wordpress_themes)
 
   const buckets = Array.isArray(storage?.buckets) ? storage.buckets : []
   const sitemapURLs = Array.isArray(crawl?.sitemap_urls) ? crawl.sitemap_urls : []
@@ -170,6 +200,11 @@ export function extractIntel(
     certDaysRemaining: certDays,
     certExpired,
     certStatus,
+    wpPluginCount: wordPressItemCount(web?.wordpress_plugins),
+    wpThemeSlug: primaryTheme.slug,
+    wpThemeVersion: primaryTheme.version,
+    newWpPluginCount: newWpPlugins > 0 ? newWpPlugins : undefined,
+    newWpThemeCount: newWpThemes > 0 ? newWpThemes : undefined,
     errorCount: raw?.errors?.length ?? 0,
     changeCount: snapshot?.changes?.length ?? 0,
   }
@@ -214,7 +249,17 @@ export const ASN_FIELDS = [
   "peeringdb",
 ] as const
 
-export const WEB_FIELDS = ["title", "url", "header_url", "copyrights", "tech_stack", "security_headers", "headers"] as const
+export const WEB_FIELDS = [
+  "title",
+  "url",
+  "header_url",
+  "copyrights",
+  "tech_stack",
+  "wordpress_plugins",
+  "wordpress_themes",
+  "security_headers",
+  "headers",
+] as const
 
 export const PWHOIS_FIELDS = [
   "origin_as",

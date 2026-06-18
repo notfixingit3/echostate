@@ -26,9 +26,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { GraphHistoryBar } from "@/components/graph-history-bar"
+import { GraphNodeInspector } from "@/components/graph-node-inspector"
 import { HopGeoMap } from "@/components/hop-geo-map"
 import { fetchApi } from "@/lib/api"
 import type {
+  GraphIntelEvent,
   GraphNode,
   GraphPath,
   GraphResponse,
@@ -133,10 +136,11 @@ const VIEW_META: Record<
   dns: {
     title: "DNS dependency graph",
     description:
-      "Nameserver, mail exchanger, and CNAME dependencies for each target.",
+      "Nameserver, mail exchanger, CNAME, and DMARC policy dependencies for each target.",
     legend: {
       Target: "#0d9488",
       DNSHost: "#4f46e5",
+      DMARCPolicy: "#0f766e",
     },
   },
   cert: {
@@ -172,10 +176,17 @@ export function GraphView() {
   const [vantageFilter, setVantageFilter] = React.useState("all")
 
   const loadGraph = React.useCallback(
-    async (targetId?: string, view: GraphViewMode = "infra") => {
+    async (
+      targetId?: string,
+      view: GraphViewMode = "infra",
+      preserveSelection = false
+    ) => {
       setLoading(true)
       setError(null)
-      setSelected(null)
+      const previousID = preserveSelection ? selected?.id : null
+      if (!preserveSelection) {
+        setSelected(null)
+      }
 
       try {
         const params = new URLSearchParams()
@@ -184,6 +195,10 @@ export function GraphView() {
         const query = params.toString() ? `?${params.toString()}` : ""
         const data = await fetchApi<GraphResponse>(`/api/graph${query}`)
         setGraph(data)
+        if (previousID) {
+          const match = data.nodes.find((node) => node.id === previousID)
+          setSelected(match ?? null)
+        }
       } catch (err) {
         setGraph(null)
         setError(err instanceof Error ? err.message : "Failed to load graph")
@@ -191,7 +206,7 @@ export function GraphView() {
         setLoading(false)
       }
     },
-    []
+    [selected]
   )
 
   React.useEffect(() => {
@@ -254,7 +269,11 @@ export function GraphView() {
   }
 
   function refreshGraph() {
-    void loadGraph(targetFilter === "all" ? undefined : targetFilter, viewMode)
+    void loadGraph(
+      targetFilter === "all" ? undefined : targetFilter,
+      viewMode,
+      true
+    )
   }
 
   const filterLabel =
@@ -296,6 +315,7 @@ export function GraphView() {
   const routeDiff = graph?.route_diff
   const vantageDivergence = graph?.vantage_divergence ?? []
   const peeringIX = graph?.peering_ix ?? []
+  const intelEvents = graph?.events ?? []
   const showRouteDiff =
     targetFilter !== "all" &&
     routeDiff?.has_previous &&
@@ -402,6 +422,14 @@ export function GraphView() {
           </div>
         </div>
 
+        {targetFilter !== "all" ? (
+          <GraphHistoryBar
+            targetId={targetFilter}
+            viewMode={viewMode}
+            routeDiff={routeDiff}
+          />
+        ) : null}
+
         {graph?.stats ? (
           <div className="flex flex-wrap gap-2">
             {Object.entries(graph.stats).map(([type, count]) => (
@@ -461,7 +489,9 @@ export function GraphView() {
                         nodeLabel="label"
                         nodeAutoColorBy="type"
                         nodeColor={(node) => graphNodeColor(node as ForceNode)}
-                        nodeVal={(node) => graphNodeSize(node as ForceNode)}
+                        nodeVal={(node) =>
+                          graphNodeSize(node as ForceNode, selected?.id)
+                        }
                         linkLabel="label"
                         linkDirectionalArrowLength={3.5}
                         linkDirectionalArrowRelPos={1}
@@ -557,44 +587,41 @@ export function GraphView() {
                   </CardHeader>
                   <CardContent className="flex flex-col gap-3 text-sm">
                     {selected && mode === viewMode ? (
-                      <>
-                        <div>
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                            {selected.type}
-                          </div>
-                          <div className="mt-1 font-medium break-all">
-                            {selected.label}
-                          </div>
-                        </div>
-                        {selected.type === "Target" && selected.props?.id ? (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="w-full"
-                            render={
-                              <Link
-                                href={`/target?id=${String(selected.props.id)}`}
-                                data-testid="graph-target-link"
-                              />
-                            }
-                          >
-                            Open target
-                          </Button>
-                        ) : null}
-                        {selected.props ? (
-                          <pre className="max-h-48 overflow-auto rounded-md border border-border/50 bg-muted/20 p-2 font-mono text-[11px] leading-relaxed">
-                            {JSON.stringify(selected.props, null, 2)}
-                          </pre>
-                        ) : null}
-                      </>
+                      <GraphNodeInspector
+                        selected={selected}
+                        nodes={graph?.nodes ?? []}
+                        edges={graph?.edges ?? []}
+                        onSelectNode={setSelected}
+                        onFilterTarget={(targetId) => handleFilterChange(targetId)}
+                      />
                     ) : (
-                      <p className="text-muted-foreground">
-                        Click a node to inspect properties and jump to related
-                        targets.
-                      </p>
+                      <GraphNodeInspector
+                        selected={null}
+                        nodes={[]}
+                        edges={[]}
+                        onSelectNode={setSelected}
+                      />
                     )}
                   </CardContent>
                 </Card>
+
+                {targetFilter !== "all" && intelEvents.length > 0 ? (
+                  <Card className="border-border/60" data-testid="graph-intel-events">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="font-heading text-base">
+                        Intel events
+                      </CardTitle>
+                      <CardDescription>
+                        Diff and enrichment signals for the selected target.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex max-h-[360px] flex-col gap-2 overflow-auto">
+                      {intelEvents.map((event) => (
+                        <IntelEventRow key={event.id} event={event} />
+                      ))}
+                    </CardContent>
+                  </Card>
+                ) : null}
 
                 {mode === "infra" && clusters.length > 0 ? (
                   <Card className="border-border/60">
@@ -865,11 +892,57 @@ function graphNodeColor(node: ForceNode): string {
   return node.color ?? "#475569"
 }
 
-function graphNodeSize(node: ForceNode): number {
-  if (node.type === "Target") return 4
-  if (node.type === "SharedHop" || node.type === "CertSAN") return 3
-  if (node.props?.shared === true) return 3
-  return 2
+function graphNodeSize(node: ForceNode, selectedId?: string): number {
+  const base =
+    node.type === "Target"
+      ? 4
+      : node.type === "SharedHop" || node.type === "CertSAN"
+        ? 3
+        : node.props?.shared === true
+          ? 3
+          : 2
+  return node.id === selectedId ? base + 2 : base
+}
+
+function IntelEventRow({ event }: { event: GraphIntelEvent }) {
+  const when =
+    event.detected_at && event.detected_at > 0
+      ? new Date(event.detected_at * 1000).toLocaleString()
+      : null
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className="font-mono text-[10px]">
+          {event.type}
+        </Badge>
+        {event.severity ? (
+          <Badge variant="secondary" className="text-[10px]">
+            {event.severity}
+          </Badge>
+        ) : null}
+        {event.source ? (
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {event.source}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-2 text-sm leading-snug">{event.summary}</p>
+      {when ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">{when}</p>
+      ) : null}
+      {event.snapshot_id ? (
+        <Button
+          variant="link"
+          size="sm"
+          className="mt-1 h-auto px-0 text-xs"
+          render={<Link href={`/snapshot?id=${event.snapshot_id}`} />}
+        >
+          View snapshot
+        </Button>
+      ) : null}
+    </div>
+  )
 }
 
 function RouteDiffCard({

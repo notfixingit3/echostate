@@ -47,7 +47,7 @@ The UI proxies `/api` to the Go backend inside Docker — no CORS setup required
 
 ```bash
 curl http://localhost:8080/health
-# {"status":"ok","env":"development","version":"0.0.1-beta.12"}
+# {"status":"ok","env":"development","version":"0.0.1-beta.13"}
 ```
 
 ### Scan a target

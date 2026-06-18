@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.13] - 2026-06-17
+
+### Added
+
+- **Graph intel events (G15)** — snapshot diffs and enrichment hits sync to Neo4j; `/graph` shows an Intel events panel per target.
+- **DMARC graph nodes** — `DMARCPolicy` nodes and `HAS_DMARC` edges on the DNS view.
+- **WordPress plugin & theme detection** — passive extraction from page assets, intel summary badges, and snapshot diffs.
+- **Version update indicator** — branch-aware status light in the footer (`GET /api/version`).
+- **Graph UX** — structured node inspector, neighbor navigation, snapshot history bar on BGP/traceroute views.
+
+### Changed
+
+- Targets auto-tag `wordpress` when WP signals are detected on scan.
+- Theme versions fetched from `style.css` when asset URLs lack `?ver=`.
+- Dev CORS allows any localhost origin against the Docker API.
+
 ## [0.0.1-beta.12] - 2026-06-17
 
 ### Added

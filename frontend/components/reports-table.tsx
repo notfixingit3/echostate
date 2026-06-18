@@ -193,14 +193,20 @@ export function ReportsTable() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : data?.data.length === 0 ? (
+            ) : !data ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  {error ? "Could not load reports." : "Loading reports…"}
+                </TableCell>
+              </TableRow>
+            ) : data.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No reports found.
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((report) => (
+              data.data.map((report) => (
                 <TableRow
                   key={report.id}
                   className="cursor-pointer"

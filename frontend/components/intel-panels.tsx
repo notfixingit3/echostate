@@ -62,6 +62,49 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   return Object.values(value).every((item) => typeof item === "string")
 }
 
+function WordPressItemsList({
+  items,
+  emptyLabel,
+}: {
+  items: unknown
+  emptyLabel: string
+}) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {items.map((item, index) => {
+        if (!item || typeof item !== "object") return null
+        const entry = item as Record<string, unknown>
+        const slug = typeof entry.slug === "string" ? entry.slug : ""
+        if (!slug) return null
+        const version =
+          typeof entry.version === "string" && entry.version.trim()
+            ? entry.version.trim()
+            : null
+
+        return (
+          <div
+            key={`${slug}-${index}`}
+            className="flex min-w-0 items-center justify-between gap-3 rounded-md border border-border/50 bg-background/60 px-3 py-2"
+          >
+            <span className="font-mono text-xs">{slug}</span>
+            {version ? (
+              <Badge variant="secondary" className="font-mono text-[11px]">
+                v{version}
+              </Badge>
+            ) : (
+              <span className="text-xs text-muted-foreground">version unknown</span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function HeaderMap({ data }: { data: Record<string, string> }) {
   const entries = Object.entries(data)
   if (entries.length === 0) {
@@ -261,6 +304,10 @@ function DataGrid({
                   </div>
                 ))}
               </div>
+            ) : key === "wordpress_plugins" && Array.isArray(value) ? (
+              <WordPressItemsList items={value} emptyLabel="No plugins detected." />
+            ) : key === "wordpress_themes" && Array.isArray(value) ? (
+              <WordPressItemsList items={value} emptyLabel="No themes detected." />
             ) : key === "subdomains" && Array.isArray(value) ? (
               <div className="flex flex-wrap gap-1.5">
                 {value.map((item) => (

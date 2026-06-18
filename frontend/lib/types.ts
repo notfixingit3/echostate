@@ -211,11 +211,24 @@ export interface ScreenshotEntry {
   error?: string
 }
 
+export interface GraphIntelEvent {
+  id: string
+  type: string
+  severity?: string
+  summary: string
+  field?: string
+  detail?: string
+  snapshot_id?: string
+  detected_at?: number
+  source?: string
+}
+
 export interface GraphResponse {
   view: string
   nodes: GraphNode[]
   edges: GraphEdge[]
   stats: Record<string, number>
+  events?: GraphIntelEvent[]
   paths?: GraphPath[]
   geo?: GraphGeoPoint[]
   as_paths?: GraphASPath[]

@@ -57,11 +57,14 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.12}
+        VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.13}
     container_name: echostate-api
     restart: unless-stopped
     environment:
       ECHOSTATE_ENV: ${ECHOSTATE_ENV:-development}
+      ECHOSTATE_BRANCH: ${ECHOSTATE_BRANCH:-dev}
+      ECHOSTATE_GITHUB_REPO: ${ECHOSTATE_GITHUB_REPO:-notfixingit3/echostate}
+      ECHOSTATE_UPDATE_CHECK: ${ECHOSTATE_UPDATE_CHECK:-true}
       ECHOSTATE_PORT: ${ECHOSTATE_PORT:-8080}
       FRONTEND_URL: http://localhost:3001
       POSTGRES_HOST: db
@@ -93,7 +96,7 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_APP_VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.12}
+        NEXT_PUBLIC_APP_VERSION: ${ECHOSTATE_VERSION:-0.0.1-beta.13}
     container_name: echostate-frontend
     restart: unless-stopped
     ports:

@@ -96,7 +96,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | G12 | PeeringDB / IX map | ✅ Done | PeeringDB enrich, `/graph?view=peering`, IX panel |
 | G13 | Rules engine on graph changes | ✅ Done | BGP origin/path, RPKI, traceroute drift in `change_details` + alert rules |
 | G14 | Screenshot timeline | ✅ Done | `/api/targets/:id/screenshots`, intel timeline tab |
-| G15 | Wire new intel into graph | ❌ Later | Sync `change_details` signals, enrichment hits, DMARC/TLS drift as graph events |
+| G15 | Wire new intel into graph | ✅ Done | `IntelEvent`/`EnrichmentHit` Neo4j sync, DMARC nodes, `/graph` events panel |
 
 ---
 
@@ -106,6 +106,6 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 |---|------|
 | **Done** | 41 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
-| **Later / platform** | 5 (graph UX overhaul, G15, SOA, agents, OIDC/RBAC) |
+| **Later / platform** | 4 (graph UX overhaul, SOA, agents, OIDC/RBAC) |
 
-**Suggested next picks:** G15 wire enrichment into Neo4j → graph UX polish (node inspector) → SOA DNS record
+**Suggested next picks:** Graph UX overhaul (time-slider topology) → SOA DNS record → agents / OIDC

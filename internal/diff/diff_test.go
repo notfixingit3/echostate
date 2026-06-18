@@ -19,6 +19,30 @@ func TestCompute_CTSubdomain(t *testing.T) {
 	}
 }
 
+func TestCompute_WordPressPlugins(t *testing.T) {
+	previous := map[string]any{
+		"web": map[string]any{
+			"wordpress_plugins": []any{
+				map[string]any{"slug": "akismet", "version": "5.3"},
+				map[string]any{"slug": "woocommerce", "version": "8.8.0"},
+			},
+		},
+	}
+	current := &models.ScanResult{
+		Web: map[string]any{
+			"wordpress_plugins": []any{
+				map[string]any{"slug": "woocommerce", "version": "8.9.1"},
+				map[string]any{"slug": "jetpack"},
+			},
+		},
+	}
+
+	entries := Compute(previous, current)
+	if len(entries) != 3 {
+		t.Fatalf("Compute() = %#v", entries)
+	}
+}
+
 func TestCompute_CertExpiryWarning(t *testing.T) {
 	previous := map[string]any{
 		"tls": map[string]any{"days_remaining": 45},

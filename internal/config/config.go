@@ -18,12 +18,16 @@ type Config struct {
 	Neo4jURI           string
 	Neo4jUser          string
 	Neo4jPassword      string
+	Branch             string
+	GitHubRepo         string
+	UpdateCheckEnabled bool
 }
 
 // Load reads configuration from environment variables and validates required fields.
 func Load() (*Config, error) {
 	pwhoisEnabled, _ := strconv.ParseBool(getEnv("ECHOSTATE_PWHOIS_ENABLED", "true"))
 	pwhoisCacheTTL, _ := strconv.Atoi(getEnv("PWHOIS_CACHE_TTL_HOURS", "24"))
+	updateCheckEnabled, _ := strconv.ParseBool(getEnv("ECHOSTATE_UPDATE_CHECK", "true"))
 
 	cfg := &Config{
 		Env:                getEnv("ECHOSTATE_ENV", "development"),
@@ -36,6 +40,9 @@ func Load() (*Config, error) {
 		Neo4jURI:           getEnv("NEO4J_URI", "bolt://localhost:7687"),
 		Neo4jUser:          getEnv("NEO4J_USER", "neo4j"),
 		Neo4jPassword:      getEnv("NEO4J_PASSWORD", "echostate123"),
+		Branch:             getEnv("ECHOSTATE_BRANCH", "dev"),
+		GitHubRepo:         getEnv("ECHOSTATE_GITHUB_REPO", "notfixingit3/echostate"),
+		UpdateCheckEnabled: updateCheckEnabled,
 	}
 
 	if cfg.DatabaseURL == "" {

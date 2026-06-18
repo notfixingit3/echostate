@@ -15,7 +15,7 @@ func init() {
 
 func TestCORS_PreflightSuccess(t *testing.T) {
 	router := gin.New()
-	router.Use(NewCORS("http://localhost:5173"))
+	router.Use(NewCORS("http://localhost:5173", "development"))
 	router.GET("/test", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
@@ -34,7 +34,7 @@ func TestCORS_PreflightSuccess(t *testing.T) {
 
 func TestCORS_UntrustedOriginRejected(t *testing.T) {
 	router := gin.New()
-	router.Use(NewCORS("http://localhost:5173"))
+	router.Use(NewCORS("http://localhost:5173", "development"))
 	router.GET("/test", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
@@ -49,9 +49,26 @@ func TestCORS_UntrustedOriginRejected(t *testing.T) {
 	assert.NotEqual(t, "https://evil.com", w.Header().Get("Access-Control-Allow-Origin"))
 }
 
+func TestCORS_LocalDevOriginAllowedInDevelopment(t *testing.T) {
+	router := gin.New()
+	router.Use(NewCORS("http://localhost:3001", "development"))
+	router.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "http://localhost:3000", w.Header().Get("Access-Control-Allow-Origin"))
+}
+
 func TestCORS_AllowedOriginServed(t *testing.T) {
 	router := gin.New()
-	router.Use(NewCORS("http://localhost:5173"))
+	router.Use(NewCORS("http://localhost:5173", "development"))
 	router.GET("/test", func(c *gin.Context) {
 		c.String(http.StatusOK, "ok")
 	})
