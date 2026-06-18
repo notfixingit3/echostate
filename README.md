@@ -15,7 +15,7 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 - **Historical tracking** — Snapshots persist; identical rescans update `last_seen` and record field-level changes.
 - **PDF reports** — Async worker renders HTML → PDF via headless Chrome.
 - **IP enrichment** — pWhois worker enriches submitter IPs (org, ASN, geo).
-- **Webhooks** — Slack-compatible notifications on new snapshots.
+- **Notifications** — Slack, Discord, MS Teams webhooks, and Pushover mobile alerts on snapshot changes.
 - **Settings** — Configure DNS resolvers, pWhois server, and global scan rate limit from the UI.
 - **Neo4j graph** — Optional relationship sync for infrastructure linking (Compose included).
 - **Containerized** — Docker Compose: API, frontend, PostgreSQL, browserless Chrome, Neo4j.

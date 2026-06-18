@@ -9,6 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  PushoverFields,
+  defaultPushoverConfig,
+  maskSecret,
+  type PushoverConfig,
+} from "@/components/pushover-fields"
 import { fetchApi } from "@/lib/api"
 
 type Webhook = {
@@ -16,6 +22,7 @@ type Webhook = {
   name: string
   type: string
   url: string
+  config?: Record<string, unknown>
   enabled: boolean
 }
 
@@ -32,6 +39,7 @@ export default function SettingsPage() {
   const [name, setName] = React.useState("")
   const [type, setType] = React.useState("slack")
   const [url, setUrl] = React.useState("")
+  const [pushover, setPushover] = React.useState<PushoverConfig>(defaultPushoverConfig())
 
   const [sysSettings, setSysSettings] = React.useState<SystemSettings>({
     dns_servers: "8.8.8.8,1.1.1.1",
@@ -78,16 +86,45 @@ export default function SettingsPage() {
     }
   }
 
+  function buildWebhookPayload() {
+    if (type === "pushover") {
+      return {
+        name,
+        type,
+        url: "https://api.pushover.net/1/messages.json",
+        enabled: true,
+        config: {
+          app_token: pushover.app_token.trim(),
+          user_key: pushover.user_key.trim(),
+          priority: pushover.priority,
+          sound: pushover.sound.trim(),
+          device: pushover.device.trim(),
+          title: pushover.title.trim() || "EchoState Alert",
+          url_title: pushover.url_title.trim() || "View target",
+          ...(pushover.priority === 2
+            ? { retry: pushover.retry, expire: pushover.expire }
+            : {}),
+        },
+      }
+    }
+
+    return { name, type, url, enabled: true, config: {} }
+  }
+
   async function createWebhook(e: React.FormEvent) {
     e.preventDefault()
-    if (!name || !url) return
+    if (!name) return
+    if (type !== "pushover" && !url) return
+    if (type === "pushover" && (!pushover.app_token || !pushover.user_key)) return
+
     try {
       await fetchApi("/api/webhooks", {
         method: "POST",
-        body: JSON.stringify({ name, type, url, enabled: true }),
+        body: JSON.stringify(buildWebhookPayload()),
       })
       setName("")
       setUrl("")
+      setPushover(defaultPushoverConfig())
       loadWebhooks()
     } catch (e) {
       console.error(e)
@@ -116,6 +153,16 @@ export default function SettingsPage() {
     }
   }
 
+  function webhookSummary(w: Webhook) {
+    if (w.type === "pushover") {
+      const cfg = w.config || {}
+      const priority = typeof cfg.priority === "number" ? cfg.priority : 0
+      const sound = typeof cfg.sound === "string" && cfg.sound ? cfg.sound : "default"
+      return `App ${maskSecret(String(cfg.app_token || ""))} · User ${maskSecret(String(cfg.user_key || ""))} · Priority ${priority} · Sound ${sound}`
+    }
+    return w.url
+  }
+
   return (
     <div className="container py-10 max-w-4xl">
       <div className="mb-8 flex items-center gap-2">
@@ -125,77 +172,100 @@ export default function SettingsPage() {
 
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
         <CardHeader>
-          <CardTitle>Add New Webhook</CardTitle>
+          <CardTitle>Add Notification Integration</CardTitle>
           <CardDescription>
-            Configure Slack, Discord, or MS Teams webhooks to receive alerts when target changes are detected.
+            Receive alerts when snapshot diffs are detected. Supports Slack, Discord,
+            MS Teams webhooks, and Pushover mobile/desktop notifications.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={createWebhook} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g. SOC Alert Channel"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+          <form onSubmit={createWebhook} className="flex flex-col gap-6">
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. SOC Alert Channel"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="w-full sm:w-56 space-y-2">
+                <Label htmlFor="type">Platform</Label>
+                <Select value={type} onValueChange={(val) => val && setType(val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slack">Slack</SelectItem>
+                    <SelectItem value="discord">Discord</SelectItem>
+                    <SelectItem value="teams">MS Teams</SelectItem>
+                    <SelectItem value="pushover">Pushover</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="w-full sm:w-48 space-y-2">
-              <Label htmlFor="type">Platform</Label>
-              <Select value={type} onValueChange={(val) => val && setType(val)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="slack">Slack</SelectItem>
-                  <SelectItem value="discord">Discord</SelectItem>
-                  <SelectItem value="teams">MS Teams</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="url">Webhook URL</Label>
-              <Input
-                id="url"
-                placeholder="https://..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-              />
-            </div>
-            <Button type="submit" disabled={!name || !url}>
+
+            {type === "pushover" ? (
+              <PushoverFields config={pushover} onChange={setPushover} />
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="url">Webhook URL</Label>
+                <Input
+                  id="url"
+                  placeholder="https://..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Paste the incoming webhook URL from your chat platform. EchoState
+                  posts a summary of detected field changes with a link to the target.
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={
+                !name ||
+                (type === "pushover"
+                  ? !pushover.app_token || !pushover.user_key
+                  : !url)
+              }
+              className="w-fit"
+            >
               <PlusIcon data-icon="inline-start" />
-              Add
+              Add integration
             </Button>
           </form>
         </CardContent>
       </Card>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Active Webhooks</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Active Integrations</h2>
         {loading ? (
           <p className="text-muted-foreground">Loading...</p>
         ) : webhooks.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-            No webhooks configured. Add one above to start receiving alerts.
+            No integrations configured. Add one above to start receiving alerts.
           </div>
         ) : (
           <div className="grid gap-4">
             {webhooks.map((w) => (
               <Card key={w.id} className="border-border/60 bg-card/40">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex flex-col">
+                <CardContent className="flex items-center justify-between gap-4 p-4">
+                  <div className="min-w-0 flex-1 flex-col">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">{w.name}</span>
                       <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium uppercase text-muted-foreground">
                         {w.type}
                       </span>
                     </div>
-                    <span className="font-mono text-xs text-muted-foreground mt-1 truncate max-w-md">
-                      {w.url}
+                    <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                      {webhookSummary(w)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex shrink-0 items-center gap-4">
                     <div className="flex items-center gap-2">
                       <Switch
                          checked={w.enabled}
