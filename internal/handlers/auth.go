@@ -34,11 +34,6 @@ func (h *Handler) authConfig(c *gin.Context) {
 func (h *Handler) authSession(c *gin.Context) {
 	user := middleware.GetUser(c)
 	if user == nil {
-		required, _ := h.auth.AuthRequired(c.Request.Context())
-		if required {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
-			return
-		}
 		c.JSON(http.StatusOK, gin.H{"authenticated": false})
 		return
 	}
