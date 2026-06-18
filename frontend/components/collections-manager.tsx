@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 
 import { HelpTip } from "@/components/help-tip"
+import { InvestigationNotes } from "@/components/investigation-notes"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -412,6 +413,14 @@ export function CollectionsManager() {
             ) : null}
           </CardContent>
         </Card>
+
+        {detail ? (
+          <InvestigationNotes
+            collectionId={detail.id}
+            title={`Notes · ${detail.name}`}
+            compact
+          />
+        ) : null}
       </div>
     </div>
   )

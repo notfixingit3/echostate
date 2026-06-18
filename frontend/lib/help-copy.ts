@@ -72,6 +72,17 @@ export const HELP_COPY: Record<string, string> = {
   "collections.rescan":
     "Enqueue an async scan job for every target in the selected collection.",
 
+  "page.notes":
+    "Investigation notes across the platform. Filter by status, archive finished work, or recover from trash within 30 days.",
+  "notes.panel":
+    "Human context on top of passive intel — findings, hypotheses, and links to external references.",
+  "notes.compose":
+    "Markdown-friendly body with optional HTML anchors and structured reference chips.",
+  "notes.references":
+    "Attach URLs, targets, snapshots, collections, or graph node IDs as clickable reference chips.",
+  "notes.trash":
+    "Trashed notes are permanently deleted after 30 days, or immediately via Delete forever.",
+
   "intel.cert_expires": "TLS certificate not-after date from the leaf cert.",
   "intel.cert_issuer": "Certificate authority that signed the active TLS certificate.",
   "intel.dns_a": "IPv4/IPv6 addresses returned by DNS resolution at scan time.",

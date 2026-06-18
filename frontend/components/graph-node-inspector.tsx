@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CopyButton } from "@/components/copy-button"
+import { InvestigationNotes } from "@/components/investigation-notes"
 import { formatFieldLabel } from "@/lib/intel"
 import type { GraphEdge, GraphNode } from "@/lib/types"
 
@@ -203,6 +204,18 @@ export function GraphNodeInspector({
           Filter graph to target
         </Button>
       ) : null}
+
+      <InvestigationNotes
+        compact
+        title="Node notes"
+        targetId={targetID || (selected.type === "Target" ? String(props.id ?? "") : undefined)}
+        snapshotId={selected.type === "Snapshot" ? String(props.id ?? "") : undefined}
+        graphNode={{
+          id: selected.id,
+          label: selected.label,
+          type: selected.type,
+        }}
+      />
     </div>
   )
 }

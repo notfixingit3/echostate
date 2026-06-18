@@ -172,6 +172,45 @@ func Migrate(db *DB) error {
 
 		CREATE INDEX IF NOT EXISTS idx_target_collection_members_target
 			ON target_collection_members(target_id);
+
+		CREATE TABLE IF NOT EXISTS investigation_notes (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			title TEXT NOT NULL DEFAULT '',
+			body TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived', 'trashed')),
+			target_id UUID REFERENCES targets(id) ON DELETE SET NULL,
+			snapshot_id UUID REFERENCES snapshots(id) ON DELETE SET NULL,
+			collection_id UUID REFERENCES target_collections(id) ON DELETE SET NULL,
+			graph_node_id TEXT,
+			graph_node_label TEXT,
+			graph_node_type TEXT,
+			refs JSONB NOT NULL DEFAULT '[]',
+			trashed_at TIMESTAMPTZ,
+			archived_at TIMESTAMPTZ,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CHECK (
+				target_id IS NOT NULL OR
+				snapshot_id IS NOT NULL OR
+				collection_id IS NOT NULL OR
+				graph_node_id IS NOT NULL
+			)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_investigation_notes_status_updated
+			ON investigation_notes(status, updated_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_investigation_notes_target
+			ON investigation_notes(target_id)
+			WHERE target_id IS NOT NULL;
+
+		CREATE INDEX IF NOT EXISTS idx_investigation_notes_collection
+			ON investigation_notes(collection_id)
+			WHERE collection_id IS NOT NULL;
+
+		CREATE INDEX IF NOT EXISTS idx_investigation_notes_trashed_at
+			ON investigation_notes(trashed_at)
+			WHERE status = 'trashed';
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

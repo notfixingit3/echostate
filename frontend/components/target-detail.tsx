@@ -20,6 +20,7 @@ import { TargetSnapshotsChart } from "@/components/target-snapshots-chart"
 import { TargetTags } from "@/components/target-tags"
 import { CountryFlag } from "@/components/country-flag"
 import { Button } from "@/components/ui/button"
+import { InvestigationNotes } from "@/components/investigation-notes"
 import { RescanTargetButton } from "@/components/rescan-target-button"
 import { extractIntel } from "@/lib/intel"
 import type { ScanResponse, TargetDetail } from "@/lib/types"
@@ -208,6 +209,12 @@ export function TargetDetailView({
           </CardContent>
         </Card>
       )}
+
+      <InvestigationNotes
+        targetId={target.id}
+        snapshotId={latest?.id}
+        compact
+      />
 
       <div className="flex flex-col gap-4">
         <h2 className="font-heading text-lg font-semibold tracking-tight">

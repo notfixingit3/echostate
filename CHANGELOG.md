@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.18] - 2026-06-17
+
+### Added
+
+- **Investigation notes** — `investigation_notes` table and CRUD API with archive, trash, restore, and permanent delete from trash.
+- **Note references** — Structured URL, target, snapshot, collection, and graph-node reference chips alongside sanitized HTML links in note bodies.
+- **Trash retention** — Trashed notes auto-purge after 30 days; manual **Delete forever** from the trash tab.
+- **Notes UI** — `/notes` page plus embedded panels on target detail, graph node inspector, and collections.
+
 ## [0.0.1-beta.17] - 2026-06-17
 
 ### Added
@@ -212,6 +221,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.18]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.18
 [0.0.1-beta.17]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.17
 [0.0.1-beta.16]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.16
 [0.0.1-beta.15]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.15
