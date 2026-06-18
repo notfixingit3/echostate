@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.19] - 2026-06-17
+
+### Added
+
+- **Saved graph views** — `graph_views` table and CRUD API (`/api/graph/views`) to bookmark graph lenses.
+- **Graph view restore** — Save/load view tab, target filter, vantage, snapshot compare pair, pinned node layout, and selected node from the `/graph` toolbar.
+
 ## [0.0.1-beta.18] - 2026-06-17
 
 ### Added
@@ -221,6 +228,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.19]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.19
 [0.0.1-beta.18]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.18
 [0.0.1-beta.17]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.17
 [0.0.1-beta.16]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.16

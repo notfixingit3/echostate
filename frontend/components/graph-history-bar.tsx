@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button"
 import { fetchApi } from "@/lib/api"
 import type { GraphRouteDiff, PaginatedResponse, SnapshotSummary } from "@/lib/types"
 
-export type GraphCompareMode = "previous" | "latest"
+import type { GraphCompareMode } from "@/lib/types"
+
+export type { GraphCompareMode }
 
 function resolveCompareId(
   snapshots: SnapshotSummary[],

@@ -60,6 +60,39 @@ export interface NoteReference {
   id?: string
 }
 
+export interface GraphPinnedNode {
+  x: number
+  y: number
+}
+
+export interface SavedGraphView {
+  id: string
+  name: string
+  description: string
+  view_mode: GraphViewMode | string
+  target_id?: string | null
+  vantage_filter: string
+  snapshot_id?: string | null
+  compare_snapshot_id?: string | null
+  compare_mode: GraphCompareMode | string
+  pinned_nodes: Record<string, GraphPinnedNode>
+  selected_node_id?: string | null
+  created_at: string
+  updated_at: string
+  target_host?: string | null
+}
+
+export type GraphViewMode =
+  | "infra"
+  | "bgp"
+  | "traceroute"
+  | "peering"
+  | "ct"
+  | "dns"
+  | "cert"
+
+export type GraphCompareMode = "previous" | "latest"
+
 export interface InvestigationNote {
   id: string
   title: string
