@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.23] - 2026-06-18
+
+### Added
+
+- **Profile display name** — Edit and save your display name via `PATCH /api/auth/profile`.
+- **Device enrollment codes** — **Profile → Issue device code** (`POST /api/auth/device-code`) for signing in on another browser or phone.
+- **Per-user theme** — Light/dark/system preference stored on the account; synced on sign-in and from the nav theme toggle (`users.theme`).
+
+### Changed
+
+- **Navigation split** — `/profile` for personal settings; `/admin` for server configuration (admin-only nav link). Legacy `/settings/*` redirects.
+- **Passkey rename** — `PUT` alias added alongside `PATCH` for credential nickname updates.
+
 ## [0.0.1-beta.22] - 2026-06-18
 
 ### Added
@@ -273,6 +286,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.23]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.23
 [0.0.1-beta.22]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.22
 [0.0.1-beta.21]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.21
 [0.0.1-beta.20]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.20

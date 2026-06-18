@@ -45,7 +45,9 @@ Built as `echostate-frontend` via `docker compose up --build`. Inside Compose, `
 | `/snapshot?id=` | Snapshot detail |
 | `/reports` | Browse reports |
 | `/report?id=` | Report status + PDF download |
-| `/settings` | DNS resolvers, pWhois, rate limit, webhooks (Slack, Discord, Teams, Pushover) |
+| `/profile` | Display name, theme, timezone, passkeys, device enrollment codes |
+| `/admin` | Server settings: integrations, system, authentication, user management |
+| `/settings/*` | Legacy redirects to `/profile` or `/admin` |
 | `/graph` | Interactive Neo4j graph (views: infra, CT, DNS, cert, BGP, traceroute, peering) |
 
 Target and snapshot detail pages use query-param routes because the app is a static export — UUIDs are not baked into the build.

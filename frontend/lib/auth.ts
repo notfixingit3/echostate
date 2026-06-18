@@ -226,10 +226,28 @@ export async function logout() {
   await fetchApi("/api/auth/logout", { method: "POST", body: "{}" })
 }
 
-export async function updateProfile(updates: { timezone?: string; theme?: UserTheme }) {
+export type IssuedEnrollmentCode = {
+  code: string
+  expires_at: string
+  purpose: string
+  user_id: string
+}
+
+export async function updateProfile(updates: {
+  display_name?: string
+  timezone?: string
+  theme?: UserTheme
+}) {
   return fetchApi<{ user: AuthUser }>("/api/auth/profile", {
     method: "PATCH",
     body: JSON.stringify(updates),
+  })
+}
+
+export async function issueDeviceCode() {
+  return fetchApi<IssuedEnrollmentCode>("/api/auth/device-code", {
+    method: "POST",
+    body: "{}",
   })
 }
 

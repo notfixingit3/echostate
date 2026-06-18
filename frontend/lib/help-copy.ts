@@ -16,9 +16,11 @@ export const HELP_COPY: Record<string, string> = {
   "settings.nav.system": "DNS, scan workers, scheduler, retention, enrichment API keys, and alert rules.",
   "settings.nav.authentication": "Passkey enrollment defaults, session lifetime, and WebAuthn relying party settings.",
   "settings.nav.users": "Create users and issue enrollment or recovery codes.",
-  "settings.profile": "Your signed-in identity, preferences, and registered passkeys.",
+  "settings.profile": "Your display name and role in EchoState.",
   "settings.preferences": "Default theme and timezone for your account across devices.",
-  "settings.passkeys": "Register, rename, or remove passkeys for each browser or security key.",
+  "settings.passkeys": "Issue device codes, register passkeys, rename, or remove credentials.",
+  "settings.device_code":
+    "Single-use enrollment code for signing in on another browser or phone, then registering a passkey there.",
   "page.reports":
     "PDF intelligence reports generated from snapshot data. Reports queue asynchronously after you request them.",
 

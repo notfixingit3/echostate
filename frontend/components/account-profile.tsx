@@ -2,7 +2,17 @@
 
 import * as React from "react"
 import { useTheme } from "next-themes"
-import { KeyRoundIcon, MonitorIcon, MoonIcon, PencilIcon, SaveIcon, SunIcon, Trash2Icon, XIcon } from "lucide-react"
+import {
+  KeyRoundIcon,
+  MonitorIcon,
+  MoonIcon,
+  PencilIcon,
+  PlusIcon,
+  SaveIcon,
+  SunIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react"
 
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
@@ -13,10 +23,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { HelpTip } from "@/components/help-tip"
 import { fetchApi } from "@/lib/api"
 import {
+  issueDeviceCode,
   registerPasskey,
   renameCredential,
   updateProfile,
   type AuthCredential,
+  type IssuedEnrollmentCode,
   type UserTheme,
 } from "@/lib/auth"
 
@@ -71,9 +83,12 @@ export function AccountProfilePanel() {
   const { setTheme } = useTheme()
   const [credentials, setCredentials] = React.useState<AuthCredential[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [displayName, setDisplayName] = React.useState("")
   const [nickname, setNickname] = React.useState("")
   const [timezone, setTimezone] = React.useState("UTC")
   const [theme, setThemePreference] = React.useState<UserTheme>("system")
+  const [issuedDeviceCode, setIssuedDeviceCode] = React.useState<IssuedEnrollmentCode | null>(null)
+  const [savingAccount, setSavingAccount] = React.useState(false)
   const [savingPreferences, setSavingPreferences] = React.useState(false)
   const [editingCredId, setEditingCredId] = React.useState<string | null>(null)
   const [editingNickname, setEditingNickname] = React.useState("")
@@ -90,9 +105,10 @@ export function AccountProfilePanel() {
   }, [user?.timezone])
 
   React.useEffect(() => {
+    setDisplayName(user?.display_name || "")
     setTimezone(user?.timezone || browserTimezone())
     setThemePreference(user?.theme || "system")
-  }, [user?.timezone, user?.theme])
+  }, [user?.display_name, user?.timezone, user?.theme])
 
   async function loadCredentials() {
     if (!user) return
@@ -128,6 +144,43 @@ export function AccountProfilePanel() {
       await refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to register passkey")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleSaveAccount(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = displayName.trim()
+    if (!trimmed) {
+      setError("Display name cannot be empty.")
+      return
+    }
+    setSavingAccount(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const result = await updateProfile({ display_name: trimmed })
+      setUser(result.user)
+      setMessage("Account updated.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update account")
+    } finally {
+      setSavingAccount(false)
+    }
+  }
+
+  async function handleIssueDeviceCode() {
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    setIssuedDeviceCode(null)
+    try {
+      const result = await issueDeviceCode()
+      setIssuedDeviceCode(result)
+      setMessage("Device enrollment code issued.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to issue device code")
     } finally {
       setBusy(false)
     }
@@ -206,9 +259,27 @@ export function AccountProfilePanel() {
             <HelpTip id="settings.profile" />
           </CardTitle>
           <CardDescription>
-            Signed in as {user.display_name} ({user.role})
+            Role: {user.role}
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveAccount} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="display_name">Display name</Label>
+              <Input
+                id="display_name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                maxLength={80}
+              />
+            </div>
+            <Button type="submit" disabled={savingAccount || !displayName.trim()} className="w-full sm:w-auto">
+              <SaveIcon data-icon="inline-start" />
+              {savingAccount ? "Saving…" : "Save name"}
+            </Button>
+          </form>
+        </CardContent>
       </Card>
 
       {error ? (
@@ -288,6 +359,33 @@ export function AccountProfilePanel() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="rounded-lg border border-dashed p-4 space-y-4">
+            <div>
+              <p className="inline-flex items-center gap-1.5 font-medium">
+                Enroll another device
+                <HelpTip id="settings.device_code" />
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Issue a one-time code for a phone or browser that does not have your passkey yet.
+              </p>
+            </div>
+            <Button type="button" variant="outline" disabled={busy} onClick={() => void handleIssueDeviceCode()}>
+              <PlusIcon data-icon="inline-start" />
+              {busy ? "Issuing…" : "Issue device code"}
+            </Button>
+            {issuedDeviceCode ? (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+                <p className="font-medium">Device code ({issuedDeviceCode.purpose})</p>
+                <p className="mt-1 font-mono text-lg tracking-widest">{issuedDeviceCode.code}</p>
+                <p className="mt-2 text-muted-foreground">
+                  Expires {formatTimestamp(issuedDeviceCode.expires_at, displayTimezone)}. Copy now — it cannot be
+                  shown again. Enter at <code className="rounded bg-muted px-1 py-0.5 text-xs">/login</code> on the new
+                  device.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
           <form onSubmit={handleRegister} className="flex flex-col gap-4 rounded-lg border border-dashed p-4 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
               <Label htmlFor="passkey_nickname">Add passkey on this device</Label>
