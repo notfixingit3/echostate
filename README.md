@@ -244,7 +244,7 @@ Rescanning a target uses the same endpoint — there is no separate rescan API.
 ### Requirements
 
 - Go 1.26+
-- Node.js 20+ (frontend)
+- Node.js 22+ (frontend)
 - PostgreSQL 16+
 - browserless/chrome or another CDP WebSocket endpoint
 - Neo4j 5+ (optional; included in Compose)

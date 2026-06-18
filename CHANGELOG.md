@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.26] - 2026-06-18
+
+### Changed
+
+- **API Docker image** — Dropped bundled Chromium (~630 MB); web scans continue to use the `browserless/chrome` compose service via `BROWSER_WS_URL`.
+- **Node.js 22** — CI and frontend Docker builds use Node 22 LTS (replaces Node 20).
+
 ## [0.0.1-beta.25] - 2026-06-18
 
 ### Fixed
