@@ -1,6 +1,8 @@
 # Local development overlay — build api/frontend from source instead of pulling GHCR.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Reclaim local build cache and stale dev images: ./scripts/docker-clean.sh
 
 services:
   api:
