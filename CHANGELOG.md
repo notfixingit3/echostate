@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.29] - 2026-06-18
+
+### Fixed
+
+- **E2E teardown** — Playwright global teardown now runs `docker compose down` without `-v`, so postgres/neo4j volumes are preserved after tests (previously wiped all targets and snapshots).
+
 ## [0.0.1-beta.28] - 2026-06-18
 
 ### Added
@@ -338,6 +344,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.29]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.29
 [0.0.1-beta.28]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.28
 [0.0.1-beta.27]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.27
 [0.0.1-beta.26]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.26

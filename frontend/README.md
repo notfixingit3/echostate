@@ -57,5 +57,5 @@ Target and snapshot detail pages use query-param routes because the app is a sta
 ```bash
 npm run typecheck
 npm run build
-npx playwright test    # global setup builds local images (docker-compose.dev.yml) and tears down after
+npx playwright test    # builds local dev images; may recreate volumes in setup — avoid on stacks with data you need
 ```

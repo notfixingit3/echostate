@@ -13,9 +13,11 @@ const composeFiles = [
 ]
 
 async function globalTeardown() {
-  console.log("[global-teardown] Stopping Docker Compose stack...")
+  // Stop containers only — do not pass -v. Wiping postgres_data destroys the
+  // user's targets, snapshots, and auth users on the same compose project.
+  console.log("[global-teardown] Stopping Docker Compose stack (volumes preserved)...")
   try {
-    execSync(["docker", "compose", ...composeFiles, "down", "-v"].join(" "), {
+    execSync(["docker", "compose", ...composeFiles, "down"].join(" "), {
       cwd: projectRoot,
       stdio: "inherit",
       timeout: 120000,
