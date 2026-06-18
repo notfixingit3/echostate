@@ -1,6 +1,6 @@
 {
   "name": "echostate",
-  "version": "0.0.1-beta.20",
+  "version": "0.0.1-beta.22",
   "type": "module",
   "private": true,
   "scripts": {

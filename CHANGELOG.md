@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.22] - 2026-06-18
+
+### Added
+
+- **Profile page** — Nav and Admin **Profile** with timezone preference, passkey register/rename/remove (replaces Account & passkeys).
+- **Passkey rename** — `PATCH /api/users/:id/credentials/:credId` and inline rename in Profile.
+- **User timezone** — `users.timezone` column and `PATCH /api/auth/profile`.
+- **`scripts/docker-clean.sh`** — Prune local EchoState dev images and Docker build cache.
+
+### Changed
+
+- **Login** — Passkey-first sign-in; enrollment/recovery code is secondary. Sign-out no longer clears saved account id (fixes missing passkey button after logout).
+- **Login shell** — Hide nav/footer until authenticated; centered login card with theme toggle.
+- **CI** — Workflow concurrency, job timeouts, and `go test -timeout 12m` to avoid hung/stuck Actions runs.
+
 ## [0.0.1-beta.21] - 2026-06-17
 
 ### Added
@@ -258,6 +273,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.22]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.22
+[0.0.1-beta.21]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.21
 [0.0.1-beta.20]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.20
 [0.0.1-beta.19]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.19
 [0.0.1-beta.18]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.18
