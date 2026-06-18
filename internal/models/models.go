@@ -251,6 +251,73 @@ type CollectionRescanResponse struct {
 	Jobs         []CollectionRescanJob `json:"jobs"`
 }
 
+type NoteStatus string
+
+const (
+	NoteStatusActive   NoteStatus = "active"
+	NoteStatusArchived NoteStatus = "archived"
+	NoteStatusTrashed  NoteStatus = "trashed"
+)
+
+func (s NoteStatus) IsValid() bool {
+	switch s {
+	case NoteStatusActive, NoteStatusArchived, NoteStatusTrashed:
+		return true
+	}
+	return false
+}
+
+type NoteReference struct {
+	Type  string `json:"type"`
+	Label string `json:"label,omitempty"`
+	URL   string `json:"url,omitempty"`
+	ID    string `json:"id,omitempty"`
+}
+
+type InvestigationNote struct {
+	ID             uuid.UUID       `json:"id"`
+	Title          string          `json:"title"`
+	Body           string          `json:"body"`
+	Status         NoteStatus      `json:"status"`
+	TargetID       *uuid.UUID      `json:"target_id,omitempty"`
+	SnapshotID     *uuid.UUID      `json:"snapshot_id,omitempty"`
+	CollectionID   *uuid.UUID      `json:"collection_id,omitempty"`
+	GraphNodeID    *string         `json:"graph_node_id,omitempty"`
+	GraphNodeLabel *string         `json:"graph_node_label,omitempty"`
+	GraphNodeType  *string         `json:"graph_node_type,omitempty"`
+	References     []NoteReference `json:"references"`
+	TrashedAt      *time.Time      `json:"trashed_at,omitempty"`
+	ArchivedAt     *time.Time      `json:"archived_at,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	TargetHost     *string         `json:"target_host,omitempty"`
+	CollectionName *string         `json:"collection_name,omitempty"`
+}
+
+type CreateInvestigationNoteRequest struct {
+	Title          string          `json:"title"`
+	Body           string          `json:"body" binding:"required"`
+	TargetID       *uuid.UUID      `json:"target_id"`
+	SnapshotID     *uuid.UUID      `json:"snapshot_id"`
+	CollectionID   *uuid.UUID      `json:"collection_id"`
+	GraphNodeID    *string         `json:"graph_node_id"`
+	GraphNodeLabel *string         `json:"graph_node_label"`
+	GraphNodeType  *string         `json:"graph_node_type"`
+	References     []NoteReference `json:"references"`
+}
+
+type UpdateInvestigationNoteRequest struct {
+	Title          string          `json:"title"`
+	Body           string          `json:"body" binding:"required"`
+	TargetID       *uuid.UUID      `json:"target_id"`
+	SnapshotID     *uuid.UUID      `json:"snapshot_id"`
+	CollectionID   *uuid.UUID      `json:"collection_id"`
+	GraphNodeID    *string         `json:"graph_node_id"`
+	GraphNodeLabel *string         `json:"graph_node_label"`
+	GraphNodeType  *string         `json:"graph_node_type"`
+	References     []NoteReference `json:"references"`
+}
+
 type Webhook struct {
 	ID        uuid.UUID      `json:"id"`
 	Name      string         `json:"name"`

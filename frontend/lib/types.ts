@@ -51,6 +51,35 @@ export interface CollectionRescanResponse {
   jobs: CollectionRescanJob[]
 }
 
+export type NoteStatus = "active" | "archived" | "trashed"
+
+export interface NoteReference {
+  type: "url" | "target" | "snapshot" | "collection" | "graph_node" | string
+  label?: string
+  url?: string
+  id?: string
+}
+
+export interface InvestigationNote {
+  id: string
+  title: string
+  body: string
+  status: NoteStatus
+  target_id?: string | null
+  snapshot_id?: string | null
+  collection_id?: string | null
+  graph_node_id?: string | null
+  graph_node_label?: string | null
+  graph_node_type?: string | null
+  references: NoteReference[]
+  trashed_at?: string | null
+  archived_at?: string | null
+  created_at: string
+  updated_at: string
+  target_host?: string | null
+  collection_name?: string | null
+}
+
 export interface SnapshotSummary {
   id: string
   target_id: string

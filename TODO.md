@@ -105,6 +105,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
+| — | Investigation notes | ✅ Done | Archive/trash/30-day purge, references, `/notes` + embedded panels |
 | — | Target collections | ✅ Done | CRUD API, bulk rescan, `/collections` UI |
 | — | Settings tooltips | ✅ Done | Dense `HelpTip` coverage on Settings page |
 | — | JA3S CI hotfix | ✅ Done | Inline TLS parse; no `gopacket` / `libpcap` on Linux CI |
@@ -115,8 +116,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 46 items (core + graph + platform batch) |
+| **Done** | 47 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 2 (agents, OIDC/RBAC) |
 
-**Suggested next picks:** saved graph views → investigation notes → OIDC/RBAC
+**Suggested next picks:** saved graph views → OIDC/RBAC
