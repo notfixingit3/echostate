@@ -111,6 +111,10 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | — | Settings tooltips | ✅ Done | Dense `HelpTip` coverage on Settings page |
 | — | JA3S CI hotfix | ✅ Done | Inline TLS parse; no `gopacket` / `libpcap` on Linux CI |
 | — | Snapshot create-report UX | ✅ Done | Poll status, in-card progress, credentialed PDF download (beta.27) |
+| — | Report state hydration | ✅ Done | Snapshot page restores latest report on load (beta.28) |
+| — | Scan-form report download | ✅ Done | Home scan result card Download PDF parity (beta.28) |
+| — | Richer PDF reports | ✅ Done | Logo, screenshot, changes, DNS/TLS, intel highlights (beta.28) |
+| — | Report E2E on snapshot page | ✅ Done | Playwright waits on snapshot + `snapshot-download-report-button` (beta.28) |
 
 ---
 
@@ -118,7 +122,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 49 items (core + graph + platform batch) |
+| **Done** | 53 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 2 (agents, OIDC/RBAC) |
 

@@ -168,7 +168,7 @@ func insertReportWithSnapshotID(t *testing.T, d *db.DB, snapshotID uuid.UUID) uu
 func TestWorkerFailsMissingSnapshot(t *testing.T) {
 	d := setupTestDB(t)
 
-	renderer := func(*models.ScanResult) ([]byte, error) {
+	renderer := func(pdf.ReportData) ([]byte, error) {
 		return []byte("should not be called"), nil
 	}
 
@@ -200,7 +200,7 @@ func TestWorkerFailsOversizedPDF(t *testing.T) {
 	d := setupTestDB(t)
 	snapshotID := seedSnapshot(t, d)
 
-	renderer := func(*models.ScanResult) ([]byte, error) {
+	renderer := func(pdf.ReportData) ([]byte, error) {
 		return make([]byte, maxPDFSize+1), nil
 	}
 
@@ -231,7 +231,7 @@ func TestWorkerRendererError(t *testing.T) {
 	snapshotID := seedSnapshot(t, d)
 
 	rendererErr := errors.New("renderer exploded")
-	renderer := func(*models.ScanResult) ([]byte, error) {
+	renderer := func(pdf.ReportData) ([]byte, error) {
 		return nil, rendererErr
 	}
 
@@ -275,7 +275,7 @@ func TestWorkerConcurrencyLimit(t *testing.T) {
 	var mu sync.Mutex
 	gate := make(chan struct{})
 
-	renderer := func(*models.ScanResult) ([]byte, error) {
+	renderer := func(pdf.ReportData) ([]byte, error) {
 		current := atomic.AddInt64(&active, 1)
 
 		mu.Lock()
@@ -349,7 +349,7 @@ func TestWorkerMarksStaleRunningAsFailed(t *testing.T) {
 	`, snapshotID, models.ReportRunning).Scan(&reportID)
 	require.NoError(t, err)
 
-	renderer := func(*models.ScanResult) ([]byte, error) {
+	renderer := func(pdf.ReportData) ([]byte, error) {
 		return []byte("%PDF"), nil
 	}
 
@@ -371,7 +371,7 @@ func TestCreateReportWakesWorker(t *testing.T) {
 	snapshotID := seedSnapshot(t, d)
 
 	called := make(chan struct{}, 1)
-	renderer := func(*models.ScanResult) ([]byte, error) {
+	renderer := func(pdf.ReportData) ([]byte, error) {
 		called <- struct{}{}
 		return []byte("%PDF"), nil
 	}

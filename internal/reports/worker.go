@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/models"
+	"github.com/notfixingit3/echostate/internal/pdf"
 )
 
 const (
@@ -23,8 +25,8 @@ const (
 	pollInterval          = 2 * time.Second
 )
 
-// Renderer renders a ScanResult into a PDF byte slice.
-type Renderer func(*models.ScanResult) ([]byte, error)
+// Renderer renders snapshot report data into a PDF byte slice.
+type Renderer func(pdf.ReportData) ([]byte, error)
 
 // Worker processes PDF report jobs asynchronously with bounded concurrency.
 type Worker struct {
@@ -252,9 +254,13 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 	defer cancel()
 
 	var raw json.RawMessage
+	var changes []string
+	var changeDetailsRaw json.RawMessage
 	err := w.db.Pool.QueryRow(ctx, `
-		SELECT raw_data FROM snapshots WHERE id = $1
-	`, snapshotID).Scan(&raw)
+		SELECT raw_data, COALESCE(changes, '{}'), COALESCE(change_details, '[]')
+		FROM snapshots
+		WHERE id = $1
+	`, snapshotID).Scan(&raw, &changes, &changeDetailsRaw)
 	if err != nil {
 		msg := fmt.Sprintf("snapshot not found: %v", err)
 		if err == pgx.ErrNoRows {
@@ -270,6 +276,27 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 		return
 	}
 
+	var changeDetails []models.ChangeDetail
+	if len(changeDetailsRaw) > 0 {
+		if err := json.Unmarshal(changeDetailsRaw, &changeDetails); err != nil {
+			w.failReport(ctx, reportID, fmt.Sprintf("decode change details: %v", err))
+			return
+		}
+	}
+
+	screenshotJPEG, err := w.loadScreenshotJPEG(ctx, snapshotID, result.Screenshot)
+	if err != nil {
+		w.failReport(ctx, reportID, fmt.Sprintf("load screenshot: %v", err))
+		return
+	}
+
+	reportData := pdf.ReportData{
+		Result:         &result,
+		Changes:        changes,
+		ChangeDetails:  changeDetails,
+		ScreenshotJPEG: screenshotJPEG,
+	}
+
 	renderCtx, renderCancel := context.WithTimeout(ctx, renderTimeout)
 	defer renderCancel()
 
@@ -279,8 +306,8 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 	}
 	renderDone := make(chan renderResult, 1)
 	go func() {
-		pdf, err := w.renderer(&result)
-		renderDone <- renderResult{pdf: pdf, err: err}
+		pdfBytes, err := w.renderer(reportData)
+		renderDone <- renderResult{pdf: pdfBytes, err: err}
 	}()
 
 	var pdfBytes []byte
@@ -335,6 +362,25 @@ func (w *Worker) failStaleRunning(ctx context.Context) error {
 		return fmt.Errorf("mark stale running reports failed: %w", err)
 	}
 	return nil
+}
+
+func (w *Worker) loadScreenshotJPEG(ctx context.Context, snapshotID uuid.UUID, screenshot map[string]any) ([]byte, error) {
+	if data, _, err := w.db.GetSnapshotBlob(ctx, snapshotID, db.BlobKindScreenshotThumbnail); err != nil {
+		return nil, err
+	} else if len(data) > 0 {
+		return data, nil
+	}
+
+	if len(screenshot) == 0 {
+		return nil, nil
+	}
+
+	rawThumb, ok := screenshot["thumbnail"].(string)
+	if !ok || rawThumb == "" {
+		return nil, nil
+	}
+
+	return base64.StdEncoding.DecodeString(rawThumb)
 }
 
 func (w *Worker) scanReport(row pgx.Row) (*models.Report, error) {

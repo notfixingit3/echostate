@@ -18,7 +18,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { IntelSummary } from "@/components/intel-summary"
 import { IntelPanels } from "@/components/intel-panels"
 import { CountryFlag } from "@/components/country-flag"
-import { createReport, getReport, downloadReport, ApiError } from "@/lib/api"
+import {
+  createReport,
+  getReport,
+  getLatestReportForSnapshot,
+  downloadReport,
+  ApiError,
+} from "@/lib/api"
 import { extractIntel } from "@/lib/intel"
 import type { Snapshot, Report } from "@/lib/types"
 import {
@@ -38,6 +44,28 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
   const [report, setReport] = React.useState<Report | null>(null)
 
   const intel = extractIntel(snapshot.raw_data, snapshot)
+
+  React.useEffect(() => {
+    let cancelled = false
+
+    async function hydrateLatestReport() {
+      try {
+        const latest = await getLatestReportForSnapshot(snapshot.id)
+        if (!cancelled && latest) {
+          setReport(latest)
+          setReportError(null)
+        }
+      } catch {
+        // Leave create-report flow available if hydration fails.
+      }
+    }
+
+    void hydrateLatestReport()
+
+    return () => {
+      cancelled = true
+    }
+  }, [snapshot.id])
 
   const handleCreateReport = async () => {
     setIsCreatingReport(true)

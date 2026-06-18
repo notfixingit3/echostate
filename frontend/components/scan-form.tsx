@@ -17,10 +17,23 @@ import {
 } from "@/components/ui/card"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { IntelSummary } from "@/components/intel-summary"
-import { scanHost, createReport, getReport, ApiError } from "@/lib/api"
+import {
+  scanHost,
+  createReport,
+  getReport,
+  downloadReport,
+  ApiError,
+} from "@/lib/api"
 import { extractIntel } from "@/lib/intel"
 import type { ScanResponse, Report } from "@/lib/types"
-import { Loader2Icon, ScanIcon, AlertCircleIcon, CheckCircleIcon, FileTextIcon } from "lucide-react"
+import {
+  Loader2Icon,
+  ScanIcon,
+  AlertCircleIcon,
+  CheckCircleIcon,
+  FileTextIcon,
+  DownloadIcon,
+} from "lucide-react"
 
 export function ScanForm() {
   const searchParams = useSearchParams()
@@ -168,6 +181,26 @@ export function ScanForm() {
     }
   }, [report])
 
+  const handleDownloadReport = async () => {
+    if (!report || report.status !== "completed" || !result) return
+
+    try {
+      await downloadReport(
+        report,
+        `echostate-${result.host || "report"}-${report.id.slice(0, 8)}.pdf`
+      )
+      setReportError(null)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setReportError(err.message)
+      } else if (err instanceof Error) {
+        setReportError(err.message)
+      } else {
+        setReportError("Failed to download report")
+      }
+    }
+  }
+
   const intel = result ? extractIntel(result.raw_data) : null
 
   return (
@@ -286,6 +319,7 @@ export function ScanForm() {
           </CardContent>
           <CardFooter className="flex flex-col items-start gap-2">
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-2">
               {!report || report.status === "failed" ? (
                 <Button
                   disabled={isCreatingReport}
@@ -305,21 +339,32 @@ export function ScanForm() {
                   )}
                 </Button>
               ) : report.status === "completed" ? (
-                <Button
-                  variant="outline"
-                  render={<Link href={`/report?id=${report.id}`} />}
-                  nativeButton={false}
-                  data-testid="scan-result-view-report-link"
-                >
-                  View report →
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    render={<Link href={`/report?id=${report.id}`} />}
+                    nativeButton={false}
+                    data-testid="scan-result-view-report-link"
+                  >
+                    <FileTextIcon data-icon="inline-start" />
+                    View report
+                  </Button>
+                  <Button
+                    onClick={() => void handleDownloadReport()}
+                    data-testid="scan-result-download-report-button"
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    Download PDF
+                  </Button>
+                </>
               ) : (
                 <Button disabled data-testid="scan-result-report-pending-button">
                   <Loader2Icon data-icon="inline-start" className="animate-spin" />
                   Generating report…
                 </Button>
               )}
-              <div className="flex gap-2">
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   render={<Link href={`/target?id=${result.target_id}`} />}

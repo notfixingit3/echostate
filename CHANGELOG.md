@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.28] - 2026-06-18
+
+### Added
+
+- **Richer PDF reports** — Cover branding with EchoState logo, web screenshot thumbnail, snapshot change summaries, intel highlights, and expanded DNS/TLS sections.
+- **Report state hydration** — Snapshot detail restores the latest report for that snapshot on page load (pending, running, or completed).
+- **Scan result downloads** — Home scan result card now offers **Download PDF** when a report completes (matching snapshot detail).
+
+### Changed
+
+- **Report E2E** — Playwright flow stays on the snapshot page, waits for completion, and downloads via `snapshot-download-report-button`. E2E global setup builds local dev images and recreates volumes when auth is bootstrapped.
+
 ## [0.0.1-beta.27] - 2026-06-18
 
 ### Fixed
@@ -326,6 +338,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.28]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.28
 [0.0.1-beta.27]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.27
 [0.0.1-beta.26]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.26
 [0.0.1-beta.25]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.25

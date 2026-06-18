@@ -167,6 +167,11 @@ export const HELP_COPY: Record<string, string> = {
   "reports.snapshot": "Snapshot used as the source data for this report.",
   "reports.download": "Download the generated PDF when status is completed.",
 
+  "snapshot.create_report":
+    "Queue an async PDF report for this snapshot. Status updates automatically; download when complete. Revisiting the page restores the latest report.",
+  "scan.and_report":
+    "Run a scan and queue a PDF report in one step. The result card polls until the report is ready, then offers download.",
+
   "snapshot.changes":
     "Structured field-level diffs with severity, type, and summary versus the previous snapshot.",
   "snapshot.raw_data": "Full JSON payload returned by all gatherers for this scan.",

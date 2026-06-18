@@ -18,6 +18,7 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/models"
+	"github.com/notfixingit3/echostate/internal/pdf"
 	"github.com/notfixingit3/echostate/internal/reports"
 )
 
@@ -101,7 +102,7 @@ func seedSnapshot(t *testing.T, d *db.DB) uuid.UUID {
 
 func newTestHandler(t *testing.T, d *db.DB) *Handler {
 	t.Helper()
-	renderer := func(*models.ScanResult) ([]byte, error) {
+	renderer := func(pdf.ReportData) ([]byte, error) {
 		return []byte("%PDF fake"), nil
 	}
 	return &Handler{

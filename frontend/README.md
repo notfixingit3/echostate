@@ -37,12 +37,12 @@ Built as `echostate-frontend` via `docker compose up --build`. Inside Compose, `
 
 | Route | Purpose |
 | ----- | ------- |
-| `/` | Scan form + intel summary |
+| `/` | Scan form + intel summary; scan result card polls reports and supports PDF download |
 | `/targets` | Browse targets |
 | `/target?id=` | Target detail, intel tabs, rescan button |
 | `/target/snapshots?id=` | Snapshot history for a target |
 | `/snapshots` | Browse all snapshots |
-| `/snapshot?id=` | Snapshot detail; **Create report** polls until PDF is ready, then download |
+| `/snapshot?id=` | Snapshot detail; hydrates latest report on load; **Create report** polls until PDF is ready, then download |
 | `/reports` | Browse reports (`?snapshot_id=` filter supported) |
 | `/report?id=` | Report status (auto-refresh) + credentialed PDF download |
 | `/profile` | Display name, theme, timezone, passkeys, device enrollment codes |
@@ -57,5 +57,5 @@ Target and snapshot detail pages use query-param routes because the app is a sta
 ```bash
 npm run typecheck
 npm run build
-npx playwright test    # requires docker compose stack running
+npx playwright test    # global setup builds local images (docker-compose.dev.yml) and tears down after
 ```

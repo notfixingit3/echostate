@@ -5,6 +5,12 @@ import { fileURLToPath } from "url"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, "../..")
+const composeFiles = [
+  "-f",
+  "docker-compose.yml",
+  "-f",
+  "docker-compose.dev.yml",
+]
 
 async function waitForHealth(maxSeconds = 180): Promise<void> {
   const deadline = Date.now() + maxSeconds * 1000
@@ -66,15 +72,34 @@ function isStackHealthy(): boolean {
   }
 }
 
+async function isAuthRequired(): Promise<boolean> {
+  try {
+    const response = await fetch("http://localhost:8080/api/auth/config")
+    if (!response.ok) {
+      return false
+    }
+    const data = (await response.json()) as { auth_required?: boolean }
+    return data.auth_required === true
+  } catch {
+    return false
+  }
+}
+
 async function globalSetup() {
-  if (isStackHealthy()) {
+  if (isStackHealthy() && !(await isAuthRequired())) {
     console.log("[global-setup] Existing stack is healthy; skipping rebuild.")
     return
   }
 
+  if (isStackHealthy() && (await isAuthRequired())) {
+    console.log(
+      "[global-setup] Stack has bootstrapped auth; recreating fresh volumes for E2E."
+    )
+  }
+
   console.log("[global-setup] Bringing down any existing stack...")
   try {
-    execSync("docker compose down -v", {
+    execSync(["docker", "compose", ...composeFiles, "down", "-v"].join(" "), {
       cwd: projectRoot,
       stdio: "inherit",
       timeout: 120000,
@@ -84,11 +109,15 @@ async function globalSetup() {
   }
 
   console.log("[global-setup] Building and starting Docker Compose stack...")
-  const proc = spawn("docker", ["compose", "up", "--build", "-d"], {
-    cwd: projectRoot,
-    stdio: "inherit",
-    shell: false,
-  })
+  const proc = spawn(
+    "docker",
+    ["compose", ...composeFiles, "up", "--build", "-d"],
+    {
+      cwd: projectRoot,
+      stdio: "inherit",
+      shell: false,
+    }
+  )
 
   await new Promise<void>((resolve, reject) => {
     proc.on("error", reject)

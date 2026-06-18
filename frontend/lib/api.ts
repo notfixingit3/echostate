@@ -2,6 +2,8 @@ import type {
   ApiErrorResponse,
   ScanResponse,
   Report,
+  ReportSummary,
+  PaginatedResponse,
   CreateReportRequest,
   TargetDetail,
 } from "./types"
@@ -149,6 +151,23 @@ export async function createReport(snapshot_id: string): Promise<Report> {
 
 export async function getReport(report_id: string): Promise<Report> {
   return fetchApi<Report>(`/api/reports/${report_id}`)
+}
+
+export async function getLatestReportForSnapshot(
+  snapshot_id: string
+): Promise<Report | null> {
+  const params = new URLSearchParams({
+    snapshot_id,
+    limit: "1",
+    page: "1",
+  })
+  const list = await fetchApi<PaginatedResponse<ReportSummary>>(
+    `/api/reports?${params.toString()}`
+  )
+  if (!list.data.length) {
+    return null
+  }
+  return getReport(list.data[0].id)
 }
 
 export async function downloadReport(

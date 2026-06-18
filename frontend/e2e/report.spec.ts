@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test"
+import fs from "fs"
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -23,32 +24,25 @@ test.describe("Report flow", () => {
 
     await page.getByTestId("snapshot-create-report-button").click()
 
+    await expect(page.getByTestId("snapshot-report-pending-button")).toBeVisible()
+
     const statusAlert = page.getByTestId("snapshot-report-status-alert")
     await expect(statusAlert).toBeVisible()
-    await expect(statusAlert).toContainText(/is pending/i)
+    await expect(statusAlert).toContainText(/is (pending|running)/i)
 
-    const alertText = await statusAlert.textContent()
-    const reportIdMatch = alertText?.match(
-      /Report\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
-    )
-    expect(reportIdMatch).toBeTruthy()
-    const reportId = reportIdMatch![1]
-
-    await page.goto(`/report?id=${reportId}`)
-
-    const statusBadge = page.getByTestId("report-detail-status")
-    await expect(statusBadge).toBeVisible()
-    await expect(statusBadge).toHaveText("completed", { timeout: 60_000 })
+    const downloadButton = page.getByTestId("snapshot-download-report-button")
+    await expect(downloadButton).toBeVisible({ timeout: 60_000 })
+    await expect(page.getByTestId("snapshot-view-report-link")).toBeVisible()
+    await expect(page.getByTestId("snapshot-report-pending-button")).toHaveCount(0)
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByTestId("report-detail-download-button").click(),
+      downloadButton.click(),
     ])
 
     const path = await download.path()
     expect(path).toBeTruthy()
 
-    const fs = await import("fs")
     const buffer = fs.readFileSync(path!)
     expect(buffer.toString("ascii", 0, 4)).toBe("%PDF")
   })

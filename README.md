@@ -11,11 +11,11 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 ## Features
 
 - **Passive recon** — WHOIS, Team Cymru ASN/BGP (RIPEstat hijack-risk heuristics, AS-path enrichment, PeeringDB IX data), DNS (A/AAAA, MX, NS, TXT, CNAME, SOA, DMARC, SPF/DKIM), TLS + JARM, crt.sh subdomain discovery, multi-vantage traceroute (local + external), favicon MMH3, robots/sitemap crawl, cloud bucket hints, HTTP security headers and full response headers from the final page load, tech-stack fingerprinting, headless Chrome web scraping, and JPEG screenshot thumbnails.
-- **Web UI** — Scan form (including **Scan & Report**), target detail with tags and rescan, intel tabs (WHOIS, ASN, DNS, TLS, Web, Favicon, Crawl, Storage, CT, Traceroute, Screenshots, Submitter), snapshot browser with **Create report** (polls until PDF is ready), side-by-side raw diffs, settings, and report downloads. Light mode default; version shown in footer.
+- **Web UI** — Scan form (including **Scan & Report** with inline PDF download), target detail with tags and rescan, intel tabs (WHOIS, ASN, DNS, TLS, Web, Favicon, Crawl, Storage, CT, Traceroute, Screenshots, Submitter), snapshot detail with **Create report** (hydrates latest report on load, polls until PDF is ready), side-by-side raw diffs, settings, and report downloads. Light mode default; version shown in footer.
 - **Historical tracking** — Snapshots persist; identical rescans update `last_seen`. Field-level `change_details` (severity, type, summary) highlight TLS expiry, new CT subdomains, DNS shifts, and more.
 - **Async scans** — `POST /api/scan` enqueues a job (`202`); poll `GET /api/scans/:id` for status and the resulting snapshot.
 - **Scheduled rescans** — Background scheduler re-scans stale targets on a configurable interval.
-- **PDF reports** — Async worker renders snapshot intel to PDF (maroto); queue via **Create report** on a snapshot or `POST /api/reports`, then poll `GET /api/reports/:id` or download when `status` is `completed`.
+- **PDF reports** — Async worker renders snapshot intel to PDF (maroto) with branding, screenshot thumbnail, change summaries, and DNS/TLS sections; queue via **Create report** on a snapshot or `POST /api/reports`, then poll `GET /api/reports/:id` or download when `status` is `completed`.
 - **IP enrichment** — pWhois worker enriches submitter IPs (org, ASN, geo).
 - **Notifications** — Slack, Discord, MS Teams webhooks, and Pushover mobile alerts with structured change payloads and alert-rule filtering.
 - **Settings** — DNS resolvers, pWhois server, rate limit, scan concurrency/timeouts, scheduler, retention, alert rules (with per-webhook filters), and optional Shodan/Censys/HIBP/RiskIQ API keys.
