@@ -19,11 +19,12 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 - **IP enrichment** — pWhois worker enriches submitter IPs (org, ASN, geo).
 - **Notifications** — Slack, Discord, MS Teams webhooks, and Pushover mobile alerts with structured change payloads and alert-rule filtering.
 - **Settings** — DNS resolvers, pWhois server, rate limit, scan concurrency/timeouts, scheduler, retention, alert rules (with per-webhook filters), and optional Shodan/Censys/HIBP/RiskIQ API keys.
-- **Optional API key** — Set `ECHOSTATE_API_KEY` (or configure in Settings) to protect write endpoints (`scan`, `reports`, `webhooks`, `settings`).
+- **Passkey authentication (beta.20+)** — WebAuthn passkeys with single-use enrollment/recovery codes; `admin` and `scanner` roles. See [Authentication](#authentication).
+- **Legacy API key** — Optional `ECHOSTATE_API_KEY` still works for admin mutations when no users exist yet.
 - **Neo4j graph** — Relationship sync on scan plus interactive `/graph` UI with infra, CT, DNS, cert SAN, BGP, traceroute, and peering views; route diff, shared hops, and infra clusters.
 - **Containerized** — Docker Compose: API, frontend, PostgreSQL, browserless Chrome, Neo4j.
 
-> **Production note:** Write endpoints accept an optional API key (`ECHOSTATE_API_KEY` or Settings). Browse endpoints and submitter IPs remain publicly visible without additional auth. Deploy behind a reverse proxy with TLS, set an API key, and restrict network access. See [SECURITY.md](SECURITY.md).
+> **Production note:** After bootstrapping the first admin, protected API routes require a signed-in passkey session. Until then, behavior matches earlier betas (optional API key for writes). Deploy behind TLS, set `ECHOSTATE_AUTH_PEPPER`, and see [SECURITY.md](SECURITY.md).
 
 ## Quick Start
 
@@ -55,6 +56,124 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 The UI proxies `/api` to the Go backend inside Docker — no CORS setup required for local use.
 
+## Authentication
+
+EchoState uses **passkeys (WebAuthn)** for day-to-day sign-in and **single-use codes** for first-time enrollment, new devices, and break-glass recovery. There are no passwords.
+
+| Role | Access |
+| ---- | ------ |
+| `admin` | Full access — settings, users, webhooks, collections, notes, scans, reports |
+| `scanner` | Scan, reports, read intel/graph/targets (no settings or user management) |
+
+**Before the first admin exists**, the API behaves like earlier releases: read endpoints are open; write endpoints accept an optional legacy API key if configured.
+
+**After bootstrap**, protected routes require an HTTP-only session cookie (`echostate_session`). The UI redirects unauthenticated users to `/login`.
+
+Auth defaults (code length/TTL, session lifetime, attempt limits, WebAuthn RP ID/origin) are **admin-configurable in Settings**.
+
+### Environment variables
+
+| Variable | Required | Purpose |
+| -------- | -------- | ------- |
+| `ECHOSTATE_AUTH_PEPPER` | Production | HMAC pepper for enrollment-code and session hashing |
+| `ECHOSTATE_BREAK_GLASS_SECRET` | For CLI recovery | Secret for `echostate auth issue-admin-code` |
+| `FRONTEND_URL` | Yes for passkeys | WebAuthn relying-party origin (e.g. `http://localhost:3001`) |
+
+Set these in `.env` (Docker) or your shell (local `go run`). See `.env.example`.
+
+### First-time setup
+
+#### Docker
+
+1. Start the stack (`docker compose up -d`).
+2. Bootstrap the first admin (one-time):
+
+   ```bash
+   docker compose run --rm api auth bootstrap-admin --name "Admin"
+   ```
+
+   This prints a single-use **enrollment code**. `bootstrap-admin` fails with "admin user already exists" if an admin is already present — use [Recovery codes](#recovery-codes) instead.
+
+3. Open **http://localhost:3001/login**, enter the code, and register a passkey (Touch ID, Windows Hello, YubiKey, etc.).
+
+#### Without Docker (local dev)
+
+1. Start dependencies and the API:
+
+   ```bash
+   cp .env.example .env
+   docker compose up db browser neo4j -d   # or your own Postgres + browserless
+   go run ./main.go
+   ```
+
+2. Bootstrap:
+
+   ```bash
+   go run ./main.go auth bootstrap-admin --name "Admin"
+   ```
+
+3. Start the frontend (`cd frontend && npm run dev`), open **http://localhost:3000/login** (or whatever port Next uses), enter the code, and register a passkey.
+
+   For local Next dev, set `FRONTEND_URL` in `.env` to match the UI origin (e.g. `http://localhost:3000`) so WebAuthn RP ID/origin align.
+
+### Sign-in flow (UI)
+
+1. **Returning user** — `/login` → **Sign in with passkey** (uses the passkey registered in this browser).
+2. **New device or first enrollment** — enter an **enrollment code** or **recovery code** → verify → register or sign in with passkey.
+3. **Sign out** — nav bar **Sign out** (or `POST /api/auth/logout`).
+
+### Managing users (admin)
+
+In **Settings → Users & enrollment codes**:
+
+- Create `admin` or `scanner` users
+- Issue **enrollment codes** (numeric, for new passkey setup)
+- Issue **recovery codes** (alphanumeric, break-glass / lost device)
+
+### Recovery codes
+
+When bootstrap has already run, use the CLI instead of `bootstrap-admin`:
+
+**Docker:**
+
+```bash
+# ECHOSTATE_BREAK_GLASS_SECRET must be set in .env
+docker compose run --rm api auth issue-admin-code
+```
+
+**Local binary:**
+
+```bash
+export ECHOSTATE_BREAK_GLASS_SECRET=your-secret
+go run ./main.go auth issue-admin-code
+```
+
+Paste the printed code at `/login`.
+
+### CLI reference
+
+| Command | When to use |
+| ------- | ----------- |
+| `auth bootstrap-admin [--name "Admin"]` | First admin only (empty `users` table) |
+| `auth issue-admin-code` | Recovery code when admin already exists |
+
+> **Docker note:** use `docker compose run --rm api auth <command>`, not `docker compose exec api auth …` (exec does not invoke the image entrypoint correctly).
+
+### API (auth endpoints)
+
+| Endpoint | Description |
+| -------- | ----------- |
+| `GET /api/auth/config` | Auth required flag + public tunables |
+| `GET /api/auth/session` | Current session (`authenticated`, `user`) |
+| `POST /api/auth/enroll/verify` | Verify enrollment/recovery code (`{"code":"..."}`) |
+| `POST /api/auth/webauthn/register/begin` | Start passkey registration |
+| `POST /api/auth/webauthn/register/finish` | Complete passkey registration |
+| `POST /api/auth/webauthn/login/begin` | Start passkey sign-in |
+| `POST /api/auth/webauthn/login/finish` | Complete passkey sign-in |
+| `POST /api/auth/logout` | End session |
+| `GET/POST /api/users` | List/create users (admin) |
+| `POST /api/users/:id/codes` | Issue enrollment/recovery code (admin) |
+
 ## API
 
 ### Health
@@ -79,7 +198,7 @@ curl http://localhost:8080/api/scans/<job-uuid>
 
 When `status` is `completed`, the response includes the snapshot with `raw_data` (`whois`, `asn`, `dns`, `tls`, `web`, `ct`, `traceroute`, `screenshot`, `favicon`, `crawl`, `storage`, `errors`) and `change_details` vs the previous snapshot.
 
-If `ECHOSTATE_API_KEY` is set, pass `Authorization: Bearer <key>` or `X-API-Key: <key>` on write requests.
+If auth is not required yet and `ECHOSTATE_API_KEY` is set, pass `Authorization: Bearer <key>` or `X-API-Key: <key>` on write requests. After bootstrap, use a session cookie from `/login` or the auth endpoints above.
 
 Rescanning a target uses the same endpoint — there is no separate rescan API.
 

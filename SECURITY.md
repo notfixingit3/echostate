@@ -16,7 +16,7 @@ Do not open public issues for security-sensitive bugs.
 
 ## Notes
 
-- **Authentication (beta.20+)** — Optional passkey + enrollment-code auth. Until the first admin is bootstrapped (`echostate auth bootstrap-admin`), the API behaves as before. After users exist, protected routes require a session cookie.
+- **Authentication (beta.20+)** — Passkey + enrollment-code auth. Full setup (Docker and local): [README § Authentication](README.md#authentication). Until the first admin is bootstrapped, the API behaves as before; after users exist, protected routes require a session cookie.
 - Set `ECHOSTATE_AUTH_PEPPER` in production for enrollment-code and session hashing.
 - Set `ECHOSTATE_BREAK_GLASS_SECRET` for CLI recovery codes (`echostate auth issue-admin-code`).
 - Auth defaults (code length/TTL, session lifetime, attempt limits, WebAuthn RP ID/origin) are admin-configurable in **Settings**.
