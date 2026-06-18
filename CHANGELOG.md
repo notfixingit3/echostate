@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.24] - 2026-06-18
+
+### Added
+
+- **Export all / import bundle** — Admin **Data transfer** page with `GET /api/export` and `POST /api/import` to move targets, snapshots, collections, notes, saved graph views, and optional blobs/settings between installs.
+- **Graph canvas sizing** — Graph view now fills its container and re-measures on tab and window resize.
+
+### Fixed
+
+- **Collections selects** — Collection and target pickers show names instead of UUIDs after selection.
+
 ## [0.0.1-beta.23] - 2026-06-18
 
 ### Added
