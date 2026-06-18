@@ -121,14 +121,17 @@ Set these in `.env` (Docker) or your shell (local `go run`). See `.env.example`.
 1. **Returning user** — `/login` → **Sign in with passkey** (uses the passkey registered in this browser).
 2. **New device or first enrollment** — enter an **enrollment code** or **recovery code** → verify → **Register passkey on this device** or sign in with an existing passkey.
 3. **Add passkey while signed in** — click your name in the nav → **Profile** → **Register passkey**.
-4. **Sign out** — nav bar **Sign out** (or `POST /api/auth/logout`).
+4. **Another device** — **Profile** → **Issue device code** → enter code at `/login` on the new device.
+5. **Sign out** — nav bar **Sign out** (or `POST /api/auth/logout`).
 
 ### Profile & administration
 
 | Area | Path | Who |
 | ---- | ---- | --- |
-| **Profile** (timezone, passkeys) | `/profile` — click your name in the nav | All signed-in users |
+| **Profile** (name, theme, timezone, passkeys) | `/profile` — click your name in the nav | All signed-in users |
 | **Administration** (server settings) | `/admin` — nav **Admin** link | Admin only |
+
+**Profile** sections: display name, theme/timezone preferences, device enrollment codes, passkey management.
 
 Administration sections: Integrations, System, Authentication, User management.
 
@@ -181,6 +184,9 @@ Paste the printed code at `/login`.
 | `POST /api/auth/webauthn/login/begin` | Start passkey sign-in |
 | `POST /api/auth/webauthn/login/finish` | Complete passkey sign-in |
 | `POST /api/auth/logout` | End session |
+| `PATCH /api/auth/profile` | Update display name, theme, and/or timezone |
+| `POST /api/auth/device-code` | Issue single-use device enrollment code (signed-in user) |
+| `PATCH /api/users/:id/credentials/:credId` | Rename passkey nickname |
 | `GET/POST /api/users` | List/create users (admin) |
 | `POST /api/users/:id/codes` | Issue enrollment/recovery code (admin) |
 
@@ -301,7 +307,7 @@ Tagged releases (`v*`) trigger:
 - **GHCR images** — `ghcr.io/notfixingit3/echostate` (API) and `ghcr.io/notfixingit3/echostate-frontend`
   - `:beta` — latest `dev` branch build (default `docker compose`)
   - `:main` — latest `main` branch build (`docker-compose.prod.yml`)
-  - `:0.0.1-beta.N` — semver pin from release tags
+  - `:0.0.1-beta.N` — semver pin from release tags (pin **both** API and frontend to the same tag)
 
 Pre-release tags containing `beta`, `alpha`, or `rc` are marked as GitHub pre-releases.
 

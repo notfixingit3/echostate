@@ -227,23 +227,26 @@ func (h *Handler) authUpdateProfile(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Timezone *string `json:"timezone"`
-		Theme    *string `json:"theme"`
+		DisplayName *string `json:"display_name"`
+		Timezone    *string `json:"timezone"`
+		Theme       *string `json:"theme"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if req.Timezone == nil && req.Theme == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "timezone or theme required"})
+	if req.DisplayName == nil && req.Timezone == nil && req.Theme == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "display_name, timezone, or theme required"})
 		return
 	}
 	user, err := h.auth.UpdateUserProfile(c.Request.Context(), actor.ID, auth.ProfileUpdate{
-		Timezone: req.Timezone,
-		Theme:    req.Theme,
+		DisplayName: req.DisplayName,
+		Timezone:    req.Timezone,
+		Theme:       req.Theme,
 	})
 	if err != nil {
-		if err.Error() == "invalid timezone" || err.Error() == "invalid theme" {
+		if err.Error() == "invalid display name" || err.Error() == "display name too long" ||
+			err.Error() == "invalid timezone" || err.Error() == "invalid theme" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

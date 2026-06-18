@@ -493,9 +493,12 @@ func (s *Service) RenameCredential(ctx context.Context, userID, credID uuid.UUID
 }
 
 type ProfileUpdate struct {
-	Timezone *string
-	Theme    *string
+	DisplayName *string
+	Timezone    *string
+	Theme       *string
 }
+
+const maxDisplayNameLen = 80
 
 func normalizeTheme(value string) (string, error) {
 	switch stringsTrim(strings.ToLower(value)) {
@@ -515,12 +518,22 @@ func (s *Service) UpdateUserProfile(ctx context.Context, userID uuid.UUID, updat
 		return nil, ErrUserDisabled
 	}
 
+	displayName := current.DisplayName
 	timezone := current.Timezone
 	theme := current.Theme
 	if theme == "" {
 		theme = "system"
 	}
 
+	if update.DisplayName != nil {
+		displayName = stringsTrim(*update.DisplayName)
+		if displayName == "" {
+			return nil, fmt.Errorf("invalid display name")
+		}
+		if len(displayName) > maxDisplayNameLen {
+			return nil, fmt.Errorf("display name too long")
+		}
+	}
 	if update.Timezone != nil {
 		timezone = stringsTrim(*update.Timezone)
 		if timezone == "" {
@@ -539,10 +552,10 @@ func (s *Service) UpdateUserProfile(ctx context.Context, userID uuid.UUID, updat
 
 	var user User
 	err = s.db.Pool.QueryRow(ctx, `
-		UPDATE users SET timezone = $1, theme = $2, updated_at = NOW()
-		WHERE id = $3 AND disabled = FALSE
+		UPDATE users SET display_name = $1, timezone = $2, theme = $3, updated_at = NOW()
+		WHERE id = $4 AND disabled = FALSE
 		RETURNING id, display_name, role, timezone, theme, disabled, created_at, updated_at
-	`, timezone, theme, userID).Scan(
+	`, displayName, timezone, theme, userID).Scan(
 		&user.ID, &user.DisplayName, &user.Role, &user.Timezone, &user.Theme, &user.Disabled, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
