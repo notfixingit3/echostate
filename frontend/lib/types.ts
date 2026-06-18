@@ -389,4 +389,60 @@ export interface GraphRouteDiff {
   traceroute?: TracerouteRouteDiff
 }
 
+export interface ExportBundle {
+  format_version: number
+  exported_at: string
+  echostate_version: string
+  targets: Array<{
+    id: string
+    host: string
+    normalized_host?: string
+    tags?: string[]
+    created_at: string
+  }>
+  snapshots: Array<Record<string, unknown>>
+  snapshot_blobs?: Array<{
+    id: string
+    snapshot_id: string
+    kind: string
+    content_type: string
+    data_base64: string
+  }>
+  collections: Array<{
+    id: string
+    name: string
+    description: string
+    created_at: string
+    updated_at: string
+  }>
+  collection_members: Array<{
+    collection_id: string
+    target_id: string
+    added_at: string
+  }>
+  notes: InvestigationNote[]
+  graph_views: SavedGraphView[]
+  webhooks?: Array<Record<string, unknown>>
+  settings?: Record<string, unknown>
+}
+
+export interface ImportResult {
+  targets_imported: number
+  targets_skipped: number
+  snapshots_imported: number
+  snapshots_skipped: number
+  snapshot_blobs_imported: number
+  collections_imported: number
+  collections_skipped: number
+  collection_members_imported: number
+  notes_imported: number
+  notes_skipped: number
+  graph_views_imported: number
+  graph_views_skipped: number
+  webhooks_imported: number
+  settings_imported: boolean
+  graph_sync_queued: number
+  warnings?: string[]
+}
+
 

@@ -213,7 +213,7 @@ export function GraphView() {
     graphData?: () => { nodes: ForceNode[]; links: ForceLink[] }
     graph2ScreenCoords?: (x: number, y: number) => { x: number; y: number }
   } | null>(null)
-  const [size, setSize] = React.useState({ width: 800, height: 520 })
+  const [size, setSize] = React.useState({ width: 0, height: 0 })
   const [graph, setGraph] = React.useState<GraphResponse | null>(null)
   const [targets, setTargets] = React.useState<TargetSummary[]>([])
   const [targetFilter, setTargetFilter] = React.useState("all")
@@ -320,22 +320,30 @@ export function GraphView() {
     }
   }, [targetFilter])
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const element = containerRef.current
     if (!element) return
 
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      setSize({
-        width: Math.max(320, Math.floor(entry.contentRect.width)),
-        height: Math.max(420, Math.floor(entry.contentRect.height)),
-      })
-    })
+    const updateSize = () => {
+      const rect = element.getBoundingClientRect()
+      const width = Math.max(320, Math.floor(rect.width))
+      const height = Math.max(420, Math.floor(rect.height))
+      setSize((current) =>
+        current.width === width && current.height === height
+          ? current
+          : { width, height }
+      )
+    }
 
+    updateSize()
+    const observer = new ResizeObserver(() => updateSize())
     observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+    window.addEventListener("resize", updateSize)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", updateSize)
+    }
+  }, [viewMode])
 
   const legend = VIEW_META[viewMode].legend
 
@@ -565,8 +573,8 @@ export function GraphView() {
   const showPathPanel = viewMode === "traceroute" && paths.length > 0
 
   return (
-    <div className="flex flex-col gap-6">
-      <Tabs value={viewMode} onValueChange={handleViewChange}>
+    <div className="flex w-full min-w-0 flex-col gap-6">
+      <Tabs value={viewMode} onValueChange={handleViewChange} className="w-full min-w-0">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-muted/50 p-1 lg:w-auto">
             <TabsTrigger value="infra" className="gap-1.5">
@@ -713,7 +721,7 @@ export function GraphView() {
                   : "grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]"
               }
             >
-              <Card className="overflow-hidden border-border/60">
+              <Card className="min-w-0 overflow-hidden border-border/60">
                 <CardHeader className="border-b border-border/50 pb-4">
                   <CardTitle className="flex items-center gap-2 font-heading text-lg">
                     {mode === "traceroute" ? (
@@ -728,7 +736,7 @@ export function GraphView() {
                 <CardContent className="p-0">
                   <div
                     ref={mode === viewMode ? containerRef : undefined}
-                    className="relative min-h-[420px] w-full bg-muted/20"
+                    className="relative h-[clamp(420px,65vh,720px)] w-full overflow-hidden bg-muted/20"
                     data-testid="graph-canvas"
                   >
                     {error ? (
@@ -745,7 +753,7 @@ export function GraphView() {
                         <p>No graph data yet for this view.</p>
                         <p>Run a scan to populate Neo4j relationships.</p>
                       </div>
-                    ) : mode === viewMode ? (
+                    ) : mode === viewMode && size.width > 0 && size.height > 0 ? (
                       <>
                         <div className="absolute right-3 top-3 z-10 flex flex-wrap justify-end gap-1">
                           <Button type="button" variant="secondary" size="icon-sm" onClick={() => graphApiRef.current?.zoom?.(1.4)} aria-label="Zoom in">
@@ -783,7 +791,11 @@ export function GraphView() {
                             <DownloadIcon />
                           </Button>
                         </div>
-                        <ForceGraph2D
+                        <div
+                          className="h-full w-full"
+                          style={{ width: size.width, height: size.height }}
+                        >
+                          <ForceGraph2D
                           ref={graphApiRef as never}
                           width={size.width}
                           height={size.height}
@@ -832,8 +844,13 @@ export function GraphView() {
                           cooldownTicks={80}
                           d3AlphaDecay={0.03}
                           d3VelocityDecay={0.35}
-                        />
+                          />
+                        </div>
                       </>
+                    ) : mode === viewMode ? (
+                      <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-muted-foreground">
+                        Preparing canvas…
+                      </div>
                     ) : (
                       <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
                         Switch to this tab to render the graph.

@@ -213,6 +213,8 @@ export function CollectionsManager() {
 
   const memberIds = new Set((detail?.targets ?? []).map((target) => target.id))
   const availableTargets = targets.filter((target) => !memberIds.has(target.id))
+  const selectedCollection = collections.find((collection) => collection.id === selectedId)
+  const selectedAddTarget = targets.find((target) => target.id === addTargetId)
 
   return (
     <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -308,7 +310,13 @@ export function CollectionsManager() {
             ) : (
               <Select value={selectedId} onValueChange={(value) => value && setSelectedId(value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select collection" />
+                  <SelectValue placeholder="Select collection">
+                    <span className="truncate">
+                      {selectedCollection
+                        ? `${selectedCollection.name} (${selectedCollection.target_count})`
+                        : "Select collection"}
+                    </span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {collections.map((collection) => (
@@ -349,7 +357,11 @@ export function CollectionsManager() {
                     <Label>Add target</Label>
                     <Select value={addTargetId} onValueChange={(value) => value && setAddTargetId(value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose a target" />
+                        <SelectValue placeholder="Choose a target">
+                          <span className="truncate">
+                            {selectedAddTarget?.host ?? "Choose a target"}
+                          </span>
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {availableTargets.map((target) => (

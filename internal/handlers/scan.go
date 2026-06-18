@@ -109,6 +109,9 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.GET("/settings", requireAdmin, h.getSettings)
 	api.PUT("/settings", requireAdmin, h.updateSettings)
 
+	api.GET("/export", requireAdmin, h.exportData)
+	api.POST("/import", requireAdmin, h.importData)
+
 	api.GET("/graph", requireScanner, h.getGraph)
 
 	api.GET("/collections", requireScanner, h.listCollections)

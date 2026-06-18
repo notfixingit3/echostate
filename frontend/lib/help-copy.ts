@@ -12,6 +12,11 @@ export const HELP_COPY: Record<string, string> = {
   "page.profile": "Your personal settings: theme, timezone, passkeys, and registered devices.",
   "page.administration":
     "Server-wide configuration: integrations, system tuning, authentication defaults, and user management.",
+  "settings.nav.data": "Export or import targets, snapshots, collections, notes, and graph views between installs.",
+  "settings.export_all":
+    "Downloads a JSON bundle with investigation data. Optional blobs and server settings can be included.",
+  "settings.import_bundle":
+    "Upload a bundle from another EchoState instance. Choose overwrite or skip when records already exist.",
   "settings.nav.integrations": "Slack, Discord, Teams, and Pushover webhook integrations.",
   "settings.nav.system": "DNS, scan workers, scheduler, retention, enrichment API keys, and alert rules.",
   "settings.nav.authentication": "Passkey enrollment defaults, session lifetime, and WebAuthn relying party settings.",
