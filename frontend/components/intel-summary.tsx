@@ -140,6 +140,26 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         icon={DatabaseIcon}
         mono
       />
+      {intel.dnsSoaZone ? (
+        <StatCard
+          label="DNS SOA zone"
+          value={
+            intel.dnsSoaSerial
+              ? `${intel.dnsSoaZone} · serial ${intel.dnsSoaSerial}`
+              : intel.dnsSoaZone
+          }
+          icon={DatabaseIcon}
+          mono
+        />
+      ) : null}
+      {intel.dnsSoaMname && !intel.dnsSoaZone ? (
+        <StatCard
+          label="DNS SOA mname"
+          value={intel.dnsSoaMname}
+          icon={DatabaseIcon}
+          mono
+        />
+      ) : null}
       <StatCard
         label="Favicon MMH3"
         value={intel.faviconMMH3}

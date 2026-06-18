@@ -10,7 +10,7 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 
 ## Features
 
-- **Passive recon** — WHOIS, Team Cymru ASN/BGP (RIPEstat hijack-risk heuristics, AS-path enrichment, PeeringDB IX data), DNS, TLS + JARM, crt.sh subdomain discovery, multi-vantage traceroute (local + HackerTarget), favicon MMH3, robots/sitemap crawl, cloud bucket hints, HTTP security headers and full response headers from the final page load, tech-stack fingerprinting, headless Chrome web scraping, and JPEG screenshot thumbnails.
+- **Passive recon** — WHOIS, Team Cymru ASN/BGP (RIPEstat hijack-risk heuristics, AS-path enrichment, PeeringDB IX data), DNS (A/AAAA, MX, NS, TXT, CNAME, SOA, DMARC, SPF/DKIM), TLS + JARM, crt.sh subdomain discovery, multi-vantage traceroute (local + HackerTarget), favicon MMH3, robots/sitemap crawl, cloud bucket hints, HTTP security headers and full response headers from the final page load, tech-stack fingerprinting, headless Chrome web scraping, and JPEG screenshot thumbnails.
 - **Web UI** — Scan form, target detail with tags and rescan, intel tabs (WHOIS, ASN, DNS, TLS, Web, Favicon, Crawl, Storage, CT, Traceroute, Screenshots, Submitter), snapshot browser, side-by-side raw diffs, settings, and report downloads. Light mode default; version shown in footer.
 - **Historical tracking** — Snapshots persist; identical rescans update `last_seen`. Field-level `change_details` (severity, type, summary) highlight TLS expiry, new CT subdomains, DNS shifts, and more.
 - **Async scans** — `POST /api/scan` enqueues a job (`202`); poll `GET /api/scans/:id` for status and the resulting snapshot.
@@ -47,7 +47,7 @@ The UI proxies `/api` to the Go backend inside Docker — no CORS setup required
 
 ```bash
 curl http://localhost:8080/health
-# {"status":"ok","env":"development","version":"0.0.1-beta.13"}
+# {"status":"ok","env":"development","version":"0.0.1-beta.14"}
 ```
 
 ### Scan a target

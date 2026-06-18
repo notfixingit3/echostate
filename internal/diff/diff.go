@@ -46,6 +46,7 @@ func Compute(previous map[string]any, current *models.ScanResult) []Entry {
 	entries = append(entries, diffGraph(previous, currentMap)...)
 	entries = append(entries, diffCT(previous, currentMap)...)
 	entries = append(entries, diffDMARC(previous, currentMap)...)
+	entries = append(entries, diffSOA(previous, currentMap)...)
 	entries = append(entries, diffWeb(previous, currentMap)...)
 	entries = append(entries, diffGeneric(previous, currentMap)...)
 
@@ -223,6 +224,69 @@ func diffDMARC(previous, current map[string]any) []Entry {
 		}}
 	}
 	return nil
+}
+
+func diffSOA(previous, current map[string]any) []Entry {
+	prevDNS, _ := previous["dns"].(map[string]any)
+	curDNS, _ := current["dns"].(map[string]any)
+	if curDNS == nil {
+		return nil
+	}
+	prevSOA, _ := prevDNS["SOA"].(map[string]any)
+	curSOA, _ := curDNS["SOA"].(map[string]any)
+	if curSOA == nil {
+		return nil
+	}
+
+	var entries []Entry
+	prevMname := stringVal(prevSOA, "mname")
+	curMname := stringVal(curSOA, "mname")
+	if curMname != "" && curMname != prevMname {
+		entries = append(entries, Entry{
+			Type: "soa_mname", Severity: SeverityWarning, Field: "dns.soa.mname",
+			Summary: fmt.Sprintf("SOA primary nameserver changed: %s → %s", emptyDash(prevMname), curMname),
+		})
+	}
+
+	prevSerial := intVal(prevSOA, "serial")
+	curSerial := intVal(curSOA, "serial")
+	if curSerial > 0 && prevSerial > 0 && curSerial != prevSerial {
+		entries = append(entries, Entry{
+			Type: "soa_serial", Severity: SeverityInfo, Field: "dns.soa.serial",
+			Summary: fmt.Sprintf("SOA serial changed: %d → %d", prevSerial, curSerial),
+		})
+	}
+
+	prevRname := stringVal(prevSOA, "rname")
+	curRname := stringVal(curSOA, "rname")
+	if curRname != "" && curRname != prevRname {
+		entries = append(entries, Entry{
+			Type: "soa_rname", Severity: SeverityInfo, Field: "dns.soa.rname",
+			Summary: fmt.Sprintf("SOA zone contact changed: %s → %s", emptyDash(prevRname), curRname),
+		})
+	}
+
+	for _, field := range []struct {
+		key  string
+		typ  string
+		name string
+	}{
+		{"refresh", "soa_refresh", "refresh"},
+		{"retry", "soa_retry", "retry"},
+		{"expire", "soa_expire", "expire"},
+		{"minimum_ttl", "soa_minimum_ttl", "minimum TTL"},
+	} {
+		prevVal := intVal(prevSOA, field.key)
+		curVal := intVal(curSOA, field.key)
+		if curVal > 0 && prevVal > 0 && curVal != prevVal {
+			entries = append(entries, Entry{
+				Type: field.typ, Severity: SeverityInfo, Field: "dns.soa." + field.key,
+				Summary: fmt.Sprintf("SOA %s changed: %d → %d", field.name, prevVal, curVal),
+			})
+		}
+	}
+
+	return entries
 }
 
 func diffWeb(previous, current map[string]any) []Entry {

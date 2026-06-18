@@ -46,6 +46,7 @@ var graphViewEdgeTypes = map[string][]string{
 		"USES_MX",
 		"ALIASES_TO",
 		"HAS_DMARC",
+		"HAS_SOA",
 	},
 	"cert": {
 		"HAS_SAN",
@@ -870,6 +871,8 @@ func graphNodeID(nodeType string, props map[string]any) string {
 		return "dnshost:" + stringProp(props, "host")
 	case "DMARCPolicy":
 		return "dmarc:" + stringProp(props, "policy")
+	case "SOAZone":
+		return "soa:" + stringProp(props, "zone")
 	case "SharedHop":
 		return "sharedhop:" + stringProp(props, "ip")
 	case "CertSAN":
@@ -944,6 +947,15 @@ func graphNodeLabel(nodeType string, props map[string]any) string {
 	case "Subdomain", "DNSHost":
 		if host := stringProp(props, "host"); host != "" {
 			return truncateLabel(host, 32)
+		}
+	case "SOAZone":
+		zone := stringProp(props, "zone")
+		serial := intProp(props, "serial")
+		if zone != "" && serial > 0 {
+			return truncateLabel(zone+" · "+fmt.Sprint(serial), 36)
+		}
+		if zone != "" {
+			return truncateLabel(zone, 36)
 		}
 	case "CertSAN":
 		if name := stringProp(props, "name"); name != "" {
