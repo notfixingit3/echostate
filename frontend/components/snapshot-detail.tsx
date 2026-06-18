@@ -18,7 +18,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { IntelSummary } from "@/components/intel-summary"
 import { IntelPanels } from "@/components/intel-panels"
 import { CountryFlag } from "@/components/country-flag"
-import { fetchApi, ApiError } from "@/lib/api"
+import { createReport, getReport, downloadReport, ApiError } from "@/lib/api"
 import { extractIntel } from "@/lib/intel"
 import type { Snapshot, Report } from "@/lib/types"
 import {
@@ -28,31 +28,25 @@ import {
   AlertCircleIcon,
   FileTextIcon,
   FileDownIcon,
-  CheckCircleIcon,
+  Loader2Icon,
+  DownloadIcon,
 } from "lucide-react"
-
-type ReportResponse = Report
 
 export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
   const [isCreatingReport, setIsCreatingReport] = React.useState(false)
   const [reportError, setReportError] = React.useState<string | null>(null)
-  const [createdReport, setCreatedReport] = React.useState<ReportResponse | null>(
-    null
-  )
+  const [report, setReport] = React.useState<Report | null>(null)
 
   const intel = extractIntel(snapshot.raw_data, snapshot)
 
   const handleCreateReport = async () => {
     setIsCreatingReport(true)
     setReportError(null)
-    setCreatedReport(null)
+    setReport(null)
 
     try {
-      const report = await fetchApi<ReportResponse>("/api/reports", {
-        method: "POST",
-        body: JSON.stringify({ snapshot_id: snapshot.id }),
-      })
-      setCreatedReport(report)
+      const created = await createReport(snapshot.id)
+      setReport(created)
     } catch (err) {
       if (err instanceof ApiError) {
         setReportError(err.message)
@@ -66,26 +60,75 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
     }
   }
 
+  React.useEffect(() => {
+    if (!report || report.status === "completed" || report.status === "failed") {
+      return
+    }
+
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    async function refresh() {
+      try {
+        const updated = await getReport(report!.id)
+        if (cancelled) return
+        setReport(updated)
+        setReportError(null)
+        if (
+          updated.status !== "pending" &&
+          updated.status !== "running" &&
+          intervalId
+        ) {
+          clearInterval(intervalId)
+          intervalId = null
+        }
+      } catch (err) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          setReportError(err.message)
+        } else if (err instanceof Error) {
+          setReportError(err.message)
+        } else {
+          setReportError("Failed to check report status")
+        }
+        if (intervalId) {
+          clearInterval(intervalId)
+          intervalId = null
+        }
+      }
+    }
+
+    void refresh()
+    intervalId = setInterval(refresh, 2000)
+
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [report])
+
+  const handleDownloadReport = async () => {
+    if (!report || report.status !== "completed") return
+
+    try {
+      await downloadReport(
+        report,
+        `echostate-${intel.host || "report"}-${report.id.slice(0, 8)}.pdf`
+      )
+      setReportError(null)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setReportError(err.message)
+      } else if (err instanceof Error) {
+        setReportError(err.message)
+      } else {
+        setReportError("Failed to download report")
+      }
+    }
+  }
+
   return (
     <div className="flex flex-col gap-8">
-      {reportError && (
-        <Alert variant="destructive">
-          <AlertCircleIcon />
-          <AlertTitle>Report failed</AlertTitle>
-          <AlertDescription>{reportError}</AlertDescription>
-        </Alert>
-      )}
-
-      {createdReport && (
-        <Alert>
-          <CheckCircleIcon />
-          <AlertTitle>Report queued</AlertTitle>
-          <AlertDescription>
-            Report {createdReport.id} is {createdReport.status}.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Card className="overflow-hidden border-border/60 bg-card/90 backdrop-blur-sm">
         <CardHeader className="border-b border-border/50 bg-muted/20">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -162,25 +205,86 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
           </div>
         </CardContent>
         <Separator />
-        <CardFooter className="flex flex-wrap justify-between gap-3">
-          <Button
-            disabled={isCreatingReport}
-            onClick={handleCreateReport}
-            data-testid="snapshot-create-report-button"
-          >
-            <FileTextIcon data-icon="inline-start" />
-            {isCreatingReport ? "Creating report…" : "Create report"}
-          </Button>
-          <Button
-            variant="outline"
-            render={
-              <Link href={`/reports?snapshot_id=${snapshot.id}`} />
-            }
-            nativeButton={false}
-          >
-            <FileDownIcon data-icon="inline-start" />
-            View reports
-          </Button>
+        <CardFooter className="flex flex-col items-start gap-3">
+          <div className="flex w-full flex-wrap justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {!report || report.status === "failed" ? (
+                <Button
+                  disabled={isCreatingReport}
+                  onClick={() => void handleCreateReport()}
+                  data-testid="snapshot-create-report-button"
+                >
+                  {isCreatingReport ? (
+                    <>
+                      <Loader2Icon
+                        data-icon="inline-start"
+                        className="animate-spin"
+                      />
+                      Creating report…
+                    </>
+                  ) : (
+                    <>
+                      <FileTextIcon data-icon="inline-start" />
+                      Create report
+                    </>
+                  )}
+                </Button>
+              ) : report.status === "completed" ? (
+                <>
+                  <Button
+                    variant="outline"
+                    render={<Link href={`/report?id=${report.id}`} />}
+                    nativeButton={false}
+                    data-testid="snapshot-view-report-link"
+                  >
+                    <FileTextIcon data-icon="inline-start" />
+                    View report
+                  </Button>
+                  <Button
+                    onClick={() => void handleDownloadReport()}
+                    data-testid="snapshot-download-report-button"
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    Download PDF
+                  </Button>
+                </>
+              ) : (
+                <Button disabled data-testid="snapshot-report-pending-button">
+                  <Loader2Icon
+                    data-icon="inline-start"
+                    className="animate-spin"
+                  />
+                  Generating report…
+                </Button>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              render={<Link href={`/reports?snapshot_id=${snapshot.id}`} />}
+              nativeButton={false}
+            >
+              <FileDownIcon data-icon="inline-start" />
+              View reports
+            </Button>
+          </div>
+          {report &&
+          (report.status === "pending" || report.status === "running") ? (
+            <Alert data-testid="snapshot-report-status-alert">
+              <Loader2Icon />
+              <AlertTitle>Report in progress</AlertTitle>
+              <AlertDescription>
+                Report {report.id} is {report.status}. This updates automatically.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {(reportError || (report && report.status === "failed")) && (
+            <span className="flex items-center gap-1.5 text-sm text-destructive">
+              <AlertCircleIcon className="size-4" />
+              {report?.status === "failed"
+                ? report.error || "Report generation failed."
+                : reportError}
+            </span>
+          )}
         </CardFooter>
       </Card>
 

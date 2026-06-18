@@ -151,6 +151,42 @@ export async function getReport(report_id: string): Promise<Report> {
   return fetchApi<Report>(`/api/reports/${report_id}`)
 }
 
+export async function downloadReport(
+  report: Pick<Report, "id" | "status" | "download_url">,
+  filename?: string
+): Promise<void> {
+  if (report.status !== "completed") {
+    throw new ApiError("Report not ready", 409)
+  }
+
+  const path = report.download_url || `/api/reports/${report.id}/download`
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    let message = text || "Download failed"
+    try {
+      const parsed = JSON.parse(text) as ApiErrorResponse
+      message = parsed.error || parsed.message || message
+    } catch {
+      // keep plain-text message
+    }
+    throw new ApiError(message, response.status)
+  }
+
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename || `echostate-report-${report.id}.pdf`
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(url)
+}
+
 export async function getTarget(target_id: string): Promise<TargetDetail> {
   return fetchApi<TargetDetail>(`/api/targets/${target_id}`)
 }

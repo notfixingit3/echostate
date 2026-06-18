@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { fetchApi, ApiError, API_BASE } from "@/lib/api"
+import { fetchApi, downloadReport, ApiError } from "@/lib/api"
 import type { ReportSummary, ReportStatus, PaginatedResponse } from "@/lib/types"
 import { SearchIcon, AlertCircleIcon, DownloadIcon } from "lucide-react"
 
@@ -60,14 +60,24 @@ function statusBadgeVariant(status: ReportStatus) {
 
 export function ReportsTable() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [status, setStatus] = React.useState<ReportStatus | "">("")
-  const [snapshotId, setSnapshotId] = React.useState("")
+  const [snapshotId, setSnapshotId] = React.useState(
+    () => searchParams.get("snapshot_id")?.trim() ?? ""
+  )
   const [page, setPage] = React.useState(1)
   const [data, setData] = React.useState<ReportsResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [downloadError, setDownloadError] = React.useState<string | null>(null)
 
   const limit = 20
+
+  React.useEffect(() => {
+    const fromUrl = searchParams.get("snapshot_id")?.trim() ?? ""
+    setSnapshotId((current) => (current === fromUrl ? current : fromUrl))
+    setPage(1)
+  }, [searchParams])
 
   React.useEffect(() => {
     let cancelled = false
@@ -157,11 +167,11 @@ export function ReportsTable() {
         </Button>
       </form>
 
-      {error && (
+      {(error || downloadError) && (
         <Alert variant="destructive">
           <AlertCircleIcon />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || downloadError}</AlertDescription>
         </Alert>
       )}
 
@@ -239,12 +249,15 @@ export function ReportsTable() {
                       onClick={(event) => {
                         event.stopPropagation()
                         if (report.status !== "completed") return
-                        const a = document.createElement("a")
-                        a.href = `${API_BASE}/api/reports/${report.id}/download`
-                        a.download = `echostate-report-${report.id}.pdf`
-                        document.body.appendChild(a)
-                        a.click()
-                        document.body.removeChild(a)
+                        void downloadReport(report).catch((err) => {
+                          if (err instanceof ApiError) {
+                            setDownloadError(err.message)
+                          } else if (err instanceof Error) {
+                            setDownloadError(err.message)
+                          } else {
+                            setDownloadError("Failed to download report")
+                          }
+                        })
                       }}
                     >
                       <DownloadIcon data-icon="inline-start" />

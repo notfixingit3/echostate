@@ -15,7 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { fetchApi, ApiError, API_BASE } from "@/lib/api"
+import { fetchApi, downloadReport, ApiError } from "@/lib/api"
 import type { Report, ReportStatus } from "@/lib/types"
 import {
   FileTextIcon,
@@ -93,17 +93,20 @@ export function ReportDetail({ reportId }: { reportId: string }) {
     }
   }, [reportId])
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!report || report.status !== "completed") return
-    const url = report.download_url
-      ? `${API_BASE}${report.download_url}`
-      : `${API_BASE}/api/reports/${report.id}/download`
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `echostate-report-${report.id}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    try {
+      await downloadReport(report)
+      setError(null)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to download report")
+      }
+    }
   }
 
   if (loading && !report) {
@@ -198,7 +201,7 @@ export function ReportDetail({ reportId }: { reportId: string }) {
         <CardFooter className="flex justify-between">
           <Button
             disabled={report.status !== "completed"}
-            onClick={handleDownload}
+            onClick={() => void handleDownload()}
             data-testid="report-detail-download-button"
           >
             <DownloadIcon data-icon="inline-start" />
