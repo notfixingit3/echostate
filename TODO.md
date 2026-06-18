@@ -12,6 +12,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | 4 | HTTP security headers | ✅ Done | HSTS, CSP, X-Frame-Options, X-Content-Type-Options from final document load |
 | 9 | `robots.txt` & `sitemap.xml` extraction | ✅ Done | Crawl tab + path summary |
 | 11 | Cloud storage bucket detection | ✅ Done | S3, Azure, GCP, DO Spaces hints in HTML |
+| 18 | Cert expiry / new-CT intel badges | ✅ Done | Summary cards on target/snapshot detail |
+| 19 | Scan job status in UI | ✅ Done | Poll `GET /api/scans/:id`; queued / running / failed |
 
 ---
 
@@ -20,8 +22,11 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 16 | Pushover notifications | ✅ Done | Webhook type + documented Settings fields |
-| 5 | Subdomain enum via crt.sh | ✅ Done | crt.sh gatherer, CT tab, click-to-scan subdomains |
+| 5 | Subdomain enum via crt.sh | ✅ Done | crt.sh + CertSpotter fallback, CT tab, click-to-scan |
 | 7 | Visual screenshots | ✅ Done | chromedp JPEG thumbnails + timeline UI |
+| 20 | Field-level snapshot diffs | ✅ Done | `change_details` (type, severity, summary); Changes intel tab |
+| 21 | Richer webhook payloads | ✅ Done | Structured change entries + alert-rule filtering |
+| 22 | SPF / DKIM / DMARC intel | ✅ Done | Parsed mail-security fields in DNS tab |
 
 ---
 
@@ -29,12 +34,16 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 1 | TLS/SSL certificate analysis | ✅ Done | Leaf cert + TLS tab; *future:* full chain, expiry alerts |
-| 2 | DNS security & deep dive | ✅ Done | A/AAAA, MX, NS, TXT, CNAME, DMARC; *future:* SOA, SPF/DKIM parse |
+| 1 | TLS/SSL certificate analysis | ✅ Done | Leaf cert, chain, `days_remaining`, expiry alerts in diff |
+| 2 | DNS security & deep dive | ✅ Done | A/AAAA, MX, NS, TXT, CNAME, DMARC, SPF/DKIM parse; *future:* SOA |
 | 3 | Tech stack fingerprinting | ✅ Done | Final-URL headers + HTML CMS hints; *future:* JS analysis, auto-tagging |
-| 8 | Favicon MMH3/SHA256 hashing | ✅ Done | Shodan-compatible; *future:* Shodan/Censys correlation |
-| 6 | Port/banner grabbing | ❌ Planned | TCP checks on 22, 21, 80, 443, 3389 |
-| — | Automated scheduling (cron) | ❌ Later | Tag-based scan policies |
+| 8 | Favicon MMH3/SHA256 hashing | ✅ Done | Shodan-compatible; enrichment worker can correlate |
+| 23 | Async scan job queue | ✅ Done | `POST /api/scan` → 202, worker pool, `GET /api/scans/:id` |
+| 24 | Scheduled rescans | ✅ Done | Background scheduler for stale targets; configurable in Settings |
+| 25 | Snapshot retention / pruning | ✅ Done | Per-target keep-N after scan; blob offload for thumbnails |
+| 26 | Minimal API-key auth | ✅ Done | `ECHOSTATE_API_KEY` or Settings key on write routes |
+| 27 | API key vault (partial) | 🟡 Partial | Shodan/Censys keys in Settings + async enrichment; *future:* HIBP, RiskIQ |
+| 6 | Port/banner grabbing | ❌ Skipped | Out of scope (passive-only product direction) |
 
 ---
 
@@ -43,9 +52,10 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 10 | JARM / JA3 fingerprinting | ✅ Done | JARM on 443; *future:* JA3S, graph linking |
-| 13 | API key vault | ❌ Planned | Shodan, HIBP, RiskIQ keys in Settings |
-| 15 | Storage archival & pruning | ❌ Planned | Retention policies, blob offload |
-| 14 | Interactive Neo4j graph UI | ✅ Done | `/graph` force-directed view, `/api/graph`, JARM/favicon/issuer links |
+| 14 | Interactive Neo4j graph UI | ✅ Done | `/graph` force-directed view, 7 views, JARM/favicon/issuer links |
+| 15 | Storage archival & pruning | ✅ Done | `snapshot_blobs`, retention policy, dedup hash excludes volatile fields |
+| 28 | Alert rules & gatherer settings | ✅ Done | Severity/type filters, scan concurrency, per-gatherer timeouts in Settings |
+| 13 | API key vault (full) | ❌ Planned | HIBP, RiskIQ, broader third-party integrations |
 
 ---
 
@@ -54,7 +64,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 12 | BGP hijack risk (RIPEstat) | ✅ Done | `hijack_risk` heuristic + ASN tab; *future:* path profiling |
-| — | Custom alerting & rules engine | ❌ Later | Diff rules, webhook filtering |
+| — | Custom alerting & rules engine (full) | 🟡 Partial | Snapshot diff rules + webhook filters done; *future:* graph drift rules, rule builder UI |
+| — | Graph UX overhaul | ❌ Later | Maltego-style canvas, node inspector, time slider, cross-view linking — beyond current 7-tab force graph |
 
 ---
 
@@ -79,12 +90,13 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | G6 | Geo map for hops | ✅ Done | RIPEstat geoloc on hops, map on traceroute view |
 | G7 | AS-path enrichment | ✅ Done | RIPEstat `bgp-state` paths, BGP graph + panel |
 | G8 | Certificate SAN overlap graph | ✅ Done | `CertSAN` nodes, `/graph?view=cert`, shared SAN panel |
-| G9 | Port / banner graph | ❌ Planned | Depends on #6 port/banner gatherer |
+| G9 | Port / banner graph | ❌ Skipped | Depends on #6 port/banner gatherer |
 | G10 | Community detection | ✅ Done | Infra clusters (2+ shared signals) on `/graph` infrastructure view |
 | G11 | Multi-vantage traceroute | ✅ Done | Local + HackerTarget vantages, divergence panel |
 | G12 | PeeringDB / IX map | ✅ Done | PeeringDB enrich, `/graph?view=peering`, IX panel |
-| G13 | Rules engine on graph changes | ❌ Planned | Webhook on origin/path/graph drift |
+| G13 | Rules engine on graph changes | ❌ Planned | Webhook on origin/path/graph drift (snapshot diff rules exist separately) |
 | G14 | Screenshot timeline | ✅ Done | `/api/targets/:id/screenshots`, intel timeline tab |
+| G15 | Wire new intel into graph | ❌ Later | Sync `change_details` signals, enrichment hits, DMARC/TLS drift as graph events |
 
 ---
 
@@ -92,8 +104,10 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 27 roadmap items (15 core + 12 graph) |
-| **Planned (near-term)** | 3 (#6, #13, #15) + 1 graph (G9) |
-| **Platform (later)** | 4 (cron, rules, agents, auth) |
+| **Done** | 38 items (core + graph + platform batch) |
+| **Partial** | 2 (#27 API vault, alerting rules engine) |
+| **Planned (near-term)** | 2 (#13 full vault, G13 graph drift alerts) |
+| **Skipped** | 2 (#6 port scan, G9 port graph) |
+| **Later / platform** | 5 (graph UX overhaul, G15, SOA, agents, OIDC/RBAC) |
 
-**Suggested next picks (easiest open items):** #6 port banners → G9 port graph → G13 rules engine
+**Suggested next picks:** G13 graph-drift webhooks → #13 full API vault (HIBP) → graph UX polish (node inspector, not full redesign)
