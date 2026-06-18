@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.25] - 2026-06-18
+
+### Fixed
+
+- **Graph node drag** — Dragged nodes stay pinned instead of snapping back when released.
+- **Docker semver on dev** — Dev CI now publishes `ghcr.io/.../echostate(-frontend):<VERSION>` from the root `VERSION` file so semver pins work without waiting on a separate tag workflow.
+
+### Changed
+
+- **docker-compose** — Removed obsolete top-level `version` key (silences compose v2 warning).
+
 ## [0.0.1-beta.24] - 2026-06-18
 
 ### Added
