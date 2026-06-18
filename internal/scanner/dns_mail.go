@@ -24,6 +24,10 @@ func enrichMailSecurity(ctx context.Context, resolver *net.Resolver, host string
 	if dkim := lookupDKIMRecords(ctx, resolver, host); len(dkim) > 0 {
 		data["DKIM"] = dkim
 	}
+
+	if posture := computeMailPosture(data); posture != nil {
+		data["MAIL_POSTURE"] = posture
+	}
 }
 
 func parseSPFRecord(txts []string) map[string]any {

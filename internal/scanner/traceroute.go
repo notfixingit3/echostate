@@ -15,15 +15,15 @@ import (
 
 const (
 	tracerouteTimeout       = 35 * time.Second
-	vantageLocal            = "local"
-	vantageHackerTarget     = "hackertarget"
-	hackerTargetTraceURL    = "https://api.hackertarget.com/traceroute/?q="
-	hackerTargetMaxResponse = 64 * 1024
+	vantageLocal              = "local"
+	vantageExternal           = "external"
+	externalTracerouteURL     = "https://api.hackertarget.com/traceroute/?q="
+	externalTracerouteMaxBody = 64 * 1024
 )
 
 var (
 	runTracerouteFunc      = runTraceroute
-	fetchExternalTraceFunc = fetchHackerTargetTraceroute
+	fetchExternalTraceFunc = fetchExternalTraceroute
 	hopLinePattern         = regexp.MustCompile(`^\s*(\d+)\s+(\S+)(?:\s+([\d.]+)\s*ms)?`)
 	rttPattern             = regexp.MustCompile(`([\d.]+)\s*ms`)
 )
@@ -77,7 +77,7 @@ func gatherTraceroute(ctx context.Context, host string) (string, map[string]any,
 
 	vantages := []map[string]any{
 		buildVantageResult(vantageLocal, "Local scanner", "traceroute", localHops, localErr),
-		buildVantageResult(vantageHackerTarget, "HackerTarget (external)", "hackertarget", externalHops, extErr),
+		buildVantageResult(vantageExternal, "External vantage", "remote-api", externalHops, extErr),
 	}
 
 	result := map[string]any{
@@ -126,28 +126,28 @@ func buildVantageResult(id, label, source string, hops []map[string]any, err err
 	return result
 }
 
-func fetchHackerTargetTraceroute(ctx context.Context, host string) (string, error) {
+func fetchExternalTraceroute(ctx context.Context, host string) (string, error) {
 	host = NormalizeHost(host)
 	if host == "" {
 		return "", fmt.Errorf("empty host")
 	}
 
-	rawURL := hackerTargetTraceURL + url.QueryEscape(host)
-	body, _, err := httpGet(ctx, rawURL, hackerTargetMaxResponse)
+	rawURL := externalTracerouteURL + url.QueryEscape(host)
+	body, _, err := httpGet(ctx, rawURL, externalTracerouteMaxBody)
 	if err != nil {
-		return "", fmt.Errorf("hackertarget traceroute: %w", err)
+		return "", fmt.Errorf("external traceroute: %w", err)
 	}
 
 	output := strings.TrimSpace(string(body))
 	if output == "" {
-		return "", fmt.Errorf("hackertarget traceroute: empty response")
+		return "", fmt.Errorf("external traceroute: empty response")
 	}
 	lower := strings.ToLower(output)
 	if strings.Contains(lower, "error") && !strings.Contains(lower, "traceroute") {
-		return "", fmt.Errorf("hackertarget traceroute: %s", output)
+		return "", fmt.Errorf("external traceroute: %s", output)
 	}
 	if strings.Contains(lower, "api count exceeded") {
-		return "", fmt.Errorf("hackertarget traceroute: rate limit exceeded")
+		return "", fmt.Errorf("external traceroute: rate limit exceeded")
 	}
 
 	return output, nil

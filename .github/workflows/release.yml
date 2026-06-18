@@ -47,13 +47,24 @@ jobs:
               done
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            echostate-linux-amd64
-            echostate-linux-arm64
-            echostate-darwin-amd64
-            echostate-darwin-arm64
-          generate_release_notes: true
-          draft: false
-          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          args=(--generate-notes)
+          if [[ "${GITHUB_REF_NAME}" == *beta* || "${GITHUB_REF_NAME}" == *alpha* || "${GITHUB_REF_NAME}" == *rc* ]]; then
+            args+=(--prerelease)
+          fi
+          for attempt in 1 2 3; do
+            if gh release create "${GITHUB_REF_NAME}" "${args[@]}" \
+              echostate-linux-amd64 \
+              echostate-linux-arm64 \
+              echostate-darwin-amd64 \
+              echostate-darwin-arm64; then
+              exit 0
+            fi
+            echo "Release create attempt ${attempt} failed; retrying in 30s..."
+            sleep 30
+          done
+          echo "Failed to create release after 3 attempts"
+          exit 1

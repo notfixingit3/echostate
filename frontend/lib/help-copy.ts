@@ -32,7 +32,7 @@ export const HELP_COPY: Record<string, string> = {
   "snapshots.hash": "Content hash used to detect identical rescans.",
 
   "graph.view.infra":
-    "Shared infrastructure links: ASN, IP, JARM, favicon hash, and certificate issuer.",
+    "Shared infrastructure links: ASN, IP, JARM, JA3S, favicon hash, and certificate issuer.",
   "graph.view.bgp":
     "BGP origin, announced prefix, visible origins, and RIPEstat AS paths with risk coloring.",
   "graph.view.traceroute":
@@ -65,7 +65,14 @@ export const HELP_COPY: Record<string, string> = {
   "intel.dns_soa": "Authoritative SOA zone and serial for the target.",
   "intel.favicon_mmh3": "Shodan-compatible MurmurHash3 of the favicon.",
   "intel.jarm": "JARM TLS fingerprint hash from port 443.",
+  "intel.ja3s": "JA3S TLS server fingerprint from the port 443 ServerHello.",
   "intel.hijack_risk": "Heuristic BGP hijack risk from RIPEstat visible-origin analysis.",
+  "intel.bgp_path_stability":
+    "BGP AS-path diversity: stable (one path), diverse (2–4), or volatile (5+).",
+  "intel.mail_posture":
+    "Composite SPF, DKIM, and DMARC grade (A–F) for outbound email security posture.",
+  "intel.js_assets":
+    "Passive script and stylesheet URLs with library/CDN hints from page assets.",
   "intel.wp_plugins": "WordPress plugins detected passively from page assets.",
   "intel.wp_themes": "Active WordPress theme slug and version when available.",
 

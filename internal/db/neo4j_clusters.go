@@ -13,6 +13,7 @@ import (
 var infraClusterEdgeTypes = []string{
 	"HOSTED_ON",
 	"HAS_JARM",
+	"HAS_JA3S",
 	"HAS_FAVICON",
 	"SIGNED_BY",
 	"HAS_SAN",

@@ -223,7 +223,8 @@ func decodeChangeDetails(data []byte) ([]models.ChangeDetail, error) {
 }
 
 func (h *Handler) applyAutoTags(ctx context.Context, targetID uuid.UUID, rawData map[string]any) error {
-	if !isWordPressSite(rawData) {
+	tags := detectAutoTags(rawData)
+	if len(tags) == 0 {
 		return nil
 	}
 
@@ -231,34 +232,62 @@ func (h *Handler) applyAutoTags(ctx context.Context, targetID uuid.UUID, rawData
 		UPDATE targets
 		SET tags = (
 			SELECT COALESCE(array_agg(DISTINCT tag), '{}')
-			FROM unnest(tags || ARRAY['wordpress']::text[]) AS tag
+			FROM unnest(tags || $2::text[]) AS tag
 		)
 		WHERE id = $1
-	`, targetID)
+	`, targetID, tags)
 	return err
 }
 
-func isWordPressSite(rawData map[string]any) bool {
+func detectAutoTags(rawData map[string]any) []string {
 	web, ok := rawData["web"].(map[string]any)
 	if !ok {
-		return false
+		return nil
 	}
+
+	seen := make(map[string]struct{})
+	var tags []string
+	addTag := func(tag string) {
+		tag = strings.TrimSpace(strings.ToLower(tag))
+		if tag == "" {
+			return
+		}
+		if _, ok := seen[tag]; ok {
+			return
+		}
+		seen[tag] = struct{}{}
+		tags = append(tags, tag)
+	}
+
 	if plugins, ok := web["wordpress_plugins"].([]any); ok && len(plugins) > 0 {
-		return true
+		addTag("wordpress")
 	}
 	if themes, ok := web["wordpress_themes"].([]any); ok && len(themes) > 0 {
-		return true
+		addTag("wordpress")
 	}
-	stack, ok := web["tech_stack"].([]any)
-	if !ok {
-		return false
-	}
+
+	stack, _ := web["tech_stack"].([]any)
 	for _, item := range stack {
-		if strings.Contains(strings.ToLower(fmt.Sprint(item)), "wordpress") {
-			return true
+		lower := strings.ToLower(fmt.Sprint(item))
+		switch {
+		case strings.Contains(lower, "wordpress"):
+			addTag("wordpress")
+		case strings.Contains(lower, "shopify"):
+			addTag("shopify")
+		case strings.Contains(lower, "next.js"):
+			addTag("nextjs")
+		case strings.Contains(lower, "drupal"):
+			addTag("drupal")
+		case strings.Contains(lower, "react"):
+			addTag("react")
+		case strings.Contains(lower, "vue.js"):
+			addTag("vue")
+		case strings.Contains(lower, "angular"):
+			addTag("angular")
 		}
 	}
-	return false
+
+	return tags
 }
 
 func toChangeDetails(entries []diff.Entry) []models.ChangeDetail {

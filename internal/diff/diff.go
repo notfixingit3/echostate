@@ -46,6 +46,7 @@ func Compute(previous map[string]any, current *models.ScanResult) []Entry {
 	entries = append(entries, diffGraph(previous, currentMap)...)
 	entries = append(entries, diffCT(previous, currentMap)...)
 	entries = append(entries, diffDMARC(previous, currentMap)...)
+	entries = append(entries, diffMailPosture(previous, currentMap)...)
 	entries = append(entries, diffSOA(previous, currentMap)...)
 	entries = append(entries, diffWeb(previous, currentMap)...)
 	entries = append(entries, diffGeneric(previous, currentMap)...)
@@ -121,6 +122,15 @@ func diffTLS(previous, current map[string]any) []Entry {
 			Summary: "TLS certificate is expired",
 		})
 	}
+
+	prevJA3S := stringVal(prevTLS, "ja3s")
+	curJA3S := stringVal(curTLS, "ja3s")
+	if curJA3S != "" && curJA3S != prevJA3S {
+		entries = append(entries, Entry{
+			Type: "tls_ja3s", Severity: SeverityWarning, Field: "tls.ja3s",
+			Summary: fmt.Sprintf("JA3S TLS fingerprint changed: %s → %s", emptyDash(prevJA3S), curJA3S),
+		})
+	}
 	return entries
 }
 
@@ -173,6 +183,19 @@ func diffBGP(previous, current map[string]any) []Entry {
 			Summary: fmt.Sprintf("BGP hijack risk changed: %s → %s", emptyDash(prevRisk), curRisk),
 		})
 	}
+
+	prevStability := pathProfileStability(prevRouting)
+	curStability := pathProfileStability(curRouting)
+	if curStability != "" && curStability != prevStability {
+		severity := SeverityInfo
+		if curStability == "volatile" || (prevStability == "stable" && curStability != "stable") {
+			severity = SeverityWarning
+		}
+		entries = append(entries, Entry{
+			Type: "bgp_path_stability", Severity: severity, Field: "asn.routing.path_profile.stability",
+			Summary: fmt.Sprintf("BGP path stability changed: %s → %s", emptyDash(prevStability), curStability),
+		})
+	}
 	return entries
 }
 
@@ -201,6 +224,60 @@ func diffCT(previous, current map[string]any) []Entry {
 		})
 	}
 	return entries
+}
+
+func diffMailPosture(previous, current map[string]any) []Entry {
+	prevDNS, _ := previous["dns"].(map[string]any)
+	curDNS, _ := current["dns"].(map[string]any)
+	if curDNS == nil {
+		return nil
+	}
+	prevPosture, _ := prevDNS["MAIL_POSTURE"].(map[string]any)
+	curPosture, _ := curDNS["MAIL_POSTURE"].(map[string]any)
+	if curPosture == nil {
+		return nil
+	}
+
+	prevGrade := stringVal(prevPosture, "grade")
+	curGrade := stringVal(curPosture, "grade")
+	if curGrade != "" && curGrade != prevGrade {
+		severity := SeverityInfo
+		if gradeRank(curGrade) < gradeRank(prevGrade) {
+			severity = SeverityWarning
+		}
+		return []Entry{{
+			Type: "mail_posture", Severity: severity, Field: "dns.mail_posture.grade",
+			Summary: fmt.Sprintf("Email security posture changed: %s → %s", emptyDash(prevGrade), curGrade),
+			Detail:  fmt.Sprintf("score %d → %d", intVal(prevPosture, "score"), intVal(curPosture, "score")),
+		}}
+	}
+	return nil
+}
+
+func gradeRank(grade string) int {
+	switch strings.ToUpper(strings.TrimSpace(grade)) {
+	case "A":
+		return 5
+	case "B":
+		return 4
+	case "C":
+		return 3
+	case "D":
+		return 2
+	default:
+		return 1
+	}
+}
+
+func pathProfileStability(routing map[string]any) string {
+	if routing == nil {
+		return ""
+	}
+	profile, ok := routing["path_profile"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	return stringVal(profile, "stability")
 }
 
 func diffDMARC(previous, current map[string]any) []Entry {

@@ -36,7 +36,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 |---|------|--------|-------|
 | 1 | TLS/SSL certificate analysis | ✅ Done | Leaf cert, chain, `days_remaining`, expiry alerts in diff |
 | 2 | DNS security & deep dive | ✅ Done | A/AAAA, MX, NS, TXT, CNAME, SOA, DMARC, SPF/DKIM parse |
-| 3 | Tech stack fingerprinting | ✅ Done | Final-URL headers + HTML CMS hints; *future:* JS analysis, auto-tagging |
+| 3 | Tech stack fingerprinting | ✅ Done | Headers, HTML hints, JS asset analysis, framework auto-tags |
 | 8 | Favicon MMH3/SHA256 hashing | ✅ Done | Shodan-compatible; enrichment worker can correlate |
 | 23 | Async scan job queue | ✅ Done | `POST /api/scan` → 202, worker pool, `GET /api/scans/:id` |
 | 24 | Scheduled rescans | ✅ Done | Background scheduler for stale targets; configurable in Settings |
@@ -51,7 +51,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 10 | JARM / JA3 fingerprinting | ✅ Done | JARM on 443; *future:* JA3S, graph linking |
+| 10 | JARM / JA3 fingerprinting | ✅ Done | JARM + JA3S on 443; JA3S linked on infra graph |
 | 14 | Interactive Neo4j graph UI | ✅ Done | `/graph` force-directed view, 7 views, JARM/favicon/issuer links |
 | 15 | Storage archival & pruning | ✅ Done | `snapshot_blobs`, retention policy, dedup hash excludes volatile fields |
 | 28 | Alert rules & gatherer settings | ✅ Done | Severity/type filters, scan concurrency, per-gatherer timeouts in Settings |
@@ -63,7 +63,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 12 | BGP hijack risk (RIPEstat) | ✅ Done | `hijack_risk` heuristic + ASN tab; *future:* path profiling |
+| 12 | BGP hijack risk (RIPEstat) | ✅ Done | `hijack_risk` heuristic + `path_profile` stability |
 | — | Custom alerting & rules engine | ✅ Done | Snapshot diff rules, graph drift (G13), webhook filters, per-integration targeting |
 | — | Graph UX overhaul | ✅ Done | Temporal topology slider, compare modes, canvas toolbar, cross-view inspector, dense tooltips |
 
@@ -92,7 +92,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | G8 | Certificate SAN overlap graph | ✅ Done | `CertSAN` nodes, `/graph?view=cert`, shared SAN panel |
 | G9 | Port / banner graph | ❌ Skipped | Depends on #6 port/banner gatherer |
 | G10 | Community detection | ✅ Done | Infra clusters (2+ shared signals) on `/graph` infrastructure view |
-| G11 | Multi-vantage traceroute | ✅ Done | Local + HackerTarget vantages, divergence panel |
+| G11 | Multi-vantage traceroute | ✅ Done | Local + external vantages, divergence panel |
 | G12 | PeeringDB / IX map | ✅ Done | PeeringDB enrich, `/graph?view=peering`, IX panel |
 | G13 | Rules engine on graph changes | ✅ Done | BGP origin/path, RPKI, traceroute drift in `change_details` + alert rules |
 | G14 | Screenshot timeline | ✅ Done | `/api/targets/:id/screenshots`, intel timeline tab |
@@ -108,4 +108,4 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 2 (agents, OIDC/RBAC) |
 
-**Suggested next picks:** OIDC/RBAC → distributed agents → graph transforms / PNG export
+**Suggested next picks:** graph PNG export → investigation workflows (collections, saved views) → OIDC/RBAC

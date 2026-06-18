@@ -23,6 +23,8 @@ type pageCapture struct {
 	headerURL        string
 	headers          map[string]string
 	htmlHints        []string
+	jsAssets         []map[string]any
+	jsHints          []string
 	wordpressPlugins []map[string]any
 	wordpressThemes  []map[string]any
 }
@@ -77,6 +79,7 @@ func newWebGatherer(browserWSURL string) Gatherer {
 		techStack := mergeTechStack(
 			extractTechStackFromHeaders(headers),
 			capture.htmlHints,
+			capture.jsHints,
 		)
 
 		webData := map[string]any{
@@ -90,6 +93,9 @@ func newWebGatherer(browserWSURL string) Gatherer {
 		}
 		if plugins := capture.wordpressPlugins; len(plugins) > 0 {
 			webData["wordpress_plugins"] = plugins
+		}
+		if assets := capture.jsAssets; len(assets) > 0 {
+			webData["js_assets"] = assets
 		}
 		if themes := capture.wordpressThemes; len(themes) > 0 {
 			themeURL := capture.location
@@ -149,6 +155,7 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 	})
 
 	var wpIntel wordpressIntel
+	var jsIntel jsAssetIntel
 	err := chromedp.Run(ctx,
 		network.Enable(),
 		chromedp.Navigate(url),
@@ -157,12 +164,14 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 		chromedp.Text("body", &capture.text, chromedp.ByQuery),
 		chromedp.Location(&capture.location),
 		chromedp.Evaluate(htmlTechHintsJS, &capture.htmlHints),
+		chromedp.Evaluate(jsAssetIntelJS, &jsIntel),
 		chromedp.Evaluate(wordpressIntelJS, &wpIntel),
 	)
 	if err != nil {
 		return err
 	}
 
+	capture.jsAssets, capture.jsHints = normalizeJSAssets(jsIntel)
 	capture.wordpressPlugins = normalizeWordPressItems(wpIntel.Plugins)
 	capture.wordpressThemes = normalizeWordPressItems(wpIntel.Themes)
 
