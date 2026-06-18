@@ -9,6 +9,15 @@ export const HELP_COPY: Record<string, string> = {
     "Interactive relationship maps synced from Neo4j. Filter by target and scrub snapshot history to see how topology changed.",
   "page.settings":
     "Runtime configuration for DNS, enrichment keys, scan workers, retention, alert rules, and outbound webhooks.",
+  "page.admin":
+    "Administration hub: account passkeys, integrations, system tuning, authentication defaults, and user management.",
+  "settings.nav.account": "Register passkeys on this device and manage credentials on your account.",
+  "settings.nav.integrations": "Slack, Discord, Teams, and Pushover webhook integrations.",
+  "settings.nav.system": "DNS, scan workers, scheduler, retention, enrichment API keys, and alert rules.",
+  "settings.nav.authentication": "Passkey enrollment defaults, session lifetime, and WebAuthn relying party settings.",
+  "settings.nav.users": "Create users and issue enrollment or recovery codes.",
+  "settings.account": "Your signed-in identity and role in EchoState.",
+  "settings.passkeys": "Add a passkey for each browser or security key you use to sign in.",
   "page.reports":
     "PDF intelligence reports generated from snapshot data. Reports queue asynchronously after you request them.",
 

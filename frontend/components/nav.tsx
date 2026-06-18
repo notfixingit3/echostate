@@ -25,7 +25,7 @@ const navLinks = [
   { href: "/snapshots", label: "Snapshots" },
   { href: "/graph", label: "Graph" },
   { href: "/reports", label: "Reports" },
-  { href: "/settings", label: "Settings" },
+  { href: "/settings", label: "Admin" },
 ]
 
 export function Nav() {
@@ -73,6 +73,9 @@ export function Nav() {
               <span className="max-w-32 truncate text-xs text-muted-foreground">
                 {user.display_name}
               </span>
+              <Button variant="ghost" size="sm" render={<Link href="/settings/account" />}>
+                Account
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => void signOut()}>
                 <LogOutIcon data-icon="inline-start" />
                 Sign out
@@ -124,6 +127,31 @@ export function Nav() {
                   </Button>
                 )
               })}
+              {user ? (
+                <>
+                  <div className="my-2 border-t border-border/60" />
+                  <p className="px-3 py-1 text-xs text-muted-foreground">{user.display_name}</p>
+                  <Button
+                    variant={pathname.startsWith("/settings/account") ? "secondary" : "ghost"}
+                    className="justify-start"
+                    render={<Link href="/settings/account" />}
+                  >
+                    Account
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => void signOut()}
+                  >
+                    <LogOutIcon data-icon="inline-start" />
+                    Sign out
+                  </Button>
+                </>
+              ) : config?.auth_required ? (
+                <Button variant="outline" className="mt-2 justify-start" render={<Link href="/login" />}>
+                  Sign in
+                </Button>
+              ) : null}
             </nav>
           </SheetContent>
           </Sheet>
