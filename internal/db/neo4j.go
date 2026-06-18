@@ -114,6 +114,20 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 				}
 			}
 
+			if ja3s, ok := tlsMap["ja3s"].(string); ok && ja3s != "" {
+				ja3sQuery := `
+					MERGE (j:JA3S {hash: $hash})
+					WITH j
+					MATCH (t:Target {id: $target_id})
+					MERGE (t)-[r:HAS_JA3S]->(j)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
+				`
+				_, err = tx.Run(ctx, ja3sQuery, meta.with(map[string]any{"hash": ja3s}))
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			if issuer, ok := tlsMap["issuer"].(string); ok && issuer != "" {
 				issuerQuery := `
 					MERGE (c:CertIssuer {name: $name})

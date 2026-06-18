@@ -60,6 +60,31 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 })
 
+function formatVantageLabel(vantageId: string, label?: string): string {
+  const id = vantageId || "local"
+  const text = (label || id).toLowerCase()
+  if (id === "hackertarget" || id === "external" || text.includes("hackertarget")) {
+    return "External vantage"
+  }
+  if (text.includes("hacker")) {
+    return "External vantage"
+  }
+  return label || id
+}
+
+function matchesVantageFilter(pathVantage: string | undefined, filter: string): boolean {
+  const id = pathVantage || "local"
+  if (filter === "all") return true
+  if (filter === "external" || filter === "hackertarget") {
+    return id === "external" || id === "hackertarget"
+  }
+  return id === filter
+}
+
+function normalizeVantageId(vantageId: string): string {
+  return vantageId === "hackertarget" ? "external" : vantageId
+}
+
 type GraphViewMode =
   | "infra"
   | "bgp"
@@ -357,15 +382,16 @@ export function GraphView() {
   const vantageOptions = React.useMemo(() => {
     const options = new Map<string, string>()
     for (const path of allPaths) {
-      const id = path.vantage || "local"
-      options.set(id, path.vantage_label || id)
+      const rawId = path.vantage || "local"
+      const id = normalizeVantageId(rawId)
+      options.set(id, formatVantageLabel(rawId, path.vantage_label))
     }
     return Array.from(options.entries()).map(([id, label]) => ({ id, label }))
   }, [allPaths])
 
   const paths =
     viewMode === "traceroute" && vantageFilter !== "all"
-      ? allPaths.filter((path) => (path.vantage || "local") === vantageFilter)
+      ? allPaths.filter((path) => matchesVantageFilter(path.vantage, vantageFilter))
       : allPaths
 
   const geoPoints =
@@ -374,7 +400,7 @@ export function GraphView() {
           const match = allPaths.find(
             (path) =>
               path.target_id === point.target_id &&
-              (path.vantage || "local") === vantageFilter
+              matchesVantageFilter(path.vantage, vantageFilter)
           )
           return !!match
         })
@@ -1196,11 +1222,9 @@ function TraceroutePathCard({ path }: { path: GraphPath }) {
       data-testid={`graph-path-${path.target_id}-${path.vantage || "local"}`}
     >
       <div className="mb-1 text-sm font-medium">{path.target_label}</div>
-      {path.vantage_label ? (
-        <div className="mb-3 text-xs text-muted-foreground">
-          {path.vantage_label}
-        </div>
-      ) : null}
+      <div className="mb-3 text-xs text-muted-foreground">
+        {formatVantageLabel(path.vantage || "local", path.vantage_label)}
+      </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {path.hops.map((hop, index) => (
           <React.Fragment key={`${path.target_id}-${hop.hop}`}>

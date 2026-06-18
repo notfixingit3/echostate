@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Traceroute external vantage label renamed to **External vantage** (no HackerTarget wording in the UI).
+
+## [0.0.1-beta.16] - 2026-06-17
+
+### Added
+
+- **JA3S TLS fingerprint** — ServerHello hash on port 443; synced to Neo4j `JA3S` nodes with `HAS_JA3S` edges on the infrastructure graph.
+- **JS asset analysis** — Passive script/stylesheet URL collection with library, CDN, and analytics hints merged into `tech_stack`.
+- **Email posture score** — Composite SPF/DKIM/DMARC grade (`MAIL_POSTURE`) with A–F rating and findings in the DNS intel tab.
+- **BGP path profiling** — `path_profile` stability label (stable / diverse / volatile) from RIPEstat AS-path diversity.
+- **Tech auto-tags** — Targets auto-tag `shopify`, `nextjs`, `drupal`, `react`, `vue`, and `angular` from detected stack signals.
+
+### Changed
+
+- Snapshot diffs alert on JA3S changes, mail posture grade shifts, and BGP path stability transitions.
+
 ## [0.0.1-beta.15] - 2026-06-17
 
 ### Added
@@ -181,6 +199,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.16]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.16
 [0.0.1-beta.15]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.15
 [0.0.1-beta.14]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.14
 [0.0.1-beta.13]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.13

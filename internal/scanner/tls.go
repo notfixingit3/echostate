@@ -77,6 +77,9 @@ func gatherTLS(ctx context.Context, host string) (string, map[string]any, error)
 	if jarmHash, err := fingerprintJARM(ctx, host, 443); err == nil {
 		data["jarm"] = jarmHash
 	}
+	if ja3sHash, err := fingerprintJA3S(ctx, host, 443); err == nil {
+		data["ja3s"] = ja3sHash
+	}
 
 	return "tls", data, nil
 }

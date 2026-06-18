@@ -21,8 +21,8 @@ func TestBuildVantageDivergence(t *testing.T) {
 		{
 			TargetID:     "t1",
 			TargetLabel:  "example.com",
-			Vantage:      "hackertarget",
-			VantageLabel: "HackerTarget (external)",
+			Vantage:      "external",
+			VantageLabel: "External vantage",
 			Hops: []models.GraphPathHop{
 				{Hop: 1, IP: "198.51.100.1"},
 				{Hop: 2, IP: "93.184.216.34"},

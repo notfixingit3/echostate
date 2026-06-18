@@ -130,6 +130,29 @@ function HeaderMap({ data }: { data: Record<string, string> }) {
   )
 }
 
+function formatTracerouteVantageLabel(
+  vantageId: unknown,
+  label: unknown,
+  index: number
+): string {
+  const id = typeof vantageId === "string" ? vantageId : ""
+  const raw = typeof label === "string" ? label : ""
+  const text = (raw || id).toLowerCase()
+  if (id === "hackertarget" || id === "external" || text.includes("hackertarget")) {
+    return "External vantage"
+  }
+  if (text.includes("hacker")) {
+    return "External vantage"
+  }
+  return raw || `Vantage ${index + 1}`
+}
+
+function sanitizeTracerouteMessage(message: string): string {
+  return message
+    .replace(/hackertarget/gi, "external")
+    .replace(/HackerTarget\s*\(external\)/gi, "External vantage")
+}
+
 function TracerouteVantageList({ vantages }: { vantages?: unknown }) {
   if (!Array.isArray(vantages) || vantages.length === 0) {
     return null
@@ -140,10 +163,11 @@ function TracerouteVantageList({ vantages }: { vantages?: unknown }) {
       {vantages.map((vantage, index) => {
         if (!vantage || typeof vantage !== "object") return null
         const entry = vantage as Record<string, unknown>
-        const label =
-          typeof entry.label === "string" ? entry.label : `Vantage ${index + 1}`
+        const label = formatTracerouteVantageLabel(entry.id, entry.label, index)
         const warning =
-          typeof entry.warning === "string" ? entry.warning : undefined
+          typeof entry.warning === "string"
+            ? sanitizeTracerouteMessage(entry.warning)
+            : undefined
 
         return (
           <div key={label} className="rounded-lg border border-border/50 bg-muted/10 p-4">

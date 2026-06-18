@@ -46,7 +46,13 @@ export interface IntelHighlights {
   dnsSoaSerial?: number
   faviconMMH3?: string
   jarm?: string
+  ja3s?: string
   hijackRisk?: string
+  bgpPathStability?: string
+  mailPostureGrade?: string
+  mailPostureScore?: number
+  jsAssetCount?: number
+  jsLibHints?: string[]
   bucketCount?: number
   crawlPathCount?: number
   ctSubdomainCount?: number
@@ -106,6 +112,37 @@ function wordPressPrimaryItem(
   }
 }
 
+function collectJSLibHints(
+  techStack: unknown,
+  jsAssets: unknown[]
+): string[] {
+  const hints = new Set<string>()
+  const add = (value: unknown) => {
+    const text = typeof value === "string" ? value.trim() : ""
+    if (
+      text &&
+      (text.startsWith("lib:") ||
+        text.startsWith("framework:") ||
+        text.startsWith("ui:") ||
+        text.startsWith("bundler:") ||
+        text.startsWith("cdn:") ||
+        text.startsWith("analytics:"))
+    ) {
+      hints.add(text)
+    }
+  }
+
+  if (Array.isArray(techStack)) {
+    for (const item of techStack) add(item)
+  }
+  for (const asset of jsAssets) {
+    if (!asset || typeof asset !== "object") continue
+    add((asset as Record<string, unknown>).hint)
+  }
+
+  return Array.from(hints).sort()
+}
+
 export function extractIntel(
   raw?: RawIntel | null,
   snapshot?: Pick<
@@ -133,6 +170,10 @@ export function extractIntel(
   const ctSubdomains = asStringArray(ct?.subdomains)
   const tracerouteHops = Array.isArray(traceroute?.hops) ? traceroute.hops : []
   const routing = asn?.routing as Record<string, unknown> | undefined
+  const pathProfile = routing?.path_profile as Record<string, unknown> | undefined
+  const mailPosture = dns?.MAIL_POSTURE as Record<string, unknown> | undefined
+  const jsAssets = Array.isArray(web?.js_assets) ? web.js_assets : []
+  const jsHints = collectJSLibHints(web?.tech_stack, jsAssets)
   const certDays =
     typeof tls?.days_remaining === "number" ? tls.days_remaining : undefined
   const certExpired = tls?.expired === true
@@ -196,7 +237,14 @@ export function extractIntel(
         : undefined,
     faviconMMH3: asString(favicon?.mmh3) || asString(favicon?.shodan),
     jarm: asString(tls?.jarm),
+    ja3s: asString(tls?.ja3s),
     hijackRisk: asString(routing?.hijack_risk),
+    bgpPathStability: asString(pathProfile?.stability),
+    mailPostureGrade: asString(mailPosture?.grade),
+    mailPostureScore:
+      typeof mailPosture?.score === "number" ? mailPosture.score : undefined,
+    jsAssetCount: jsAssets.length > 0 ? jsAssets.length : undefined,
+    jsLibHints: jsHints.length > 0 ? jsHints : undefined,
     bucketCount: buckets.length > 0 ? buckets.length : undefined,
     crawlPathCount:
       sitemapURLs.length + disallow.length > 0
@@ -264,6 +312,7 @@ export const WEB_FIELDS = [
   "header_url",
   "copyrights",
   "tech_stack",
+  "js_assets",
   "wordpress_plugins",
   "wordpress_themes",
   "security_headers",
@@ -293,6 +342,7 @@ export const TLS_FIELDS = [
   "signature_algorithm",
   "cipher_suite",
   "jarm",
+  "ja3s",
 ] as const
 
 export const FAVICON_FIELDS = ["url", "mmh3", "shodan", "sha256", "size"] as const
@@ -347,4 +397,5 @@ export const DNS_FIELDS = [
   "SPF",
   "DKIM",
   "DMARC_PARSED",
+  "MAIL_POSTURE",
 ] as const

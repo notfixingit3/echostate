@@ -55,6 +55,9 @@ func enrichRouting(ctx context.Context, ip, originASN, prefix string) (map[strin
 	}
 	if paths, err := fetchASPathsFunc(ctx, resource); err == nil && len(paths) > 0 {
 		routing["as_paths"] = paths
+		if profile := buildBGPPathProfile(paths); profile != nil {
+			routing["path_profile"] = profile
+		}
 	} else if err != nil {
 		appendNote(routing, "as-path lookup failed: "+err.Error())
 	}

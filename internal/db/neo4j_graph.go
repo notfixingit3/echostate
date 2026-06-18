@@ -18,6 +18,7 @@ var graphViewEdgeTypes = map[string][]string{
 		"HOSTED_ON",
 		"RESOLVES_TO",
 		"HAS_JARM",
+		"HAS_JA3S",
 		"HAS_FAVICON",
 		"SIGNED_BY",
 	},
@@ -910,6 +911,8 @@ func graphNodeID(nodeType string, props map[string]any) string {
 		return "ip:" + stringProp(props, "address")
 	case "JARM":
 		return "jarm:" + stringProp(props, "hash")
+	case "JA3S":
+		return "ja3s:" + stringProp(props, "hash")
 	case "Favicon":
 		return "favicon:" + stringProp(props, "mmh3")
 	case "CertIssuer":
@@ -967,6 +970,10 @@ func graphNodeLabel(nodeType string, props map[string]any) string {
 	case "JARM":
 		if hash := stringProp(props, "hash"); hash != "" {
 			return truncateLabel(hash, 18)
+		}
+	case "JA3S":
+		if hash := stringProp(props, "hash"); hash != "" {
+			return "JA3S " + truncateLabel(hash, 18)
 		}
 	case "Favicon":
 		if mmh3 := stringProp(props, "mmh3"); mmh3 != "" {

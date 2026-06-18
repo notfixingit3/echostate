@@ -175,11 +175,57 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         mono
       />
       <StatCard helpId="intel.jarm" label="JARM" value={intel.jarm} icon={FingerprintIcon} mono />
+      <StatCard helpId="intel.ja3s" label="JA3S" value={intel.ja3s} icon={FingerprintIcon} mono />
       <StatCard
         label="BGP hijack risk"
         value={intel.hijackRisk}
         icon={ShieldIcon}
       />
+      {intel.bgpPathStability ? (
+        <StatCard
+          helpId="intel.bgp_path_stability"
+          label="BGP path stability"
+          value={intel.bgpPathStability}
+          icon={NetworkIcon}
+        />
+      ) : null}
+      {intel.mailPostureGrade ? (
+        <StatCard
+          helpId="intel.mail_posture"
+          label="Email posture"
+          value={
+            intel.mailPostureScore !== undefined
+              ? `${intel.mailPostureGrade} (${intel.mailPostureScore}/100)`
+              : intel.mailPostureGrade
+          }
+          icon={ShieldIcon}
+          badge={
+            intel.mailPostureGrade === "F" || intel.mailPostureGrade === "D"
+              ? "Weak"
+              : undefined
+          }
+          className={
+            intel.mailPostureGrade === "F"
+              ? "border-destructive/40"
+              : intel.mailPostureGrade === "D"
+                ? "border-amber-500/40"
+                : undefined
+          }
+        />
+      ) : null}
+      {intel.jsAssetCount ? (
+        <StatCard
+          helpId="intel.js_assets"
+          label="JS assets"
+          value={`${intel.jsAssetCount} loaded`}
+          icon={PuzzleIcon}
+          badge={
+            intel.jsLibHints?.length
+              ? intel.jsLibHints.slice(0, 2).join(", ")
+              : undefined
+          }
+        />
+      ) : null}
       {intel.bucketCount ? (
         <StatCard
           label="Cloud buckets"
