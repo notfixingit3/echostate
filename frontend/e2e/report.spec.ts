@@ -23,13 +23,11 @@ test.describe("Report flow", () => {
 
     await page.getByTestId("snapshot-create-report-button").click()
 
-    await expect(
-      page.locator('[role="alert"]', { hasText: /Report .* is pending/i })
-    ).toBeVisible()
+    const statusAlert = page.getByTestId("snapshot-report-status-alert")
+    await expect(statusAlert).toBeVisible()
+    await expect(statusAlert).toContainText(/is pending/i)
 
-    const alertText = await page
-      .locator('[role="alert"]', { hasText: /Report .* is pending/i })
-      .textContent()
+    const alertText = await statusAlert.textContent()
     const reportIdMatch = alertText?.match(
       /Report\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
     )
