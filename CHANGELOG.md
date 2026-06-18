@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.2] - 2026-06-17
+
 ### Changed
 
 - New EchoState brand identity — radar echo mark with theme-aware SVG logo (light/dark), refreshed favicon, and updated README assets.
@@ -60,5 +62,6 @@ First public beta — API, web UI, PDF reports, and Docker Compose stack.
 - Trusted proxy configuration for accurate client IP behind reverse proxies.
 - Report error responses sanitized; Slowloris mitigation on HTTP server.
 
+[0.0.1-beta.2]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.2
 [0.0.1-beta.1]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.1
 [0.0.1-beta.0]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.0
