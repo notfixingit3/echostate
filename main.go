@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/notfixingit3/echostate/internal/cli"
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/handlers"
@@ -19,6 +20,12 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "auth" {
+		if err := cli.RunAuth(os.Args[2:]); err != nil {
+			log.Fatalf("auth command failed: %v", err)
+		}
+		return
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)

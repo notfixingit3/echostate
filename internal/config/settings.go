@@ -36,6 +36,15 @@ type SystemSettings struct {
 	ScheduleStaleHours        int         `json:"schedule_stale_hours"`
 	ScheduleTags              []string    `json:"schedule_tags"`
 	AlertRules                []AlertRule `json:"alert_rules"`
+	AuthEnabled               bool        `json:"auth_enabled"`
+	EnrollmentCodeTTLHours    int         `json:"enrollment_code_ttl_hours"`
+	EnrollmentCodeLength      int         `json:"enrollment_code_length"`
+	RecoveryCodeLength        int         `json:"recovery_code_length"`
+	SessionTTLHours           int         `json:"session_ttl_hours"`
+	MaxCodeAttempts           int         `json:"max_code_attempts"`
+	CodeAttemptWindowMinutes  int         `json:"code_attempt_window_minutes"`
+	WebAuthnRPID              string      `json:"webauthn_rp_id"`
+	WebAuthnRPOrigin          string      `json:"webauthn_rp_origin"`
 }
 
 var (
@@ -54,6 +63,13 @@ var (
 		ScheduleIntervalMinutes:   60,
 		ScheduleStaleHours:        24,
 		AlertRules:                defaultAlertRules(),
+		AuthEnabled:               true,
+		EnrollmentCodeTTLHours:    24,
+		EnrollmentCodeLength:      8,
+		RecoveryCodeLength:        12,
+		SessionTTLHours:           168,
+		MaxCodeAttempts:           5,
+		CodeAttemptWindowMinutes:  15,
 	}
 	GlobalSettings = defaultSettings
 	settingsMu     sync.RWMutex
@@ -123,6 +139,24 @@ func normalizeSettings(s SystemSettings) SystemSettings {
 	}
 	if len(s.AlertRules) == 0 {
 		s.AlertRules = defaultAlertRules()
+	}
+	if s.EnrollmentCodeTTLHours <= 0 {
+		s.EnrollmentCodeTTLHours = defaultSettings.EnrollmentCodeTTLHours
+	}
+	if s.EnrollmentCodeLength <= 0 {
+		s.EnrollmentCodeLength = defaultSettings.EnrollmentCodeLength
+	}
+	if s.RecoveryCodeLength <= 0 {
+		s.RecoveryCodeLength = defaultSettings.RecoveryCodeLength
+	}
+	if s.SessionTTLHours <= 0 {
+		s.SessionTTLHours = defaultSettings.SessionTTLHours
+	}
+	if s.MaxCodeAttempts <= 0 {
+		s.MaxCodeAttempts = defaultSettings.MaxCodeAttempts
+	}
+	if s.CodeAttemptWindowMinutes <= 0 {
+		s.CodeAttemptWindowMinutes = defaultSettings.CodeAttemptWindowMinutes
 	}
 	return s
 }

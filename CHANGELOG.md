@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.20] - 2026-06-17
+
+### Added
+
+- **Passkey authentication** — WebAuthn passkeys with HTTP-only session cookies (`echostate_session`) and enrollment cookies (`echostate_enroll`).
+- **Enrollment codes** — Configurable-length numeric codes and alphanumeric recovery codes; single-use, HMAC-hashed, with attempt rate limiting.
+- **Roles** — `admin` (full access) and `scanner` (scan, reports, read intel); session middleware on protected API routes.
+- **Auth settings** — Admin-configurable defaults in Settings: auth toggle, code TTL/length, session TTL, attempt limits, WebAuthn RP ID/origin.
+- **User management** — Settings UI to create users and issue enrollment/recovery codes; credential list/delete API.
+- **CLI** — `echostate auth bootstrap-admin` and `echostate auth issue-admin-code` for first admin and break-glass recovery.
+- **Login page** — `/login` with enrollment code verification, passkey registration, and returning passkey sign-in.
+
+### Changed
+
+- Protected `/api/*` routes use session auth when users exist; legacy API key still works for admin mutations before bootstrap.
+- CORS allows `X-API-Key`; frontend `fetchApi` sends cookies (`credentials: include`).
+
 ## [0.0.1-beta.19] - 2026-06-17
 
 ### Added
@@ -228,6 +245,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.20]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.20
 [0.0.1-beta.19]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.19
 [0.0.1-beta.18]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.18
 [0.0.1-beta.17]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.17

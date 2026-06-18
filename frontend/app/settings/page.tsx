@@ -16,6 +16,7 @@ import {
   maskSecret,
   type PushoverConfig,
 } from "@/components/pushover-fields"
+import { AuthUsersPanel } from "@/components/auth-users"
 import { fetchApi } from "@/lib/api"
 
 type Webhook = {
@@ -73,6 +74,15 @@ type SystemSettings = {
   schedule_stale_hours?: number
   schedule_tags?: string[]
   alert_rules?: AlertRule[]
+  auth_enabled?: boolean
+  enrollment_code_ttl_hours?: number
+  enrollment_code_length?: number
+  recovery_code_length?: number
+  session_ttl_hours?: number
+  max_code_attempts?: number
+  code_attempt_window_minutes?: number
+  webauthn_rp_id?: string
+  webauthn_rp_origin?: string
 }
 
 export default function SettingsPage() {
@@ -100,6 +110,15 @@ export default function SettingsPage() {
     schedule_stale_hours: 24,
     schedule_tags: [],
     alert_rules: [],
+    auth_enabled: true,
+    enrollment_code_ttl_hours: 24,
+    enrollment_code_length: 8,
+    recovery_code_length: 12,
+    session_ttl_hours: 168,
+    max_code_attempts: 5,
+    code_attempt_window_minutes: 15,
+    webauthn_rp_id: "",
+    webauthn_rp_origin: "",
   })
   const [savingSys, setSavingSys] = React.useState(false)
 
@@ -353,6 +372,80 @@ export default function SettingsPage() {
       </div>
 
       <form onSubmit={saveSysSettings} className="flex flex-col gap-8">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            Authentication
+            <HelpTip id="settings.auth" />
+          </CardTitle>
+          <CardDescription>
+            Passkey enrollment defaults, session lifetime, and WebAuthn relying party settings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <Switch
+              checked={!!sysSettings.auth_enabled}
+              onCheckedChange={(checked) => setSysSettings({ ...sysSettings, auth_enabled: checked })}
+              id="auth_enabled"
+            />
+            <Label htmlFor="auth_enabled">
+              <LabelWithHelp label="Require authentication when users exist" helpId="settings.auth_enabled" />
+            </Label>
+          </div>
+          {[
+            ["enrollment_code_ttl_hours", "Enrollment code TTL (hours)", "settings.enrollment_code_ttl"],
+            ["enrollment_code_length", "Enrollment code length (digits)", "settings.enrollment_code_length"],
+            ["recovery_code_length", "Recovery code length", "settings.recovery_code_length"],
+            ["session_ttl_hours", "Session TTL (hours)", "settings.session_ttl"],
+            ["max_code_attempts", "Max code attempts", "settings.max_code_attempts"],
+            ["code_attempt_window_minutes", "Code attempt window (minutes)", "settings.code_attempt_window"],
+          ].map(([key, label, helpId]) => (
+            <div className="space-y-2" key={key}>
+              <Label htmlFor={key}>
+                <LabelWithHelp label={label} helpId={helpId} />
+              </Label>
+              <Input
+                id={key}
+                type="number"
+                min="1"
+                value={Number(sysSettings[key as keyof SystemSettings] ?? 0)}
+                onChange={(e) =>
+                  setSysSettings({
+                    ...sysSettings,
+                    [key]: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+          ))}
+          <div className="space-y-2">
+            <Label htmlFor="webauthn_rp_id">
+              <LabelWithHelp label="WebAuthn RP ID" helpId="settings.webauthn_rp_id" />
+            </Label>
+            <Input
+              id="webauthn_rp_id"
+              value={sysSettings.webauthn_rp_id || ""}
+              onChange={(e) => setSysSettings({ ...sysSettings, webauthn_rp_id: e.target.value })}
+              placeholder="localhost or app.example.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="webauthn_rp_origin">
+              <LabelWithHelp label="WebAuthn RP origin" helpId="settings.webauthn_rp_origin" />
+            </Label>
+            <Input
+              id="webauthn_rp_origin"
+              value={sysSettings.webauthn_rp_origin || ""}
+              onChange={(e) => setSysSettings({ ...sysSettings, webauthn_rp_origin: e.target.value })}
+              placeholder="http://localhost:3001"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <AuthUsersPanel />
+
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Global Settings</CardTitle>

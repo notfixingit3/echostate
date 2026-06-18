@@ -230,6 +230,72 @@ func Migrate(db *DB) error {
 
 		CREATE INDEX IF NOT EXISTS idx_graph_views_updated
 			ON graph_views(updated_at DESC);
+
+		CREATE TABLE IF NOT EXISTS users (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			display_name TEXT NOT NULL,
+			role TEXT NOT NULL CHECK (role IN ('admin', 'scanner')),
+			disabled BOOLEAN NOT NULL DEFAULT FALSE,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		CREATE TABLE IF NOT EXISTS enrollment_codes (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			code_hash TEXT NOT NULL,
+			purpose TEXT NOT NULL DEFAULT 'initial',
+			expires_at TIMESTAMPTZ NOT NULL,
+			used_at TIMESTAMPTZ,
+			created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+			attempts INT NOT NULL DEFAULT 0,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_enrollment_codes_hash
+			ON enrollment_codes(code_hash);
+
+		CREATE TABLE IF NOT EXISTS webauthn_credentials (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			credential_id BYTEA NOT NULL UNIQUE,
+			public_key BYTEA NOT NULL,
+			sign_count BIGINT NOT NULL DEFAULT 0,
+			nickname TEXT NOT NULL DEFAULT '',
+			transport TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			last_used_at TIMESTAMPTZ
+		);
+
+		CREATE TABLE IF NOT EXISTS sessions (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			token_hash TEXT NOT NULL UNIQUE,
+			expires_at TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			user_agent TEXT NOT NULL DEFAULT '',
+			ip TEXT NOT NULL DEFAULT ''
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_sessions_token_hash
+			ON sessions(token_hash);
+
+		CREATE TABLE IF NOT EXISTS enrollment_sessions (
+			token_hash TEXT PRIMARY KEY,
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			expires_at TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		CREATE TABLE IF NOT EXISTS webauthn_challenges (
+			id TEXT PRIMARY KEY,
+			user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+			kind TEXT NOT NULL,
+			challenge_data JSONB NOT NULL,
+			expires_at TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

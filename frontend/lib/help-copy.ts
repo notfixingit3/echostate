@@ -131,6 +131,20 @@ export const HELP_COPY: Record<string, string> = {
     "Comma-separated change types. Leave empty to match all severities above the minimum.",
   "settings.alert_webhooks":
     "Limit delivery to specific integrations. Empty means all enabled webhooks.",
+  "settings.auth":
+    "Passkey authentication defaults: enrollment codes, session lifetime, rate limits, and WebAuthn relying party.",
+  "settings.auth_enabled":
+    "When enabled and at least one user exists, the API requires a signed-in session for protected routes.",
+  "settings.enrollment_code_ttl": "Hours before an issued enrollment or recovery code expires.",
+  "settings.enrollment_code_length": "Digit count for standard enrollment codes (default 8).",
+  "settings.recovery_code_length": "Character count for alphanumeric recovery codes.",
+  "settings.session_ttl": "Hours before an HTTP session cookie expires.",
+  "settings.max_code_attempts": "Failed verification attempts allowed within the attempt window.",
+  "settings.code_attempt_window": "Minutes over which failed code attempts are counted.",
+  "settings.webauthn_rp_id": "Relying party ID hostname for passkeys. Defaults from FRONTEND_URL when blank.",
+  "settings.webauthn_rp_origin": "Allowed WebAuthn origin URL. Defaults to FRONTEND_URL when blank.",
+  "settings.auth_users":
+    "Create scanner or admin accounts and issue single-use enrollment or recovery codes.",
 
   "reports.status": "queued, running, completed, or failed PDF generation state.",
   "reports.snapshot": "Snapshot used as the source data for this report.",
