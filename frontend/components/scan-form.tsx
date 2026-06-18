@@ -167,6 +167,7 @@ export function ScanForm() {
       )}
 
       {result && (
+        <>
         <Card
           className="border-primary/20 bg-card/90 backdrop-blur-sm"
           data-testid="scan-result-card"
@@ -181,29 +182,28 @@ export function ScanForm() {
               {new Date(result.scanned_at).toLocaleString()}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1">
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Host
                 </span>
-                <span className="font-mono text-sm" data-testid="scan-result-host">
+                <span className="break-all font-mono text-sm" data-testid="scan-result-host">
                   {result.host}
                 </span>
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Snapshot ID
                 </span>
-                <span className="font-mono text-sm" data-testid="scan-result-snapshot-id">
+                <span className="break-all font-mono text-sm" data-testid="scan-result-snapshot-id">
                   {result.snapshot_id}
                 </span>
               </div>
             </div>
-            {intel ? <IntelSummary intel={intel} /> : null}
           </CardContent>
-          <CardFooter className="flex flex-col gap-2 items-start">
-            <div className="flex w-full justify-between">
+          <CardFooter className="flex flex-col items-start gap-2">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               {!report || report.status === "failed" ? (
                 <Button
                   disabled={isCreatingReport}
@@ -266,6 +266,16 @@ export function ScanForm() {
             )}
           </CardFooter>
         </Card>
+
+        {intel ? (
+          <div className="flex w-full flex-col gap-3">
+            <h3 className="font-heading text-base font-semibold tracking-tight">
+              Intelligence summary
+            </h3>
+            <IntelSummary intel={intel} />
+          </div>
+        ) : null}
+        </>
       )}
     </div>
   )

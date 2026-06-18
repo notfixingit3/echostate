@@ -118,7 +118,7 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-4">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Scanned at
@@ -156,7 +156,7 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Data hash
             </span>
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="break-all font-mono text-xs text-muted-foreground">
               {snapshot.data_hash}
             </span>
           </div>
