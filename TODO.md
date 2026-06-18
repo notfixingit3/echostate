@@ -42,7 +42,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | 24 | Scheduled rescans | ✅ Done | Background scheduler for stale targets; configurable in Settings |
 | 25 | Snapshot retention / pruning | ✅ Done | Per-target keep-N after scan; blob offload for thumbnails |
 | 26 | Minimal API-key auth | ✅ Done | `ECHOSTATE_API_KEY` or Settings key on write routes |
-| 27 | API key vault (partial) | 🟡 Partial | Shodan/Censys keys in Settings + async enrichment; *future:* HIBP, RiskIQ |
+| 27 | API key vault | ✅ Done | Shodan, Censys, HIBP, RiskIQ keys in Settings + async enrichment worker |
 | 6 | Port/banner grabbing | ❌ Skipped | Out of scope (passive-only product direction) |
 
 ---
@@ -55,7 +55,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | 14 | Interactive Neo4j graph UI | ✅ Done | `/graph` force-directed view, 7 views, JARM/favicon/issuer links |
 | 15 | Storage archival & pruning | ✅ Done | `snapshot_blobs`, retention policy, dedup hash excludes volatile fields |
 | 28 | Alert rules & gatherer settings | ✅ Done | Severity/type filters, scan concurrency, per-gatherer timeouts in Settings |
-| 13 | API key vault (full) | ❌ Planned | HIBP, RiskIQ, broader third-party integrations |
+
 
 ---
 
@@ -64,7 +64,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 12 | BGP hijack risk (RIPEstat) | ✅ Done | `hijack_risk` heuristic + ASN tab; *future:* path profiling |
-| — | Custom alerting & rules engine (full) | 🟡 Partial | Snapshot diff rules + webhook filters done; *future:* graph drift rules, rule builder UI |
+| — | Custom alerting & rules engine | ✅ Done | Snapshot diff rules, graph drift (G13), webhook filters, per-integration targeting |
 | — | Graph UX overhaul | ❌ Later | Maltego-style canvas, node inspector, time slider, cross-view linking — beyond current 7-tab force graph |
 
 ---
@@ -94,7 +94,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | G10 | Community detection | ✅ Done | Infra clusters (2+ shared signals) on `/graph` infrastructure view |
 | G11 | Multi-vantage traceroute | ✅ Done | Local + HackerTarget vantages, divergence panel |
 | G12 | PeeringDB / IX map | ✅ Done | PeeringDB enrich, `/graph?view=peering`, IX panel |
-| G13 | Rules engine on graph changes | ❌ Planned | Webhook on origin/path/graph drift (snapshot diff rules exist separately) |
+| G13 | Rules engine on graph changes | ✅ Done | BGP origin/path, RPKI, traceroute drift in `change_details` + alert rules |
 | G14 | Screenshot timeline | ✅ Done | `/api/targets/:id/screenshots`, intel timeline tab |
 | G15 | Wire new intel into graph | ❌ Later | Sync `change_details` signals, enrichment hits, DMARC/TLS drift as graph events |
 
@@ -104,10 +104,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 38 items (core + graph + platform batch) |
-| **Partial** | 2 (#27 API vault, alerting rules engine) |
-| **Planned (near-term)** | 2 (#13 full vault, G13 graph drift alerts) |
+| **Done** | 41 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 5 (graph UX overhaul, G15, SOA, agents, OIDC/RBAC) |
 
-**Suggested next picks:** G13 graph-drift webhooks → #13 full API vault (HIBP) → graph UX polish (node inspector, not full redesign)
+**Suggested next picks:** G15 wire enrichment into Neo4j → graph UX polish (node inspector) → SOA DNS record

@@ -33,6 +33,8 @@ func (h *Handler) updateSettings(c *gin.Context) {
 	req.APIKey = mergeSecret(req.APIKey, current.APIKey)
 	req.ShodanAPIKey = mergeSecret(req.ShodanAPIKey, current.ShodanAPIKey)
 	req.CensysAPISecret = mergeSecret(req.CensysAPISecret, current.CensysAPISecret)
+	req.HIBPAPIKey = mergeSecret(req.HIBPAPIKey, current.HIBPAPIKey)
+	req.RiskIQAPIKey = mergeSecret(req.RiskIQAPIKey, current.RiskIQAPIKey)
 	config.UpdateSettings(req)
 	req = config.GetSettings()
 

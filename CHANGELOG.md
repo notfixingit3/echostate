@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.12] - 2026-06-17
+
+### Added
+
+- **HIBP enrichment** — breach checks for WHOIS/crawl emails (up to 3 per snapshot) when `hibp_api_key` is set.
+- **RiskIQ / PassiveTotal enrichment** — passive DNS correlation for the scanned host.
+- **Graph drift alerting (G13)** — BGP visible-origin, AS-path, RPKI, and traceroute hop changes flow into `change_details` and webhooks.
+- **Alert rule builder** — per-rule webhook targeting, graph-drift preset, and unified system-config save.
+- **Enrichment intel tab** — Shodan, Censys, HIBP, and RiskIQ results in the snapshot UI.
+
+### Changed
+
+- Settings page wraps all system configuration in one save action (API keys, scheduler, retention, alert rules).
+
 ## [0.0.1-beta.11] - 2026-06-17
 
 ### Added
@@ -131,6 +145,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.12]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.12
 [0.0.1-beta.11]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.11
 [0.0.1-beta.10]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.10
 [0.0.1-beta.5]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.5

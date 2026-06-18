@@ -14,6 +14,7 @@ export interface RawIntel {
   ct?: Record<string, unknown>
   traceroute?: Record<string, unknown>
   screenshot?: Record<string, unknown>
+  enrichment?: Record<string, unknown>
   errors?: string[]
 }
 
@@ -268,6 +269,17 @@ export const SCREENSHOT_FIELDS = [
   "height",
   "format",
   "error",
+] as const
+
+export const ENRICHMENT_FIELDS = [
+  "shodan",
+  "censys",
+  "hibp",
+  "riskiq",
+  "shodan_error",
+  "censys_error",
+  "hibp_error",
+  "riskiq_error",
 ] as const
 
 export const DNS_FIELDS = [

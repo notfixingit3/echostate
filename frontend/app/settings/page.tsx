@@ -26,6 +26,20 @@ type Webhook = {
   enabled: boolean
 }
 
+const GRAPH_DRIFT_TYPES = [
+  "graph_bgp_origin_added",
+  "graph_bgp_origin_removed",
+  "graph_as_path_added",
+  "graph_as_path_removed",
+  "graph_rpki_changed",
+  "graph_traceroute_hop_added",
+  "graph_traceroute_hop_removed",
+  "graph_traceroute_reordered",
+]
+
+const CHANGE_TYPE_HINTS =
+  "cert_expiry, bgp_origin, bgp_hijack_risk, new_ct_subdomain, dmarc_policy, web_title, graph_bgp_origin_added, graph_traceroute_hop_removed"
+
 type AlertRule = {
   id: string
   name: string
@@ -41,6 +55,9 @@ type SystemSettings = {
   rate_limit: number
   api_key?: string
   shodan_api_key?: string
+  hibp_api_key?: string
+  riskiq_api_user?: string
+  riskiq_api_key?: string
   censys_api_id?: string
   censys_api_secret?: string
   scan_concurrency?: number
@@ -327,7 +344,8 @@ export default function SettingsPage() {
         <h2 className="text-2xl font-bold tracking-tight">System Configuration</h2>
       </div>
 
-      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+      <form onSubmit={saveSysSettings} className="flex flex-col gap-8">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Global Settings</CardTitle>
           <CardDescription>
@@ -335,7 +353,6 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={saveSysSettings} className="flex flex-col gap-6">
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="dns_servers">DNS Resolvers</Label>
@@ -369,19 +386,14 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Requests allowed per minute.</p>
               </div>
             </div>
-            <Button type="submit" disabled={savingSys} className="w-fit">
-              <SaveIcon data-icon="inline-start" />
-              {savingSys ? "Saving..." : "Save Configuration"}
-            </Button>
-          </form>
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>API Access & Enrichment Keys</CardTitle>
           <CardDescription>
-            Optional API key for write endpoints and passive Shodan/Censys correlation.
+            Write-endpoint API key plus passive Shodan, Censys, HIBP, and RiskIQ (PassiveTotal) correlation.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -401,10 +413,22 @@ export default function SettingsPage() {
             <Label htmlFor="censys_api_secret">Censys API secret</Label>
             <Input id="censys_api_secret" value={sysSettings.censys_api_secret || ""} onChange={(e) => setSysSettings({ ...sysSettings, censys_api_secret: e.target.value })} />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="hibp_api_key">HIBP API key</Label>
+            <Input id="hibp_api_key" value={sysSettings.hibp_api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, hibp_api_key: e.target.value })} placeholder="Breach checks for WHOIS emails" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="riskiq_api_user">RiskIQ / PassiveTotal user</Label>
+            <Input id="riskiq_api_user" value={sysSettings.riskiq_api_user || ""} onChange={(e) => setSysSettings({ ...sysSettings, riskiq_api_user: e.target.value })} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="riskiq_api_key">RiskIQ / PassiveTotal API key</Label>
+            <Input id="riskiq_api_key" value={sysSettings.riskiq_api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, riskiq_api_key: e.target.value })} placeholder="Passive DNS for scanned host" />
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Scan Performance</CardTitle>
           <CardDescription>Worker concurrency and per-gatherer timeouts (seconds).</CardDescription>
@@ -437,7 +461,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Scheduled Rescans</CardTitle>
           <CardDescription>Enqueue stale targets automatically (tag filter optional).</CardDescription>
@@ -466,7 +490,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Retention</CardTitle>
           <CardDescription>Keep only the newest N snapshots per target (0 = unlimited).</CardDescription>
@@ -479,10 +503,12 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Alert Rules</CardTitle>
-          <CardDescription>Filter webhook notifications by severity and change type.</CardDescription>
+          <CardDescription>
+            Filter webhook notifications by severity, change type, and destination integration.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {(sysSettings.alert_rules || []).map((rule, index) => (
@@ -517,7 +543,35 @@ export default function SettingsPage() {
                   rules[index] = { ...rule, match_types: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) }
                   setSysSettings({ ...sysSettings, alert_rules: rules })
                 }} />
+                <p className="text-xs text-muted-foreground">{CHANGE_TYPE_HINTS}</p>
               </div>
+              {webhooks.length > 0 ? (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Deliver to integrations (empty = all enabled)</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {webhooks.map((wh) => {
+                      const selected = (rule.webhook_ids || []).includes(wh.id)
+                      return (
+                        <label key={wh.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => {
+                              const rules = [...(sysSettings.alert_rules || [])]
+                              const ids = new Set(rule.webhook_ids || [])
+                              if (selected) ids.delete(wh.id)
+                              else ids.add(wh.id)
+                              rules[index] = { ...rule, webhook_ids: Array.from(ids) }
+                              setSysSettings({ ...sysSettings, alert_rules: rules })
+                            }}
+                          />
+                          {wh.name}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
               <div className="flex items-center gap-2 sm:col-span-2">
                 <Switch checked={rule.enabled} onCheckedChange={(checked) => {
                   const rules = [...(sysSettings.alert_rules || [])]
@@ -528,22 +582,44 @@ export default function SettingsPage() {
               </div>
             </div>
           ))}
-          <Button type="button" variant="outline" onClick={() => setSysSettings({
-            ...sysSettings,
-            alert_rules: [...(sysSettings.alert_rules || []), {
-              id: `rule-${Date.now()}`,
-              name: "New rule",
-              enabled: true,
-              min_severity: "warning",
-              match_types: [],
-              webhook_ids: [],
-            }],
-          })}>
-            <PlusIcon data-icon="inline-start" />
-            Add alert rule
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => setSysSettings({
+              ...sysSettings,
+              alert_rules: [...(sysSettings.alert_rules || []), {
+                id: `rule-${Date.now()}`,
+                name: "New rule",
+                enabled: true,
+                min_severity: "warning",
+                match_types: [],
+                webhook_ids: [],
+              }],
+            })}>
+              <PlusIcon data-icon="inline-start" />
+              Add alert rule
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setSysSettings({
+              ...sysSettings,
+              alert_rules: [...(sysSettings.alert_rules || []), {
+                id: `rule-graph-${Date.now()}`,
+                name: "Graph path drift",
+                enabled: true,
+                min_severity: "warning",
+                match_types: GRAPH_DRIFT_TYPES,
+                webhook_ids: [],
+              }],
+            })}>
+              <PlusIcon data-icon="inline-start" />
+              Add graph drift preset
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      <Button type="submit" disabled={savingSys} className="w-fit">
+        <SaveIcon data-icon="inline-start" />
+        {savingSys ? "Saving..." : "Save system configuration"}
+      </Button>
+      </form>
 
     </div>
   )

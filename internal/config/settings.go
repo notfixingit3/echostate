@@ -21,6 +21,9 @@ type SystemSettings struct {
 	ShodanAPIKey              string      `json:"shodan_api_key,omitempty"`
 	CensysAPIID               string      `json:"censys_api_id,omitempty"`
 	CensysAPISecret           string      `json:"censys_api_secret,omitempty"`
+	HIBPAPIKey                string      `json:"hibp_api_key,omitempty"`
+	RiskIQAPIUser             string      `json:"riskiq_api_user,omitempty"`
+	RiskIQAPIKey              string      `json:"riskiq_api_key,omitempty"`
 	ScanConcurrency           int         `json:"scan_concurrency"`
 	ScanJobTimeoutSec         int         `json:"scan_job_timeout_sec"`
 	DefaultGathererTimeoutSec int         `json:"default_gatherer_timeout_sec"`
@@ -60,6 +63,15 @@ func defaultAlertRules() []AlertRule {
 	return []AlertRule{
 		{ID: "critical-all", Name: "Critical changes", Enabled: true, MinSeverity: "critical"},
 		{ID: "warnings", Name: "Warnings and above", Enabled: true, MinSeverity: "warning"},
+		{
+			ID: "graph-drift", Name: "Graph path drift", Enabled: true, MinSeverity: "warning",
+			MatchTypes: []string{
+				"graph_bgp_origin_added", "graph_bgp_origin_removed",
+				"graph_as_path_added", "graph_as_path_removed",
+				"graph_rpki_changed",
+				"graph_traceroute_hop_added", "graph_traceroute_hop_removed", "graph_traceroute_reordered",
+			},
+		},
 	}
 }
 
@@ -121,6 +133,8 @@ func PublicSettings(s SystemSettings) SystemSettings {
 	out.APIKey = maskSecret(out.APIKey)
 	out.ShodanAPIKey = maskSecret(out.ShodanAPIKey)
 	out.CensysAPISecret = maskSecret(out.CensysAPISecret)
+	out.HIBPAPIKey = maskSecret(out.HIBPAPIKey)
+	out.RiskIQAPIKey = maskSecret(out.RiskIQAPIKey)
 	return out
 }
 

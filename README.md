@@ -18,7 +18,7 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 - **PDF reports** — Async worker renders HTML → PDF via headless Chrome.
 - **IP enrichment** — pWhois worker enriches submitter IPs (org, ASN, geo).
 - **Notifications** — Slack, Discord, MS Teams webhooks, and Pushover mobile alerts with structured change payloads and alert-rule filtering.
-- **Settings** — DNS resolvers, pWhois server, rate limit, scan concurrency/timeouts, scheduler, retention, alert rules, and optional Shodan/Censys API keys.
+- **Settings** — DNS resolvers, pWhois server, rate limit, scan concurrency/timeouts, scheduler, retention, alert rules (with per-webhook filters), and optional Shodan/Censys/HIBP/RiskIQ API keys.
 - **Optional API key** — Set `ECHOSTATE_API_KEY` (or configure in Settings) to protect write endpoints (`scan`, `reports`, `webhooks`, `settings`).
 - **Neo4j graph** — Relationship sync on scan plus interactive `/graph` UI with infra, CT, DNS, cert SAN, BGP, traceroute, and peering views; route diff, shared hops, and infra clusters.
 - **Containerized** — Docker Compose: API, frontend, PostgreSQL, browserless Chrome, Neo4j.
@@ -47,7 +47,7 @@ The UI proxies `/api` to the Go backend inside Docker — no CORS setup required
 
 ```bash
 curl http://localhost:8080/health
-# {"status":"ok","env":"development","version":"0.0.1-beta.11"}
+# {"status":"ok","env":"development","version":"0.0.1-beta.12"}
 ```
 
 ### Scan a target
