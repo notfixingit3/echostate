@@ -1,0 +1,20 @@
+# Local development overlay — build api/frontend from source instead of pulling GHCR.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+services:
+  api:
+    image: echostate-api:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${ECHOSTATE_VERSION:-dev}
+
+  frontend:
+    image: echostate-frontend:local
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ""
+        NEXT_PUBLIC_APP_VERSION: ${ECHOSTATE_VERSION:-dev}

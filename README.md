@@ -29,7 +29,21 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose pull
+docker compose up -d
+```
+
+Default compose pulls **`:beta`** images from GHCR (built on every `dev` branch push). For stable **`main`** builds:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+To build api/frontend from local source instead of pulling:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 | Service   | URL                         |
@@ -156,10 +170,13 @@ Tagged releases (`v*`) trigger:
 
 - **GitHub Release** — Linux and macOS binaries (amd64 + arm64)
 - **GHCR images** — `ghcr.io/notfixingit3/echostate` (API) and `ghcr.io/notfixingit3/echostate-frontend`
+  - `:beta` — latest `dev` branch build (default `docker compose`)
+  - `:main` — latest `main` branch build (`docker-compose.prod.yml`)
+  - `:0.0.1-beta.N` — semver pin from release tags
 
 Pre-release tags containing `beta`, `alpha`, or `rc` are marked as GitHub pre-releases.
 
-Bump the root `VERSION` file and run `./scripts/sync-version.sh` before tagging. Set `ECHOSTATE_VERSION` in `.env` for local Docker builds to match.
+Bump the root `VERSION` file and run `./scripts/sync-version.sh` before tagging. Pin a specific release with `ECHOSTATE_API_IMAGE` / `ECHOSTATE_FRONTEND_IMAGE` in `.env`.
 
 ## License
 
