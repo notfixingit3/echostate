@@ -1,3 +1,0 @@
-testing: warning: no tests to run
-PASS
-ok  	github.com/notfixingit3/echostate/internal/scanner	0.224s [no tests to run]

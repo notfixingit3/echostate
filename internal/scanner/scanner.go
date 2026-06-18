@@ -31,6 +31,8 @@ func NewScanner(browserWSURL string) *Scanner {
 		gatherers: []Gatherer{
 			gatherWHOIS,
 			gatherASN,
+			gatherTLS,
+			gatherDNS,
 			newWebGatherer(browserWSURL),
 		},
 	}
@@ -46,6 +48,8 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 		WHOIS:     make(map[string]any),
 		ASN:       make(map[string]any),
 		Web:       make(map[string]any),
+		TLS:       make(map[string]any),
+		DNS:       make(map[string]any),
 		Errors:    []string{},
 	}
 
@@ -72,6 +76,10 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 						mergeMap(result.ASN, value)
 					case "web":
 						mergeMap(result.Web, value)
+					case "tls":
+						mergeMap(result.TLS, value)
+					case "dns":
+						mergeMap(result.DNS, value)
 					}
 				}
 				mu.Unlock()
@@ -86,6 +94,10 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 				result.ASN = value
 			case "web":
 				result.Web = value
+			case "tls":
+				result.TLS = value
+			case "dns":
+				result.DNS = value
 			}
 			mu.Unlock()
 		}(g)

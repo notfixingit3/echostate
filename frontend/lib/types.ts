@@ -53,6 +53,8 @@ export interface Snapshot {
     whois?: Record<string, unknown>
     asn?: Record<string, unknown>
     web?: Record<string, unknown>
+    tls?: Record<string, unknown>
+    dns?: Record<string, unknown>
     errors?: string[]
   }
   changes?: string[]

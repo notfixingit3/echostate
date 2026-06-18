@@ -23,6 +23,9 @@ import {
   ASN_FIELDS,
   WEB_FIELDS,
   WHOIS_FIELDS,
+  PWHOIS_FIELDS,
+  TLS_FIELDS,
+  DNS_FIELDS,
   formatFieldLabel,
   formatValue,
 } from "@/lib/intel"
@@ -35,6 +38,8 @@ import {
   GitCompareIcon,
   ExternalLinkIcon,
   ChevronRightIcon,
+  ShieldIcon,
+  DatabaseIcon,
 } from "lucide-react"
 import ReactDiffViewer from "react-diff-viewer-continued"
 import { useTheme } from "next-themes"
@@ -75,7 +80,17 @@ function DataGrid({
             {formatFieldLabel(key)}
           </dt>
           <dd className="text-sm break-words">
-            {key === "name_servers" || key === "status" || key === "copyrights" ? (
+            {key === "name_servers" ||
+            key === "status" ||
+            key === "copyrights" ||
+            key === "dns_names" ||
+            key === "ip_sans" ||
+            key === "A" ||
+            key === "MX" ||
+            key === "NS" ||
+            key === "TXT" ||
+            key === "DMARC" ||
+            key === "tech_stack" ? (
               <div className="flex flex-wrap gap-1.5">
                 {(Array.isArray(value) ? value : [value]).map((item) => (
                   <Badge key={String(item)} variant="outline" className="font-mono text-xs font-normal">
@@ -148,6 +163,8 @@ export function IntelPanels({
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="whois">WHOIS</TabsTrigger>
         <TabsTrigger value="asn">ASN / BGP</TabsTrigger>
+        <TabsTrigger value="dns">DNS</TabsTrigger>
+        <TabsTrigger value="tls">TLS</TabsTrigger>
         <TabsTrigger value="web">Web</TabsTrigger>
         <TabsTrigger value="pwhois">Submitter</TabsTrigger>
         <TabsTrigger value="errors" className="gap-1.5">
@@ -214,6 +231,17 @@ export function IntelPanels({
               <DataGrid data={raw?.web} fields={WEB_FIELDS} />
             </CardContent>
           </Card>
+          <Card className="border-border/60 bg-card/80 backdrop-blur-sm lg:col-span-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldIcon className="size-4 text-primary" />
+                TLS Certificate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DataGrid data={raw?.tls} fields={TLS_FIELDS} />
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 
@@ -245,6 +273,22 @@ export function IntelPanels({
         <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
             <DataGrid data={raw?.asn} fields={ASN_FIELDS} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="dns" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardContent className="pt-6">
+            <DataGrid data={raw?.dns} fields={DNS_FIELDS} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="tls" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardContent className="pt-6">
+            <DataGrid data={raw?.tls} fields={TLS_FIELDS} />
           </CardContent>
         </Card>
       </TabsContent>

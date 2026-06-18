@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- DNS gatherer — A/AAAA, MX, NS, TXT, CNAME, and DMARC records via configurable resolvers.
+- TLS gatherer — certificate issuer, SANs, validity window, and signature algorithm.
+- Web gatherer enhancements — HTTP security headers and basic tech-stack fingerprinting.
+- Intel UI — DNS and TLS tabs, cert expiry and A-record summary cards.
+
+### Fixed
+
+- `storeSnapshot` no longer panics when handler `config` is nil (CI test failure).
+- Release workflow cleans up stale GitHub releases before retagging.
+
+### Removed
+
+- `.omo/` agent artifacts removed from the repository.
+
 ## [0.0.1-beta.1] - 2026-06-17
 
 ### Added

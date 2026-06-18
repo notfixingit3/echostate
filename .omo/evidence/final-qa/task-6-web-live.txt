@@ -1,5 +1,0 @@
-=== RUN   TestWebLive
-    web_test.go:86: browser not available at ws://localhost:3000/
---- SKIP: TestWebLive (0.00s)
-PASS
-ok  	github.com/notfixingit3/echostate/internal/scanner	(cached)

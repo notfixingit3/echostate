@@ -33,12 +33,27 @@ func (m *mockScanRunner) Run(ctx context.Context, host string) (*models.ScanResu
 	return m.result, m.err
 }
 
+func testConfig() *config.Config {
+	return &config.Config{
+		Env:         "test",
+		FrontendURL: "http://localhost:3001",
+	}
+}
+
 func newScanTestHandler(t *testing.T, d *db.DB, runner scanRunner) *Handler {
 	t.Helper()
 	return &Handler{
 		db:      d,
-		config:  &config.Config{Env: "test"},
+		config:  testConfig(),
 		scanner: runner,
+	}
+}
+
+func newDBTestHandler(t *testing.T, d *db.DB) *Handler {
+	t.Helper()
+	return &Handler{
+		db:     d,
+		config: testConfig(),
 	}
 }
 
@@ -166,7 +181,7 @@ func TestCreateScan_ValidHost(t *testing.T) {
 
 func TestStoreSnapshot_NewTarget(t *testing.T) {
 	d := setupTestDB(t)
-	h := &Handler{db: d}
+	h := newDBTestHandler(t, d)
 
 	ctx := context.Background()
 	targetID, err := h.upsertTarget(ctx, "example.com")
@@ -191,7 +206,7 @@ func TestStoreSnapshot_NewTarget(t *testing.T) {
 
 func TestStoreSnapshot_SameHashUpdatesLastSeen(t *testing.T) {
 	d := setupTestDB(t)
-	h := &Handler{db: d}
+	h := newDBTestHandler(t, d)
 	ctx := context.Background()
 
 	targetID, err := h.upsertTarget(ctx, "example.com")
@@ -227,7 +242,7 @@ func TestStoreSnapshot_SameHashUpdatesLastSeen(t *testing.T) {
 
 func TestStoreSnapshot_DifferentHashInsertsWithChanges(t *testing.T) {
 	d := setupTestDB(t)
-	h := &Handler{db: d}
+	h := newDBTestHandler(t, d)
 	ctx := context.Background()
 
 	targetID, err := h.upsertTarget(ctx, "example.com")
@@ -269,7 +284,7 @@ func TestStoreSnapshot_DifferentHashInsertsWithChanges(t *testing.T) {
 
 func TestStoreSnapshot_DatabaseError(t *testing.T) {
 	d := setupTestDB(t)
-	h := &Handler{db: d}
+	h := newDBTestHandler(t, d)
 	ctx := context.Background()
 
 	targetID := uuid.New()
@@ -339,6 +354,11 @@ func TestComputeChanges_MarshalCurrentError(t *testing.T) {
 	changes := computeChanges(previous, current)
 	require.Len(t, changes, 1)
 	require.Contains(t, changes[0], "marshal current:")
+}
+
+func TestHandler_FrontendURL_NilConfig(t *testing.T) {
+	h := &Handler{}
+	require.Equal(t, "", h.frontendURL())
 }
 
 func TestComputeChanges_MarshalPreviousValueError(t *testing.T) {
