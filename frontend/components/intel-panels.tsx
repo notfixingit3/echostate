@@ -26,6 +26,9 @@ import {
   PWHOIS_FIELDS,
   TLS_FIELDS,
   DNS_FIELDS,
+  FAVICON_FIELDS,
+  CRAWL_FIELDS,
+  STORAGE_FIELDS,
   formatFieldLabel,
   formatValue,
 } from "@/lib/intel"
@@ -123,7 +126,8 @@ function DataGrid({
             key === "NS" ||
             key === "TXT" ||
             key === "DMARC" ||
-            key === "tech_stack" ? (
+            key === "tech_stack" ||
+            key === "sitemap_urls" ? (
               <div className="flex flex-wrap gap-1.5">
                 {(Array.isArray(value) ? value : [value]).map((item) => (
                   <Badge
@@ -133,6 +137,32 @@ function DataGrid({
                   >
                     {String(item)}
                   </Badge>
+                ))}
+              </div>
+            ) : key === "routing" && value && typeof value === "object" ? (
+              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/50 bg-background/60 p-3 font-mono text-xs leading-relaxed">
+                {formatValue(value)}
+              </pre>
+            ) : key === "robots" && value && typeof value === "object" ? (
+              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/50 bg-background/60 p-3 font-mono text-xs leading-relaxed">
+                {formatValue(value)}
+              </pre>
+            ) : key === "buckets" && Array.isArray(value) ? (
+              <div className="flex flex-col gap-2">
+                {value.map((bucket, index) => (
+                  <div
+                    key={index}
+                    className="rounded-md border border-border/50 bg-background/60 px-3 py-2"
+                  >
+                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {typeof bucket === "object" && bucket && "provider" in bucket
+                        ? String((bucket as Record<string, unknown>).provider)
+                        : "bucket"}
+                    </div>
+                    <div className="mt-1 break-all font-mono text-xs">
+                      {formatValue(bucket)}
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (key === "headers" || key === "security_headers") &&
@@ -212,6 +242,9 @@ export function IntelPanels({
         <TabsTrigger value="dns">DNS</TabsTrigger>
         <TabsTrigger value="tls">TLS</TabsTrigger>
         <TabsTrigger value="web">Web</TabsTrigger>
+        <TabsTrigger value="favicon">Favicon</TabsTrigger>
+        <TabsTrigger value="crawl">Crawl</TabsTrigger>
+        <TabsTrigger value="storage">Storage</TabsTrigger>
         <TabsTrigger value="pwhois">Submitter</TabsTrigger>
         <TabsTrigger value="errors" className="gap-1.5">
           Errors
@@ -335,6 +368,30 @@ export function IntelPanels({
         <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
             <DataGrid data={raw?.tls} fields={TLS_FIELDS} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="favicon" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardContent className="pt-6">
+            <DataGrid data={raw?.favicon} fields={FAVICON_FIELDS} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="crawl" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardContent className="pt-6">
+            <DataGrid data={raw?.crawl} fields={CRAWL_FIELDS} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="storage" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardContent className="pt-6">
+            <DataGrid data={raw?.storage} fields={STORAGE_FIELDS} />
           </CardContent>
         </Card>
       </TabsContent>

@@ -44,7 +44,7 @@ func gatherTLS(ctx context.Context, host string) (string, map[string]any, error)
 		ipSans = append(ipSans, ip.String())
 	}
 
-	return "tls", map[string]any{
+	data := map[string]any{
 		"issuer":              cert.Issuer.String(),
 		"subject":             cert.Subject.String(),
 		"not_before":          cert.NotBefore,
@@ -53,5 +53,12 @@ func gatherTLS(ctx context.Context, host string) (string, map[string]any, error)
 		"ip_sans":             ipSans,
 		"version":             cert.Version,
 		"signature_algorithm": cert.SignatureAlgorithm.String(),
-	}, nil
+		"cipher_suite":        tls.CipherSuiteName(state.CipherSuite),
+	}
+
+	if jarmHash, err := fingerprintJARM(ctx, host, 443); err == nil {
+		data["jarm"] = jarmHash
+	}
+
+	return "tls", data, nil
 }

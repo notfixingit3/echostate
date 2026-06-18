@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Pushover notification integration with configurable priority, sound, device, title, and emergency retry/expire settings (documented in Settings UI).
+- Favicon MMH3/SHA256 fingerprinting (Shodan-compatible hash).
+- `robots.txt` and `sitemap.xml` crawl extraction.
+- JARM TLS server fingerprinting on port 443.
+- Cloud storage bucket reference detection (S3, Azure, GCP, DO Spaces).
+- BGP hijack risk heuristics via RIPEstat routing visibility and RPKI validation.
 
 ## [0.0.1-beta.2] - 2026-06-17
 

@@ -23,6 +23,32 @@
 - Displayed in the Web intel tab alongside full response headers.
 - *Future:* hygiene scoring and downgrade alerting.
 
+### 8. Favicon Hashing (Infrastructure Tracking) ✓
+- Downloads favicon (HTML hint or `/favicon.ico`) and computes Shodan-compatible MMH3 + SHA256.
+- Intel UI: Favicon tab + MMH3 summary card.
+- *Future:* Shodan/Censys correlation from Settings API vault.
+
+### 9. `robots.txt` & `sitemap.xml` Extraction ✓
+- Parses `robots.txt` disallow/allow/sitemap directives and sitemap URL lists.
+- Intel UI: Crawl tab + crawl path summary card.
+- *Future:* Track hidden path changes over time with dedicated diff rules.
+
+### 10. JARM / JA3 Fingerprinting ✓
+- JARM TLS server fingerprint via active probes on port 443.
+- Intel UI: TLS tab + JARM summary card.
+- *Future:* JA3S extraction and cross-target graph linking.
+
+### 11. Cloud Storage Bucket Detection ✓
+- Detects AWS S3, Azure Blob, GCP Storage, and DigitalOcean Spaces references in homepage HTML.
+- Intel UI: Storage tab + bucket count summary card.
+- *Future:* passive public-access checks for discovered buckets.
+
+### 12. BGP Route Hijacking Detection ✓
+- RIPEstat routing visibility + RPKI validation compared against Team Cymru origin data.
+- `hijack_risk` heuristic (`low` / `medium` / `high`) with explanatory notes in ASN routing block.
+- Intel UI: BGP hijack risk summary card + routing details in ASN tab.
+- *Future:* historical path profiling and alerting rules.
+
 ---
 
 ## Planned
@@ -39,26 +65,6 @@
 ### 7. Visual Screenshots
 - Leverage `chromedp` to capture a `.png` or `.jpeg` screenshot of the webpage upon scanning.
 - **Use Case:** Provide immediate visual context in the dashboard to see how a site's UI changes over time.
-
-### 8. Favicon Hashing (Infrastructure Tracking)
-- Download the site's `favicon.ico` and compute its MurmurHash3 (MMH3) fingerprint.
-- **Use Case:** Cross-reference the hash with search engines like Shodan or Censys to discover hidden internal subdomains or detect phishing sites stealing corporate logos.
-
-### 9. `robots.txt` & `sitemap.xml` Extraction
-- Automatically pull and parse standard web crawler files during the web scrape.
-- **Use Case:** Reveal sensitive admin panels or internal API routes that admins attempt to hide via `Disallow` rules. Track these hidden paths over time.
-
-### 10. JARM / JA3 Fingerprinting
-- Collect the unique TLS handshake fingerprint (JARM) of the server.
-- **Use Case:** Track infrastructure across the internet even if IPs or domains completely change, effectively identifying backend server configurations or malicious C2 servers.
-
-### 11. Cloud Storage Bucket Detection
-- Analyze the web scrape to detect references to AWS S3, Azure Blob Storage, or GCP Buckets.
-- **Use Case:** Automatically check if discovered buckets are accidentally configured for "public list" access, catching potential data leaks early.
-
-### 12. BGP Route Hijacking Detection
-- Actively monitor and profile the ASN Path data collected during scans.
-- **Use Case:** Alert when traffic intended for a target suddenly begins routing through an anomalous or unverified ASN, which is a strong indicator of a BGP hijack attack.
 
 ### 13. API Key Vault (External Integrations)
 - Create a secure vault in the Settings UI to store third-party API keys (e.g., Shodan, HaveIBeenPwned, RiskIQ).

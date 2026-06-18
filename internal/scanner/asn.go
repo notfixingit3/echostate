@@ -11,7 +11,7 @@ import (
 const (
 	cymruOriginDomain = "origin.asn.cymru.com"
 	cymruASNDomain    = "asn.cymru.com"
-	asnGatherTimeout  = 10 * time.Second
+	asnGatherTimeout  = 18 * time.Second
 	dnsLookupTimeout  = 5 * time.Second
 )
 
@@ -24,6 +24,7 @@ var (
 	lookupTXTFunc = func(ctx context.Context, resolver *net.Resolver, name string) ([]string, error) {
 		return resolver.LookupTXT(ctx, name)
 	}
+	enrichRoutingFunc = enrichRouting
 )
 
 // gatherASN performs a passive ASN/BGP lookup for host using Team Cymru's
@@ -76,6 +77,16 @@ func gatherASN(ctx context.Context, host string) (string, map[string]any, error)
 	}
 
 	origin["ip"] = ip
+
+	if routing, err := enrichRoutingFunc(ctx, ip, fmt.Sprint(origin["asn"]), fmt.Sprint(origin["prefix"])); err == nil {
+		origin["routing"] = routing
+	} else {
+		origin["routing"] = map[string]any{
+			"hijack_risk": "unknown",
+			"notes":       []string{err.Error()},
+		}
+	}
+
 	return "asn", origin, nil
 }
 

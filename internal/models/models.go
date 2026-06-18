@@ -46,6 +46,9 @@ type ScanResult struct {
 	Web       map[string]any `json:"web,omitempty"`
 	TLS       map[string]any `json:"tls,omitempty"`
 	DNS       map[string]any `json:"dns,omitempty"`
+	Favicon   map[string]any `json:"favicon,omitempty"`
+	Crawl     map[string]any `json:"crawl,omitempty"`
+	Storage   map[string]any `json:"storage,omitempty"`
 	Errors    []string       `json:"errors,omitempty"`
 }
 
