@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/notfixingit3/echostate/internal/config"
 )
 
 const (
@@ -45,26 +47,44 @@ func gatherCT(ctx context.Context, host string) (string, map[string]any, error) 
 		return "ct", nil, fmt.Errorf("unable to derive search domain from %q", host)
 	}
 
-	gatherCtx, cancel := context.WithTimeout(ctx, ctGatherTimeout)
+	gatherCtx, cancel := context.WithTimeout(ctx, ctGatherTimeoutFromSettings())
 	defer cancel()
 
-	queryURL := fmt.Sprintf("%s?q=%s&output=json", ctAPIBaseURL, url.QueryEscape("%."+domain))
-	body, err := fetchCRTSh(gatherCtx, queryURL)
-	if err != nil {
-		return "ct", nil, fmt.Errorf("crt.sh request: %w", err)
-	}
-
-	subdomains, err := parseCTResponse(body, domain)
+	subdomains, source, err := fetchCTSubdomains(gatherCtx, domain)
 	if err != nil {
 		return "ct", nil, err
 	}
 
 	return "ct", map[string]any{
 		"domain":     domain,
-		"source":     "crt.sh",
+		"source":     source,
 		"subdomains": subdomains,
 		"count":      len(subdomains),
 	}, nil
+}
+
+func fetchCTSubdomains(ctx context.Context, domain string) ([]string, string, error) {
+	queryURL := fmt.Sprintf("%s?q=%s&output=json", ctAPIBaseURL, url.QueryEscape("%."+domain))
+	body, err := fetchCRTSh(ctx, queryURL)
+	if err == nil {
+		subdomains, parseErr := parseCTResponse(body, domain)
+		if parseErr == nil {
+			return subdomains, "crt.sh", nil
+		}
+		err = parseErr
+	}
+
+	subdomains, fallbackErr := fetchCertSpotter(ctx, domain)
+	if fallbackErr == nil && len(subdomains) > 0 {
+		return subdomains, "certspotter", nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("crt.sh request: %w", err)
+	}
+	if fallbackErr != nil {
+		return nil, "", fmt.Errorf("certspotter request: %w", fallbackErr)
+	}
+	return subdomains, "certspotter", nil
 }
 
 func fetchCRTSh(ctx context.Context, queryURL string) ([]byte, error) {
@@ -81,7 +101,7 @@ func fetchCRTSh(ctx context.Context, queryURL string) ([]byte, error) {
 			}
 		}
 
-		body, _, err := httpGetTimeout(ctx, queryURL, ctResponseMaxBytes, ctHTTPTimeout)
+		body, _, err := httpGetTimeout(ctx, queryURL, ctResponseMaxBytes, ctHTTPTimeoutFromSettings())
 		if err == nil {
 			return body, nil
 		}
@@ -170,4 +190,20 @@ func normalizeCTName(name string) string {
 
 func isCTSubdomain(name, domain string) bool {
 	return name == domain || strings.HasSuffix(name, "."+domain)
+}
+
+func ctHTTPTimeoutFromSettings() time.Duration {
+	sec := config.GetSettings().CTHTTPTimeoutSec
+	if sec > 0 {
+		return time.Duration(sec) * time.Second
+	}
+	return ctHTTPTimeout
+}
+
+func ctGatherTimeoutFromSettings() time.Duration {
+	sec := config.GetSettings().CTHTTPTimeoutSec + 15
+	if sec > 0 {
+		return time.Duration(sec) * time.Second
+	}
+	return ctGatherTimeout
 }

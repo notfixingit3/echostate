@@ -34,6 +34,7 @@ export function ScanForm() {
   const [result, setResult] = React.useState<ScanResponse | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
+  const [scanStatus, setScanStatus] = React.useState<string | null>(null)
   const [report, setReport] = React.useState<Report | null>(null)
   const [reportError, setReportError] = React.useState<string | null>(null)
   const [isCreatingReport, setIsCreatingReport] = React.useState(false)
@@ -49,9 +50,12 @@ export function ScanForm() {
     setReport(null)
     setReportError(null)
     setIsCreatingReport(false)
+    setScanStatus(null)
 
     try {
-      const scanResult = await scanHost(trimmedHost)
+      const scanResult = await scanHost(trimmedHost, (status) => {
+        setScanStatus(status)
+      })
       setResult(scanResult)
 
       if (queueReport) {
@@ -86,6 +90,7 @@ export function ScanForm() {
     } finally {
       setIsLoading(false)
       setWithReport(false)
+      setScanStatus(null)
     }
   }
 
@@ -227,6 +232,11 @@ export function ScanForm() {
             )}
           </Button>
         </div>
+        {isLoading && scanStatus ? (
+          <p className="text-sm text-muted-foreground" data-testid="scan-status">
+            Scan job: <span className="font-medium text-foreground">{scanStatus}</span>
+          </p>
+        ) : null}
       </form>
 
       {error && (

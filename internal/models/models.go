@@ -22,6 +22,7 @@ type Snapshot struct {
 	DataHash        string         `json:"data_hash"`
 	RawData         map[string]any `json:"raw_data"`
 	Changes         []string       `json:"changes,omitempty"`
+	ChangeDetails   []ChangeDetail `json:"change_details,omitempty"`
 	PwhoisData      map[string]any `json:"pwhois_data,omitempty"`
 	PwhoisLookedUp  *time.Time     `json:"pwhois_looked_up_at,omitempty"`
 	PwhoisOriginAS  *string        `json:"pwhois_origin_as,omitempty"`
@@ -32,9 +33,50 @@ type Snapshot struct {
 	ClientIP        string         `json:"client_ip,omitempty"`
 }
 
+// ChangeDetail is a structured snapshot diff entry.
+type ChangeDetail struct {
+	Type     string `json:"type"`
+	Severity string `json:"severity"`
+	Summary  string `json:"summary"`
+	Field    string `json:"field,omitempty"`
+	Detail   string `json:"detail,omitempty"`
+}
+
 // ScanRequest is the payload accepted by POST /api/scan.
 type ScanRequest struct {
 	Host string `json:"host" binding:"required"`
+}
+
+// ScanJobStatus represents the lifecycle state of an async scan job.
+type ScanJobStatus string
+
+const (
+	ScanJobPending   ScanJobStatus = "pending"
+	ScanJobRunning   ScanJobStatus = "running"
+	ScanJobCompleted ScanJobStatus = "completed"
+	ScanJobFailed    ScanJobStatus = "failed"
+)
+
+func (s ScanJobStatus) IsValid() bool {
+	switch s {
+	case ScanJobPending, ScanJobRunning, ScanJobCompleted, ScanJobFailed:
+		return true
+	}
+	return false
+}
+
+// ScanJob tracks an asynchronous reconnaissance scan.
+type ScanJob struct {
+	ID           uuid.UUID      `json:"id"`
+	Host         string         `json:"host"`
+	Status       ScanJobStatus  `json:"status"`
+	SnapshotID   *uuid.UUID     `json:"snapshot_id,omitempty"`
+	TargetID     *uuid.UUID     `json:"target_id,omitempty"`
+	ErrorMessage string         `json:"error,omitempty"`
+	ClientIP     string         `json:"client_ip,omitempty"`
+	CreatedAt    time.Time      `json:"created_at"`
+	CompletedAt  *time.Time     `json:"completed_at,omitempty"`
+	Snapshot     *Snapshot      `json:"snapshot,omitempty"`
 }
 
 // ScanResult is the unified reconnaissance payload stored in raw_data.

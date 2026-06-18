@@ -2,13 +2,11 @@ package scanner
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/models"
 )
 
@@ -33,20 +31,38 @@ func NewScanner(browserWSURL string) *Scanner {
 	if browserWSURL == "" {
 		browserWSURL = "ws://localhost:3000/"
 	}
+	settings := config.GetSettings()
+	defaultTimeout := time.Duration(settings.DefaultGathererTimeoutSec) * time.Second
+	if defaultTimeout <= 0 {
+		defaultTimeout = defaultGathererTimeout
+	}
+	ctTimeout := time.Duration(settings.CTHTTPTimeoutSec+20) * time.Second
+	if ctTimeout <= 0 {
+		ctTimeout = 80 * time.Second
+	}
+	tracerouteTimeout := time.Duration(settings.TracerouteTimeoutSec) * time.Second
+	if tracerouteTimeout <= 0 {
+		tracerouteTimeout = 40 * time.Second
+	}
+	screenshotTimeout := time.Duration(settings.ScreenshotTimeoutSec) * time.Second
+	if screenshotTimeout <= 0 {
+		screenshotTimeout = 25 * time.Second
+	}
+
 	return &Scanner{
 		browserWSURL: browserWSURL,
 		gatherers: []timedGatherer{
-			{timeout: defaultGathererTimeout, fn: gatherWHOIS},
-			{timeout: defaultGathererTimeout, fn: gatherASN},
-			{timeout: defaultGathererTimeout, fn: gatherTLS},
-			{timeout: defaultGathererTimeout, fn: gatherDNS},
-			{timeout: defaultGathererTimeout, fn: gatherFavicon},
-			{timeout: defaultGathererTimeout, fn: gatherCrawl},
-			{timeout: defaultGathererTimeout, fn: gatherStorage},
-			{timeout: 80 * time.Second, fn: gatherCT},
-			{timeout: 40 * time.Second, fn: gatherTraceroute},
-			{timeout: defaultGathererTimeout, fn: newWebGatherer(browserWSURL)},
-			{timeout: 25 * time.Second, fn: newScreenshotGatherer(browserWSURL)},
+			{timeout: defaultTimeout, fn: gatherWHOIS},
+			{timeout: defaultTimeout, fn: gatherASN},
+			{timeout: defaultTimeout, fn: gatherTLS},
+			{timeout: defaultTimeout, fn: gatherDNS},
+			{timeout: defaultTimeout, fn: gatherFavicon},
+			{timeout: defaultTimeout, fn: gatherCrawl},
+			{timeout: defaultTimeout, fn: gatherStorage},
+			{timeout: ctTimeout, fn: gatherCT},
+			{timeout: tracerouteTimeout, fn: gatherTraceroute},
+			{timeout: defaultTimeout, fn: newWebGatherer(browserWSURL)},
+			{timeout: screenshotTimeout, fn: newScreenshotGatherer(browserWSURL)},
 		},
 	}
 }
@@ -168,13 +184,7 @@ func mergeMap(dst, src map[string]any) {
 	}
 }
 
-// Hash computes a SHA256 hash of the scan result JSON.
+// Hash computes a deduplication hash of the scan result JSON.
 func Hash(result *models.ScanResult) (string, error) {
-	data, err := json.Marshal(result)
-	if err != nil {
-		return "", fmt.Errorf("marshal result: %w", err)
-	}
-
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:]), nil
+	return HashForDedup(result)
 }

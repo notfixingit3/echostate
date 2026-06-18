@@ -3,6 +3,14 @@
 
 export type ReportStatus = "pending" | "running" | "completed" | "failed"
 
+export interface ChangeDetail {
+  type: string
+  severity: "info" | "warning" | "critical" | string
+  summary: string
+  field?: string
+  detail?: string
+}
+
 export interface TargetSummary {
   id: string
   host: string
@@ -58,6 +66,7 @@ export interface Snapshot {
     errors?: string[]
   }
   changes?: string[]
+  change_details?: ChangeDetail[]
   pwhois_data?: Record<string, unknown> | null
   pwhois_looked_up_at?: string | null
   pwhois_origin_as?: string | null

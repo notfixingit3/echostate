@@ -105,8 +105,8 @@ func newTestHandler(t *testing.T, d *db.DB) *Handler {
 		return []byte("%PDF fake"), nil
 	}
 	return &Handler{
-		db:     d,
-		worker: reports.New(d, renderer, 1),
+		db:           d,
+		reportWorker: reports.New(d, renderer, 1),
 	}
 }
 
@@ -149,8 +149,8 @@ func TestCreateReport_BySnapshot(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	require.NoError(t, h.worker.Start(ctx))
-	defer h.worker.Stop()
+	require.NoError(t, h.reportWorker.Start(ctx))
+	defer h.reportWorker.Stop()
 
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -173,8 +173,8 @@ func TestCreateReport_ByHost(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	require.NoError(t, h.worker.Start(ctx))
-	defer h.worker.Stop()
+	require.NoError(t, h.reportWorker.Start(ctx))
+	defer h.reportWorker.Stop()
 
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()

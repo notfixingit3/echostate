@@ -134,8 +134,10 @@ func (h *Handler) getTarget(c *gin.Context) {
 
 	if detail.SnapshotCount > 0 {
 		var snapshot models.Snapshot
+		var changeDetailsJSON []byte
 		err := h.db.Pool.QueryRow(ctx, `
 			SELECT s.id, s.target_id, s.scanned_at, s.last_seen, s.data_hash, s.raw_data, s.changes,
+				COALESCE(s.change_details, '[]') AS change_details,
 				COALESCE(s.client_ip, 'unknown') AS client_ip,
 				s.pwhois_data, s.pwhois_looked_up_at, s.pwhois_origin_as, s.pwhois_org_name,
 				s.pwhois_country_code, s.pwhois_city, s.pwhois_prefix
@@ -145,12 +147,17 @@ func (h *Handler) getTarget(c *gin.Context) {
 			LIMIT 1
 		`, targetID).Scan(
 			&snapshot.ID, &snapshot.TargetID, &snapshot.ScannedAt, &snapshot.LastSeen,
-			&snapshot.DataHash, &snapshot.RawData, &snapshot.Changes, &snapshot.ClientIP,
+			&snapshot.DataHash, &snapshot.RawData, &snapshot.Changes, &changeDetailsJSON, &snapshot.ClientIP,
 			&snapshot.PwhoisData, &snapshot.PwhoisLookedUp, &snapshot.PwhoisOriginAS,
 			&snapshot.PwhoisOrgName, &snapshot.PwhoisCountry, &snapshot.PwhoisCity, &snapshot.PwhoisPrefix,
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch latest snapshot"})
+			return
+		}
+		snapshot.ChangeDetails, err = decodeChangeDetails(changeDetailsJSON)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to decode change details"})
 			return
 		}
 		detail.LatestSnapshot = &snapshot
@@ -327,8 +334,10 @@ func (h *Handler) getSnapshot(c *gin.Context) {
 	defer cancel()
 
 	var snapshot models.Snapshot
+	var changeDetailsJSON []byte
 	err := h.db.Pool.QueryRow(ctx, `
 		SELECT s.id, s.target_id, s.scanned_at, s.last_seen, s.data_hash, s.raw_data, s.changes,
+			COALESCE(s.change_details, '[]') AS change_details,
 			COALESCE(s.client_ip, 'unknown') AS client_ip,
 			s.pwhois_data, s.pwhois_looked_up_at, s.pwhois_origin_as, s.pwhois_org_name,
 			s.pwhois_country_code, s.pwhois_city, s.pwhois_prefix
@@ -336,7 +345,7 @@ func (h *Handler) getSnapshot(c *gin.Context) {
 		WHERE s.id = $1
 	`, snapshotID).Scan(
 		&snapshot.ID, &snapshot.TargetID, &snapshot.ScannedAt, &snapshot.LastSeen,
-		&snapshot.DataHash, &snapshot.RawData, &snapshot.Changes, &snapshot.ClientIP,
+		&snapshot.DataHash, &snapshot.RawData, &snapshot.Changes, &changeDetailsJSON, &snapshot.ClientIP,
 		&snapshot.PwhoisData, &snapshot.PwhoisLookedUp, &snapshot.PwhoisOriginAS,
 		&snapshot.PwhoisOrgName, &snapshot.PwhoisCountry, &snapshot.PwhoisCity, &snapshot.PwhoisPrefix,
 	)
@@ -346,6 +355,11 @@ func (h *Handler) getSnapshot(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch snapshot"})
+		return
+	}
+	snapshot.ChangeDetails, err = decodeChangeDetails(changeDetailsJSON)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to decode change details"})
 		return
 	}
 
@@ -565,11 +579,14 @@ func (h *Handler) listTargetScreenshots(c *gin.Context) {
 	var total int
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)
-		FROM snapshots
-		WHERE target_id = $1
+		FROM snapshots s
+		LEFT JOIN snapshot_blobs b
+		  ON b.snapshot_id = s.id AND b.kind = 'screenshot_thumbnail'
+		WHERE s.target_id = $1
 		  AND (
-		    raw_data->'screenshot'->>'thumbnail' IS NOT NULL
-		    OR raw_data->'screenshot'->>'error' IS NOT NULL
+		    b.id IS NOT NULL
+		    OR s.raw_data->'screenshot'->>'thumbnail' IS NOT NULL
+		    OR s.raw_data->'screenshot'->>'error' IS NOT NULL
 		  )
 	`, targetID).Scan(&total)
 	if err != nil {
@@ -580,15 +597,22 @@ func (h *Handler) listTargetScreenshots(c *gin.Context) {
 	rows, err := h.db.Pool.Query(ctx, `
 		SELECT s.id, s.scanned_at,
 			COALESCE(s.raw_data->'screenshot'->>'url', '') AS url,
-			COALESCE(s.raw_data->'screenshot'->>'thumbnail', '') AS thumbnail,
+			COALESCE(
+				NULLIF(encode(b.data, 'base64'), ''),
+				s.raw_data->'screenshot'->>'thumbnail',
+				''
+			) AS thumbnail,
 			COALESCE(s.raw_data->'screenshot'->>'format', '') AS format,
 			COALESCE(s.raw_data->'screenshot'->>'error', '') AS error,
 			COALESCE(NULLIF(s.raw_data->'screenshot'->>'width', '')::int, 0) AS width,
 			COALESCE(NULLIF(s.raw_data->'screenshot'->>'height', '')::int, 0) AS height
 		FROM snapshots s
+		LEFT JOIN snapshot_blobs b
+		  ON b.snapshot_id = s.id AND b.kind = 'screenshot_thumbnail'
 		WHERE s.target_id = $1
 		  AND (
-		    s.raw_data->'screenshot'->>'thumbnail' IS NOT NULL
+		    b.id IS NOT NULL
+		    OR s.raw_data->'screenshot'->>'thumbnail' IS NOT NULL
 		    OR s.raw_data->'screenshot'->>'error' IS NOT NULL
 		  )
 		ORDER BY s.scanned_at DESC

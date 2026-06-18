@@ -46,7 +46,11 @@ export interface IntelHighlights {
   bucketCount?: number
   crawlPathCount?: number
   ctSubdomainCount?: number
+  newCtSubdomainCount?: number
   tracerouteHopCount?: number
+  certDaysRemaining?: number
+  certExpired?: boolean
+  certStatus?: "ok" | "warning" | "critical"
   errorCount: number
   changeCount: number
 }
@@ -86,6 +90,7 @@ export function extractIntel(
     | "pwhois_origin_as"
     | "pwhois_country_code"
     | "changes"
+    | "change_details"
   >
 ): IntelHighlights {
   const whois = raw?.whois
@@ -101,6 +106,22 @@ export function extractIntel(
   const ctSubdomains = asStringArray(ct?.subdomains)
   const tracerouteHops = Array.isArray(traceroute?.hops) ? traceroute.hops : []
   const routing = asn?.routing as Record<string, unknown> | undefined
+  const certDays =
+    typeof tls?.days_remaining === "number" ? tls.days_remaining : undefined
+  const certExpired = tls?.expired === true
+  let certStatus: IntelHighlights["certStatus"]
+  if (certExpired) {
+    certStatus = "critical"
+  } else if (certDays !== undefined) {
+    if (certDays <= 7) certStatus = "critical"
+    else if (certDays <= 30) certStatus = "warning"
+    else certStatus = "ok"
+  }
+
+  const newCtSubdomains = (snapshot?.change_details || []).filter(
+    (change) => change.type === "new_ct_subdomain"
+  ).length
+
   const buckets = Array.isArray(storage?.buckets) ? storage.buckets : []
   const sitemapURLs = Array.isArray(crawl?.sitemap_urls) ? crawl.sitemap_urls : []
   const robots = crawl?.robots as Record<string, unknown> | undefined
@@ -142,8 +163,12 @@ export function extractIntel(
         ? sitemapURLs.length + disallow.length
         : undefined,
     ctSubdomainCount: ctSubdomains?.length,
+    newCtSubdomainCount: newCtSubdomains > 0 ? newCtSubdomains : undefined,
     tracerouteHopCount:
       tracerouteHops.length > 0 ? tracerouteHops.length : undefined,
+    certDaysRemaining: certDays,
+    certExpired,
+    certStatus,
     errorCount: raw?.errors?.length ?? 0,
     changeCount: snapshot?.changes?.length ?? 0,
   }
@@ -205,6 +230,10 @@ export const TLS_FIELDS = [
   "ip_sans",
   "not_before",
   "not_after",
+  "days_remaining",
+  "expired",
+  "chain_length",
+  "chain",
   "version",
   "signature_algorithm",
   "cipher_suite",
@@ -248,4 +277,7 @@ export const DNS_FIELDS = [
   "TXT",
   "CNAME",
   "DMARC",
+  "SPF",
+  "DKIM",
+  "DMARC_PARSED",
 ] as const

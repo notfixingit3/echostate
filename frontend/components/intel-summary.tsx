@@ -102,8 +102,26 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       <StatCard label="Registrar" value={intel.registrar} icon={GlobeIcon} />
       <StatCard
         label="Cert expires"
-        value={intel.certExpires}
+        value={
+          intel.certDaysRemaining !== undefined
+            ? `${intel.certExpires || "—"} (${intel.certDaysRemaining}d)`
+            : intel.certExpires
+        }
         icon={ShieldIcon}
+        badge={
+          intel.certStatus === "critical"
+            ? "Expired / critical"
+            : intel.certStatus === "warning"
+              ? "Expiring soon"
+              : undefined
+        }
+        className={
+          intel.certStatus === "critical"
+            ? "border-destructive/40"
+            : intel.certStatus === "warning"
+              ? "border-amber-500/40"
+              : undefined
+        }
       />
       <StatCard
         label="Cert issuer"
@@ -151,6 +169,11 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
           label="CT subdomains"
           value={String(intel.ctSubdomainCount)}
           icon={ScrollTextIcon}
+          badge={
+            intel.newCtSubdomainCount
+              ? `${intel.newCtSubdomainCount} new`
+              : undefined
+          }
         />
       ) : null}
       <StatCard

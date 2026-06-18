@@ -193,6 +193,7 @@ export function TargetDetailView({
             targetId={target.id}
             raw={latest.raw_data}
             changes={latest.changes}
+            changeDetails={latest.change_details}
             pwhois={latest.pwhois_data}
           />
         </>
