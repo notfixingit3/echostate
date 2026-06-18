@@ -153,11 +153,12 @@ type ReportSummary struct {
 }
 
 type Webhook struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Type      string    `json:"type"`
-	URL       string    `json:"url"`
-	Enabled   bool      `json:"enabled"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID      `json:"id"`
+	Name      string         `json:"name"`
+	Type      string         `json:"type"`
+	URL       string         `json:"url"`
+	Config    map[string]any `json:"config,omitempty"`
+	Enabled   bool           `json:"enabled"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 }

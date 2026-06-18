@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Pushover notification integration with configurable priority, sound, device, title, and emergency retry/expire settings (documented in Settings UI).
+
 ## [0.0.1-beta.2] - 2026-06-17
 
 ### Changed

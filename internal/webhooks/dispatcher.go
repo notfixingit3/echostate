@@ -17,7 +17,7 @@ func Dispatch(ctx context.Context, database *db.DB, targetHost string, snapshot 
 		return
 	}
 
-	rows, err := database.Pool.Query(ctx, `SELECT id, name, type, url, enabled FROM webhooks WHERE enabled = true`)
+	rows, err := database.Pool.Query(ctx, `SELECT id, name, type, url, config, enabled FROM webhooks WHERE enabled = true`)
 	if err != nil {
 		return
 	}
@@ -26,7 +26,11 @@ func Dispatch(ctx context.Context, database *db.DB, targetHost string, snapshot 
 	var hooks []models.Webhook
 	for rows.Next() {
 		var w models.Webhook
-		if err := rows.Scan(&w.ID, &w.Name, &w.Type, &w.URL, &w.Enabled); err == nil {
+		var configBytes []byte
+		if err := rows.Scan(&w.ID, &w.Name, &w.Type, &w.URL, &configBytes, &w.Enabled); err == nil {
+			if len(configBytes) > 0 {
+				_ = json.Unmarshal(configBytes, &w.Config)
+			}
 			hooks = append(hooks, w)
 		}
 	}
@@ -56,6 +60,9 @@ func sendWebhook(hook models.Webhook, host, changes, link string) {
 	msg := fmt.Sprintf("🚨 **EchoState Alert**\nChanges detected for **%s**\n\n```\n%s```\n[View Details](%s)", host, changes, link)
 
 	switch hook.Type {
+	case "pushover":
+		_ = sendPushover(hook, host, changes, link)
+		return
 	case "slack":
 		p := map[string]string{"text": msg}
 		payload, err = json.Marshal(p)

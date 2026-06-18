@@ -116,6 +116,8 @@ func Migrate(db *DB) error {
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 
+		ALTER TABLE webhooks ADD COLUMN IF NOT EXISTS config JSONB NOT NULL DEFAULT '{}';
+
 		ALTER TABLE targets ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
 		CREATE INDEX IF NOT EXISTS idx_targets_tags ON targets USING GIN (tags);
 
