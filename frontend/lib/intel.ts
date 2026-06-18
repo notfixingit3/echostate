@@ -8,6 +8,9 @@ export interface RawIntel {
   web?: Record<string, unknown>
   tls?: Record<string, unknown>
   dns?: Record<string, unknown>
+  favicon?: Record<string, unknown>
+  crawl?: Record<string, unknown>
+  storage?: Record<string, unknown>
   errors?: string[]
 }
 
@@ -34,6 +37,11 @@ export interface IntelHighlights {
   certExpires?: string
   certIssuer?: string
   dnsARecords?: string[]
+  faviconMMH3?: string
+  jarm?: string
+  hijackRisk?: string
+  bucketCount?: number
+  crawlPathCount?: number
   errorCount: number
   changeCount: number
 }
@@ -80,6 +88,14 @@ export function extractIntel(
   const web = raw?.web
   const tls = raw?.tls
   const dns = raw?.dns
+  const favicon = raw?.favicon
+  const crawl = raw?.crawl
+  const storage = raw?.storage
+  const routing = asn?.routing as Record<string, unknown> | undefined
+  const buckets = Array.isArray(storage?.buckets) ? storage.buckets : []
+  const sitemapURLs = Array.isArray(crawl?.sitemap_urls) ? crawl.sitemap_urls : []
+  const robots = crawl?.robots as Record<string, unknown> | undefined
+  const disallow = Array.isArray(robots?.disallow) ? robots.disallow : []
 
   return {
     host: asString(raw?.host) || "Unknown host",
@@ -108,6 +124,14 @@ export function extractIntel(
     certExpires: formatDateField(tls?.not_after),
     certIssuer: asString(tls?.issuer),
     dnsARecords: asStringArray(dns?.A),
+    faviconMMH3: asString(favicon?.mmh3) || asString(favicon?.shodan),
+    jarm: asString(tls?.jarm),
+    hijackRisk: asString(routing?.hijack_risk),
+    bucketCount: buckets.length > 0 ? buckets.length : undefined,
+    crawlPathCount:
+      sitemapURLs.length + disallow.length > 0
+        ? sitemapURLs.length + disallow.length
+        : undefined,
     errorCount: raw?.errors?.length ?? 0,
     changeCount: snapshot?.changes?.length ?? 0,
   }
@@ -148,6 +172,7 @@ export const ASN_FIELDS = [
   "country",
   "registry",
   "allocated",
+  "routing",
 ] as const
 
 export const WEB_FIELDS = ["title", "url", "copyrights", "tech_stack", "security_headers", "headers"] as const
@@ -169,7 +194,20 @@ export const TLS_FIELDS = [
   "not_after",
   "version",
   "signature_algorithm",
+  "cipher_suite",
+  "jarm",
 ] as const
+
+export const FAVICON_FIELDS = ["url", "mmh3", "shodan", "sha256", "size"] as const
+
+export const CRAWL_FIELDS = [
+  "robots",
+  "sitemap_urls",
+  "sitemap_url_count",
+  "errors",
+] as const
+
+export const STORAGE_FIELDS = ["buckets"] as const
 
 export const DNS_FIELDS = [
   "A",

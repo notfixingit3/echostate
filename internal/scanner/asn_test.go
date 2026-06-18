@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"reflect"
 	"testing"
 )
 
@@ -102,6 +103,16 @@ func TestASNParse(t *testing.T) {
 			return nil, errors.New("unexpected query: " + name)
 		}
 
+		origRouting := enrichRoutingFunc
+		enrichRoutingFunc = func(ctx context.Context, ip, originASN, prefix string) (map[string]any, error) {
+			return map[string]any{
+				"hijack_risk":     "low",
+				"visible_origins": []string{"15169"},
+				"notes":           []string{"mock routing"},
+			}, nil
+		}
+		defer func() { enrichRoutingFunc = origRouting }()
+
 		key, value, err := gatherASN(context.Background(), "dns.google")
 		if err != nil {
 			t.Fatalf("gatherASN error: %v", err)
@@ -117,6 +128,11 @@ func TestASNParse(t *testing.T) {
 			"allocated": "1992-12-01",
 			"as_name":   "GOOGLE, US",
 			"ip":        "8.8.8.8",
+			"routing": map[string]any{
+				"hijack_risk":     "low",
+				"visible_origins": []string{"15169"},
+				"notes":           []string{"mock routing"},
+			},
 		}
 		assertMapEqual(t, value, want)
 	})
@@ -191,7 +207,7 @@ func assertMapEqual(t *testing.T, got, want map[string]any) {
 			t.Errorf("missing key %q", k)
 			continue
 		}
-		if gotV != wantV {
+		if !reflect.DeepEqual(gotV, wantV) {
 			t.Errorf("%q = %v, want %v", k, gotV, wantV)
 		}
 	}

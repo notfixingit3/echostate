@@ -12,6 +12,10 @@ import {
   GitCompareIcon,
   ShieldIcon,
   DatabaseIcon,
+  ImageIcon,
+  FingerprintIcon,
+  CloudIcon,
+  FolderSearchIcon,
 } from "lucide-react"
 
 function StatCard({
@@ -115,6 +119,32 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         icon={DatabaseIcon}
         mono
       />
+      <StatCard
+        label="Favicon MMH3"
+        value={intel.faviconMMH3}
+        icon={ImageIcon}
+        mono
+      />
+      <StatCard label="JARM" value={intel.jarm} icon={FingerprintIcon} mono />
+      <StatCard
+        label="BGP hijack risk"
+        value={intel.hijackRisk}
+        icon={ShieldIcon}
+      />
+      {intel.bucketCount ? (
+        <StatCard
+          label="Cloud buckets"
+          value={String(intel.bucketCount)}
+          icon={CloudIcon}
+        />
+      ) : null}
+      {intel.crawlPathCount ? (
+        <StatCard
+          label="Crawl paths"
+          value={String(intel.crawlPathCount)}
+          icon={FolderSearchIcon}
+        />
+      ) : null}
       <StatCard
         label="Submitter IP"
         value={intel.clientIp}

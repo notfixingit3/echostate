@@ -33,6 +33,9 @@ func NewScanner(browserWSURL string) *Scanner {
 			gatherASN,
 			gatherTLS,
 			gatherDNS,
+			gatherFavicon,
+			gatherCrawl,
+			gatherStorage,
 			newWebGatherer(browserWSURL),
 		},
 	}
@@ -50,6 +53,9 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 		Web:       make(map[string]any),
 		TLS:       make(map[string]any),
 		DNS:       make(map[string]any),
+		Favicon:   make(map[string]any),
+		Crawl:     make(map[string]any),
+		Storage:   make(map[string]any),
 		Errors:    []string{},
 	}
 
@@ -61,7 +67,7 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 		go func(gatherer Gatherer) {
 			defer wg.Done()
 
-			gatherCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			gatherCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
 
 			key, value, err := gatherer(gatherCtx, normalized)
@@ -69,42 +75,62 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 				mu.Lock()
 				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", key, err))
 				if len(value) > 0 {
-					switch key {
-					case "whois":
-						mergeMap(result.WHOIS, value)
-					case "asn":
-						mergeMap(result.ASN, value)
-					case "web":
-						mergeMap(result.Web, value)
-					case "tls":
-						mergeMap(result.TLS, value)
-					case "dns":
-						mergeMap(result.DNS, value)
-					}
+					mergeGathererResult(result, key, value)
 				}
 				mu.Unlock()
 				return
 			}
 
 			mu.Lock()
-			switch key {
-			case "whois":
-				result.WHOIS = value
-			case "asn":
-				result.ASN = value
-			case "web":
-				result.Web = value
-			case "tls":
-				result.TLS = value
-			case "dns":
-				result.DNS = value
-			}
+			assignGathererResult(result, key, value)
 			mu.Unlock()
 		}(g)
 	}
 
 	wg.Wait()
 	return result, nil
+}
+
+func assignGathererResult(result *models.ScanResult, key string, value map[string]any) {
+	switch key {
+	case "whois":
+		result.WHOIS = value
+	case "asn":
+		result.ASN = value
+	case "web":
+		result.Web = value
+	case "tls":
+		result.TLS = value
+	case "dns":
+		result.DNS = value
+	case "favicon":
+		result.Favicon = value
+	case "crawl":
+		result.Crawl = value
+	case "storage":
+		result.Storage = value
+	}
+}
+
+func mergeGathererResult(result *models.ScanResult, key string, value map[string]any) {
+	switch key {
+	case "whois":
+		mergeMap(result.WHOIS, value)
+	case "asn":
+		mergeMap(result.ASN, value)
+	case "web":
+		mergeMap(result.Web, value)
+	case "tls":
+		mergeMap(result.TLS, value)
+	case "dns":
+		mergeMap(result.DNS, value)
+	case "favicon":
+		mergeMap(result.Favicon, value)
+	case "crawl":
+		mergeMap(result.Crawl, value)
+	case "storage":
+		mergeMap(result.Storage, value)
+	}
 }
 
 func mergeMap(dst, src map[string]any) {
@@ -123,5 +149,3 @@ func Hash(result *models.ScanResult) (string, error) {
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:]), nil
 }
-
-
