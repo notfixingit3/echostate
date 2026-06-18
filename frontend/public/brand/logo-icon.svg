@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="EchoState">
+  <circle cx="24" cy="24" r="3.25" fill="#0d9488"/>
+  <circle cx="24" cy="24" r="7.5" stroke="#0d9488" stroke-width="2" opacity="0.95"/>
+  <circle cx="24" cy="24" r="12.5" stroke="#0d9488" stroke-width="1.75" opacity="0.65"/>
+  <circle cx="24" cy="24" r="17.5" stroke="#0d9488" stroke-width="1.25" opacity="0.4"/>
+  <path d="M24 6.5 A17.5 17.5 0 0 1 41.5 24" stroke="#0d9488" stroke-width="2.25" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="39" cy="21" r="1.75" fill="#0d9488" opacity="0.85"/>
+</svg>

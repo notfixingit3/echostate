@@ -1,5 +1,4 @@
-import Image from "next/image"
-
+import { BrandLogo } from "@/components/brand-logo"
 import { ScanForm } from "@/components/scan-form"
 import { Badge } from "@/components/ui/badge"
 import { GlobeIcon, NetworkIcon, MonitorIcon } from "lucide-react"
@@ -26,14 +25,7 @@ export default function Page() {
   return (
     <section className="container flex flex-1 flex-col items-center gap-12 py-12 md:gap-16 md:py-20">
       <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
-        <Image
-          src="/logo-banner.png"
-          alt="EchoState"
-          width={320}
-          height={80}
-          className="h-16 w-auto md:h-20 dark:invert"
-          priority
-        />
+        <BrandLogo variant="banner" className="h-16 w-auto md:h-20" />
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Badge variant="secondary" className="font-mono text-xs">
             Passive recon

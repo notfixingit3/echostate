@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- New EchoState brand identity — radar echo mark with theme-aware SVG logo (light/dark), refreshed favicon, and updated README assets.
+
 ### Added
 
 - DNS gatherer — A/AAAA, MX, NS, TXT, CNAME, and DMARC records via configurable resolvers.
