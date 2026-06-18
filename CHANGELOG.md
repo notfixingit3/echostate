@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.15] - 2026-06-17
+
+### Added
+
+- **Temporal graph topology** — versioned Neo4j edges with `snapshot_id`; history slider reloads the canvas for all 7 views when a target is selected.
+- **Graph compare modes** — `vs previous` and `vs latest` toggles with green/red topology diff overlay on nodes and edges.
+- **Graph canvas controls** — zoom, fit, reset layout, drag-to-pin nodes, neighbor highlighting, and inspector cross-view jumps.
+- **Contextual tooltips** — dense `HelpTip` icons across graph, scan form, intel summary, and page headers (`help-copy.ts` registry).
+
+### Changed
+
+- `GET /api/graph` accepts `snapshot_id`, `compare_snapshot_id`, and `compare_mode`; returns `topology_diff`.
+- Route diff API supports arbitrary snapshot pairs for BGP/traceroute narrative panels.
+
 ## [0.0.1-beta.14] - 2026-06-17
 
 ### Added
@@ -167,6 +181,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.15]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.15
 [0.0.1-beta.14]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.14
 [0.0.1-beta.13]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.13
 [0.0.1-beta.12]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.12

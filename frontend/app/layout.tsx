@@ -2,6 +2,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono, Sora } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { Nav } from "@/components/nav"
 import { Footer } from "@/components/footer"
 import { cn } from "@/lib/utils"
@@ -41,11 +42,13 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <div className="flex min-h-svh flex-col">
-            <Nav />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <TooltipProvider>
+            <div className="flex min-h-svh flex-col">
+              <Nav />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

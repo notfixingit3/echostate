@@ -65,7 +65,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 |---|------|--------|-------|
 | 12 | BGP hijack risk (RIPEstat) | ✅ Done | `hijack_risk` heuristic + ASN tab; *future:* path profiling |
 | — | Custom alerting & rules engine | ✅ Done | Snapshot diff rules, graph drift (G13), webhook filters, per-integration targeting |
-| — | Graph UX overhaul | ❌ Later | Maltego-style canvas, node inspector, time slider, cross-view linking — beyond current 7-tab force graph |
+| — | Graph UX overhaul | ✅ Done | Temporal topology slider, compare modes, canvas toolbar, cross-view inspector, dense tooltips |
 
 ---
 
@@ -104,8 +104,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 41 items (core + graph + platform batch) |
+| **Done** | 42 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
-| **Later / platform** | 3 (graph UX overhaul, agents, OIDC/RBAC) |
+| **Later / platform** | 2 (agents, OIDC/RBAC) |
 
-**Suggested next picks:** Graph UX overhaul (time-slider topology) → distributed agents → OIDC/RBAC
+**Suggested next picks:** OIDC/RBAC → distributed agents → graph transforms / PNG export

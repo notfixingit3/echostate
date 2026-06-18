@@ -26,7 +26,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import { GraphHistoryBar } from "@/components/graph-history-bar"
+import {
+  GraphHistoryBar,
+  type GraphCompareMode,
+} from "@/components/graph-history-bar"
+import { HelpTip } from "@/components/help-tip"
 import { GraphNodeInspector } from "@/components/graph-node-inspector"
 import { HopGeoMap } from "@/components/hop-geo-map"
 import { fetchApi } from "@/lib/api"
@@ -41,7 +45,10 @@ import type {
 import {
   AlertCircleIcon,
   ArrowRightIcon,
+  Maximize2Icon,
+  MinusIcon,
   NetworkIcon,
+  PlusIcon,
   RefreshCwIcon,
   RouteIcon,
   ScrollTextIcon,
@@ -166,6 +173,11 @@ type ForceLink = {
 
 export function GraphView() {
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const graphApiRef = React.useRef<{
+    zoomToFit?: (ms?: number, padding?: number) => void
+    zoom?: (k?: number, durationMs?: number) => void
+    d3ReheatSimulation?: () => void
+  } | null>(null)
   const [size, setSize] = React.useState({ width: 800, height: 520 })
   const [graph, setGraph] = React.useState<GraphResponse | null>(null)
   const [targets, setTargets] = React.useState<TargetSummary[]>([])
@@ -175,12 +187,19 @@ export function GraphView() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [vantageFilter, setVantageFilter] = React.useState("all")
+  const [snapshotId, setSnapshotId] = React.useState<string | undefined>()
+  const [compareSnapshotId, setCompareSnapshotId] = React.useState<string | undefined>()
+  const [compareMode, setCompareMode] = React.useState<GraphCompareMode>("previous")
+  const [pinnedNodes, setPinnedNodes] = React.useState<Record<string, { x: number; y: number }>>({})
 
   const loadGraph = React.useCallback(
     async (
       targetId?: string,
       view: GraphViewMode = "infra",
-      preserveSelection = false
+      preserveSelection = false,
+      nextSnapshotId?: string,
+      nextCompareSnapshotId?: string,
+      nextCompareMode?: GraphCompareMode
     ) => {
       setLoading(true)
       setError(null)
@@ -193,6 +212,9 @@ export function GraphView() {
         const params = new URLSearchParams()
         if (targetId) params.set("target_id", targetId)
         if (view !== "infra") params.set("view", view)
+        if (nextSnapshotId) params.set("snapshot_id", nextSnapshotId)
+        if (nextCompareSnapshotId) params.set("compare_snapshot_id", nextCompareSnapshotId)
+        if (nextCompareMode) params.set("compare_mode", nextCompareMode)
         const query = params.toString() ? `?${params.toString()}` : ""
         const data = await fetchApi<GraphResponse>(`/api/graph${query}`)
         setGraph(data)
@@ -208,6 +230,28 @@ export function GraphView() {
       }
     },
     [selected]
+  )
+
+  const handleSnapshotChange = React.useCallback(
+    (
+      nextSnapshotId?: string,
+      nextCompareSnapshotId?: string,
+      mode: GraphCompareMode = "previous"
+    ) => {
+      setSnapshotId(nextSnapshotId)
+      setCompareSnapshotId(nextCompareSnapshotId)
+      setCompareMode(mode)
+      if (targetFilter === "all") return
+      void loadGraph(
+        targetFilter,
+        viewMode,
+        true,
+        nextSnapshotId,
+        nextCompareSnapshotId,
+        mode
+      )
+    },
+    [targetFilter, viewMode, loadGraph]
   )
 
   React.useEffect(() => {
@@ -245,36 +289,62 @@ export function GraphView() {
     const edges = graph.edges ?? []
 
     return {
-      nodes: nodes.map((node) => ({
-        ...node,
-        color: legend[node.type] ?? "#475569",
-      })),
+      nodes: nodes.map((node) => {
+        const pin = pinnedNodes[node.id]
+        return {
+          ...node,
+          color: legend[node.type] ?? "#475569",
+          ...(pin ? { fx: pin.x, fy: pin.y } : {}),
+        }
+      }),
       links: edges.map((edge) => ({
+        id: edge.id,
         source: edge.source,
         target: edge.target,
         label: edge.label,
         color: edge.color,
       })),
     }
-  }, [graph, legend])
+  }, [graph, legend, pinnedNodes])
 
   function handleFilterChange(value: string) {
     setTargetFilter(value)
-    void loadGraph(value === "all" ? undefined : value, viewMode)
+    if (value === "all") {
+      setSnapshotId(undefined)
+      setCompareSnapshotId(undefined)
+      void loadGraph(undefined, viewMode)
+      return
+    }
+    void loadGraph(value, viewMode, false, snapshotId, compareSnapshotId, compareMode)
   }
 
   function handleViewChange(value: string) {
     const next = (value as GraphViewMode) || "infra"
     setViewMode(next)
-    void loadGraph(targetFilter === "all" ? undefined : targetFilter, next)
+    void loadGraph(
+      targetFilter === "all" ? undefined : targetFilter,
+      next,
+      true,
+      snapshotId,
+      compareSnapshotId,
+      compareMode
+    )
   }
 
   function refreshGraph() {
     void loadGraph(
       targetFilter === "all" ? undefined : targetFilter,
       viewMode,
-      true
+      true,
+      snapshotId,
+      compareSnapshotId,
+      compareMode
     )
+  }
+
+  function resetLayout() {
+    setPinnedNodes({})
+    graphApiRef.current?.d3ReheatSimulation?.()
   }
 
   const filterLabel =
@@ -317,6 +387,20 @@ export function GraphView() {
   const vantageDivergence = graph?.vantage_divergence ?? []
   const peeringIX = graph?.peering_ix ?? []
   const intelEvents = graph?.events ?? []
+  const topologyDiff = graph?.topology_diff
+  const addedNodeIds = new Set(topologyDiff?.added_node_ids ?? [])
+  const removedNodeIds = new Set(topologyDiff?.removed_node_ids ?? [])
+  const addedEdgeIds = new Set(topologyDiff?.added_edge_ids ?? [])
+  const removedEdgeIds = new Set(topologyDiff?.removed_edge_ids ?? [])
+  const neighborIds = React.useMemo(() => {
+    if (!selected || !graph?.edges) return new Set<string>()
+    const ids = new Set<string>()
+    for (const edge of graph.edges) {
+      if (edge.source === selected.id) ids.add(edge.target)
+      if (edge.target === selected.id) ids.add(edge.source)
+    }
+    return ids
+  }, [selected, graph?.edges])
   const showRouteDiff =
     targetFilter !== "all" &&
     routeDiff?.has_previous &&
@@ -426,8 +510,11 @@ export function GraphView() {
         {targetFilter !== "all" ? (
           <GraphHistoryBar
             targetId={targetFilter}
-            viewMode={viewMode}
             routeDiff={routeDiff}
+            snapshotId={snapshotId}
+            compareMode={compareMode}
+            onCompareModeChange={setCompareMode}
+            onSnapshotChange={handleSnapshotChange}
           />
         ) : null}
 
@@ -483,28 +570,72 @@ export function GraphView() {
                         <p>Run a scan to populate Neo4j relationships.</p>
                       </div>
                     ) : mode === viewMode ? (
-                      <ForceGraph2D
-                        width={size.width}
-                        height={size.height}
-                        graphData={forceData}
-                        nodeLabel="label"
-                        nodeAutoColorBy="type"
-                        nodeColor={(node) => graphNodeColor(node as ForceNode)}
-                        nodeVal={(node) =>
-                          graphNodeSize(node as ForceNode, selected?.id)
-                        }
-                        linkLabel="label"
-                        linkDirectionalArrowLength={3.5}
-                        linkDirectionalArrowRelPos={1}
-                        linkColor={(link) =>
-                          (link as ForceLink).color ??
-                          "rgba(100, 116, 139, 0.45)"
-                        }
-                        onNodeClick={(node) => setSelected(node as GraphNode)}
-                        cooldownTicks={80}
-                        d3AlphaDecay={0.03}
-                        d3VelocityDecay={0.35}
-                      />
+                      <>
+                        <div className="absolute right-3 top-3 z-10 flex gap-1">
+                          <Button type="button" variant="secondary" size="icon-sm" onClick={() => graphApiRef.current?.zoom?.(1.4)} aria-label="Zoom in">
+                            <PlusIcon />
+                          </Button>
+                          <Button type="button" variant="secondary" size="icon-sm" onClick={() => graphApiRef.current?.zoom?.(0.7)} aria-label="Zoom out">
+                            <MinusIcon />
+                          </Button>
+                          <Button type="button" variant="secondary" size="icon-sm" onClick={() => graphApiRef.current?.zoomToFit?.(400)} aria-label="Fit graph">
+                            <Maximize2Icon />
+                          </Button>
+                          <Button type="button" variant="secondary" size="sm" onClick={resetLayout}>
+                            Reset
+                          </Button>
+                        </div>
+                        <ForceGraph2D
+                          ref={graphApiRef as never}
+                          width={size.width}
+                          height={size.height}
+                          graphData={forceData}
+                          enableZoomInteraction
+                          enablePanInteraction
+                          nodeLabel={(node) => {
+                            const n = node as ForceNode
+                            return `${n.type}: ${n.label}`
+                          }}
+                          nodeAutoColorBy="type"
+                          nodeColor={(node) => {
+                            const n = node as ForceNode
+                            if (removedNodeIds.has(n.id)) return "#ef4444"
+                            if (addedNodeIds.has(n.id)) return "#22c55e"
+                            if (selected && n.id !== selected.id && !neighborIds.has(n.id)) {
+                              return "rgba(148, 163, 184, 0.35)"
+                            }
+                            return graphNodeColor(n)
+                          }}
+                          nodeVal={(node) =>
+                            graphNodeSize(node as ForceNode, selected?.id)
+                          }
+                          linkLabel="label"
+                          linkDirectionalArrowLength={3.5}
+                          linkDirectionalArrowRelPos={1}
+                          linkColor={(link) => {
+                            const l = link as ForceLink & { id?: string }
+                            const edgeId = l.id ?? `${l.source}|${l.label}|${l.target}`
+                            if (removedEdgeIds.has(edgeId)) return "#ef4444"
+                            if (addedEdgeIds.has(edgeId)) return "#22c55e"
+                            return l.color ?? "rgba(100, 116, 139, 0.45)"
+                          }}
+                          onNodeClick={(node) => setSelected(node as GraphNode)}
+                          onNodeDragEnd={(node) => {
+                            const n = node as ForceNode & { x?: number; y?: number }
+                            if (typeof n.x !== "number" || typeof n.y !== "number") return
+                            const x = n.x
+                            const y = n.y
+                            setPinnedNodes((prev) => ({
+                              ...prev,
+                              [n.id]: { x, y },
+                            }))
+                          }}
+
+                          cooldownTicks={80}
+                          d3AlphaDecay={0.03}
+                          d3VelocityDecay={0.35}
+                        />
+                      </>
                     ) : (
                       <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
                         Switch to this tab to render the graph.
@@ -598,6 +729,7 @@ export function GraphView() {
                         edges={graph?.edges ?? []}
                         onSelectNode={setSelected}
                         onFilterTarget={(targetId) => handleFilterChange(targetId)}
+                        onJumpToView={handleViewChange}
                       />
                     ) : (
                       <GraphNodeInspector

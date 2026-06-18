@@ -6,6 +6,7 @@ export default function SnapshotsPage() {
     <section className="container flex flex-1 flex-col gap-8 py-8 md:py-10">
       <PageHeader
         title="Snapshots"
+        helpId="page.snapshots"
         description="Browse reconnaissance snapshots with ASN, web title, and submitter enrichment."
       />
       <SnapshotsTable />

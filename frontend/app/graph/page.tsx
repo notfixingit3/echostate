@@ -6,6 +6,7 @@ export default function GraphPage() {
     <section className="container flex flex-1 flex-col gap-8 py-8 md:py-10">
       <PageHeader
         title="Graph"
+        helpId="page.graph"
         description="Interactive Neo4j maps for infrastructure clusters, BGP paths, traceroute geography, CT subdomains, DNS dependencies, and certificate SAN overlap."
       />
       <GraphView />

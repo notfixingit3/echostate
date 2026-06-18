@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
+import { LabelWithHelp } from "@/components/help-tip"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -174,7 +175,7 @@ export function ScanForm() {
       <form onSubmit={handleSubmit} className="scan-form flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="host" className="text-sm font-medium">
-            Host / IP / URL
+            <LabelWithHelp label="Host / IP / URL" helpId="scan.host" />
           </label>
           <Input
             id="host"

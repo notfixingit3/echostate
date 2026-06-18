@@ -26,6 +26,12 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 	session := c.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close(ctx)
 
+	meta := graphSyncMeta{
+		TargetID:   target.ID.String(),
+		SnapshotID: snapshot.ID.String(),
+		ScannedAt:  snapshot.ScannedAt.Unix(),
+	}
+
 	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		// Merge Target
 		targetQuery := `
@@ -66,12 +72,10 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 					MERGE (a:ASN {number: $asn})
 					WITH a
 					MATCH (t:Target {id: $target_id})
-					MERGE (t)-[:HOSTED_ON]->(a)
+					MERGE (t)-[r:HOSTED_ON]->(a)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
 				`
-				_, err = tx.Run(ctx, asnQuery, map[string]any{
-					"asn":       asnVal,
-					"target_id": target.ID.String(),
-				})
+				_, err = tx.Run(ctx, asnQuery, meta.with(map[string]any{"asn": asnVal}))
 				if err != nil {
 					return nil, err
 				}
@@ -85,12 +89,10 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 					MERGE (i:IP {address: $ip})
 					WITH i
 					MATCH (t:Target {id: $target_id})
-					MERGE (t)-[:RESOLVES_TO]->(i)
+					MERGE (t)-[r:RESOLVES_TO]->(i)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
 				`
-				_, err = tx.Run(ctx, ipQuery, map[string]any{
-					"ip":        ipVal,
-					"target_id": target.ID.String(),
-				})
+				_, err = tx.Run(ctx, ipQuery, meta.with(map[string]any{"ip": ipVal}))
 				if err != nil {
 					return nil, err
 				}
@@ -103,12 +105,10 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 					MERGE (j:JARM {hash: $hash})
 					WITH j
 					MATCH (t:Target {id: $target_id})
-					MERGE (t)-[:HAS_JARM]->(j)
+					MERGE (t)-[r:HAS_JARM]->(j)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
 				`
-				_, err = tx.Run(ctx, jarmQuery, map[string]any{
-					"hash":      jarm,
-					"target_id": target.ID.String(),
-				})
+				_, err = tx.Run(ctx, jarmQuery, meta.with(map[string]any{"hash": jarm}))
 				if err != nil {
 					return nil, err
 				}
@@ -119,12 +119,10 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 					MERGE (c:CertIssuer {name: $name})
 					WITH c
 					MATCH (t:Target {id: $target_id})
-					MERGE (t)-[:SIGNED_BY]->(c)
+					MERGE (t)-[r:SIGNED_BY]->(c)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
 				`
-				_, err = tx.Run(ctx, issuerQuery, map[string]any{
-					"name":      issuer,
-					"target_id": target.ID.String(),
-				})
+				_, err = tx.Run(ctx, issuerQuery, meta.with(map[string]any{"name": issuer}))
 				if err != nil {
 					return nil, err
 				}
@@ -137,34 +135,32 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 					MERGE (f:Favicon {mmh3: $mmh3})
 					WITH f
 					MATCH (t:Target {id: $target_id})
-					MERGE (t)-[:HAS_FAVICON]->(f)
+					MERGE (t)-[r:HAS_FAVICON]->(f)
+					SET r.snapshot_id = $snapshot_id, r.scanned_at = $scanned_at
 				`
-				_, err = tx.Run(ctx, favQuery, map[string]any{
-					"mmh3":      mmh3,
-					"target_id": target.ID.String(),
-				})
+				_, err = tx.Run(ctx, favQuery, meta.with(map[string]any{"mmh3": mmh3}))
 				if err != nil {
 					return nil, err
 				}
 			}
 		}
 
-		if err = syncBGPGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+		if err = syncBGPGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}
-		if err = syncPeeringGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+		if err = syncPeeringGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}
-		if err = syncCTGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+		if err = syncCTGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}
-		if err = syncDNSGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+		if err = syncDNSGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}
-		if err = syncTracerouteGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+		if err = syncTracerouteGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}
-		if err = syncCertSANGraph(ctx, tx, target.ID.String(), snapshot.RawData); err != nil {
+		if err = syncCertSANGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}
 

@@ -1,3 +1,4 @@
+import { HelpTip } from "@/components/help-tip"
 import { Badge } from "@/components/ui/badge"
 import { CountryFlag } from "@/components/country-flag"
 import type { IntelHighlights } from "@/lib/intel"
@@ -28,6 +29,7 @@ function StatCard({
   mono = false,
   badge,
   className,
+  helpId,
 }: {
   label: string
   value?: string
@@ -35,6 +37,7 @@ function StatCard({
   mono?: boolean
   badge?: string
   className?: string
+  helpId?: string
 }) {
   return (
     <div
@@ -46,6 +49,7 @@ function StatCard({
       <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         <Icon className="size-3.5 shrink-0 text-primary/70" />
         {label}
+        {helpId ? <HelpTip id={helpId} /> : null}
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {badge ? (
@@ -103,6 +107,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       <StatCard label="Web title" value={intel.webTitle} icon={FileTextIcon} />
       <StatCard label="Registrar" value={intel.registrar} icon={GlobeIcon} />
       <StatCard
+        helpId="intel.cert_expires"
         label="Cert expires"
         value={
           intel.certDaysRemaining !== undefined
@@ -126,11 +131,13 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         }
       />
       <StatCard
+        helpId="intel.cert_issuer"
         label="Cert issuer"
         value={intel.certIssuer}
         icon={ShieldIcon}
       />
       <StatCard
+        helpId="intel.dns_a"
         label="DNS A records"
         value={
           intel.dnsARecords?.length
@@ -142,6 +149,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       />
       {intel.dnsSoaZone ? (
         <StatCard
+          helpId="intel.dns_soa"
           label="DNS SOA zone"
           value={
             intel.dnsSoaSerial
@@ -166,7 +174,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         icon={ImageIcon}
         mono
       />
-      <StatCard label="JARM" value={intel.jarm} icon={FingerprintIcon} mono />
+      <StatCard helpId="intel.jarm" label="JARM" value={intel.jarm} icon={FingerprintIcon} mono />
       <StatCard
         label="BGP hijack risk"
         value={intel.hijackRisk}

@@ -223,11 +223,24 @@ export interface GraphIntelEvent {
   source?: string
 }
 
+export interface GraphTopologyDiff {
+  added_node_ids?: string[]
+  removed_node_ids?: string[]
+  added_edge_ids?: string[]
+  removed_edge_ids?: string[]
+  changed?: boolean
+}
+
 export interface GraphResponse {
   view: string
   nodes: GraphNode[]
   edges: GraphEdge[]
   stats: Record<string, number>
+  snapshot_id?: string
+  scanned_at?: number
+  compare_snapshot_id?: string
+  compare_mode?: "previous" | "latest"
+  topology_diff?: GraphTopologyDiff
   events?: GraphIntelEvent[]
   paths?: GraphPath[]
   geo?: GraphGeoPoint[]

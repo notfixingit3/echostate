@@ -62,13 +62,18 @@ var graphViewEdgeTypes = map[string][]string{
 // GetGraph returns nodes and edges for the requested graph view. When targetID
 // is non-empty, only the subgraph connected to that target is returned.
 func (c *Neo4jClient) GetGraph(ctx context.Context, targetID, view string) (*models.GraphResponse, error) {
-	view = normalizeGraphView(view)
+	return c.GetGraphWithOpts(ctx, GraphQueryOpts{TargetID: targetID, View: view})
+}
+
+func (c *Neo4jClient) fetchGraph(ctx context.Context, opts GraphQueryOpts, snapshotID string) (*models.GraphResponse, error) {
+	view := normalizeGraphView(opts.View)
+	targetID := opts.TargetID
 
 	session := c.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
 	defer session.Close(ctx)
 
 	relTypes := graphViewEdgeTypes[view]
-	query, params := buildGraphQuery(view, targetID, relTypes)
+	query, params := buildGraphQuery(view, targetID, relTypes, snapshotID)
 
 	result, err := session.Run(ctx, query, params)
 	if err != nil {
@@ -83,7 +88,7 @@ func (c *Neo4jClient) GetGraph(ctx context.Context, targetID, view string) (*mod
 	nodeMap := make(map[string]models.GraphNode)
 	edges := make([]models.GraphEdge, 0)
 
-	for i, record := range records {
+	for _, record := range records {
 		aVal, _ := record.Get("a")
 		bVal, _ := record.Get("b")
 		relVal, _ := record.Get("rel")
@@ -110,7 +115,7 @@ func (c *Neo4jClient) GetGraph(ctx context.Context, targetID, view string) (*mod
 			relProps = props
 		}
 		edges = append(edges, models.GraphEdge{
-			ID:     fmt.Sprintf("edge-%d", i),
+			ID:     fmt.Sprintf("%s|%s|%s", source, rel, target),
 			Source: source,
 			Target: target,
 			Label:  rel,
@@ -134,7 +139,7 @@ func (c *Neo4jClient) GetGraph(ctx context.Context, targetID, view string) (*mod
 	}
 
 	if view == "traceroute" {
-		paths, err := c.getTraceroutePaths(ctx, targetID)
+		paths, err := c.getTraceroutePaths(ctx, targetID, snapshotID)
 		if err != nil {
 			return nil, err
 		}
@@ -158,7 +163,7 @@ func (c *Neo4jClient) GetGraph(ctx context.Context, targetID, view string) (*mod
 	}
 
 	if view == "peering" {
-		peeringIX, err := c.getPeeringIX(ctx, targetID)
+		peeringIX, err := c.getPeeringIX(ctx, targetID, snapshotID)
 		if err != nil {
 			return nil, err
 		}
@@ -166,7 +171,7 @@ func (c *Neo4jClient) GetGraph(ctx context.Context, targetID, view string) (*mod
 	}
 
 	if view == "bgp" {
-		asPaths, err := c.getBGPASPaths(ctx, targetID)
+		asPaths, err := c.getBGPASPaths(ctx, targetID, snapshotID)
 		if err != nil {
 			return nil, err
 		}
@@ -226,55 +231,97 @@ func normalizeGraphView(view string) string {
 	}
 }
 
-func buildGraphQuery(view, targetID string, relTypes []string) (string, map[string]any) {
+func buildGraphQuery(view, targetID string, relTypes []string, snapshotID string) (string, map[string]any) {
 	params := map[string]any{
 		"rel_types": relTypes,
 		"limit":     graphEdgeLimit,
 	}
 
+	latestDedup := `
+		WITH a, b, type(r) AS rel_type, r
+		ORDER BY coalesce(r.scanned_at, 0) DESC
+		WITH a, b, rel_type, head(collect(r)) AS r
+	`
+
+	if snapshotID != "" {
+		params["snapshot_id"] = snapshotID
+	}
+
 	if targetID != "" {
 		params["target_id"] = targetID
-		query := `
+		base := `
 			MATCH (t:Target {id: $target_id})
 			OPTIONAL MATCH (t)-[*0..3]-(n)
 			WITH collect(DISTINCT n) AS nodes
 			UNWIND nodes AS a
 			MATCH (a)-[r]->(b)
 			WHERE b IN nodes AND type(r) IN $rel_types
-			RETURN a, type(r) AS rel, b, properties(r) AS rel_props
-			LIMIT $limit
 		`
-		return query, params
+		if snapshotID != "" {
+			return base + ` AND r.snapshot_id = $snapshot_id
+				RETURN a, type(r) AS rel, b, properties(r) AS rel_props
+				LIMIT $limit
+			`, params
+		}
+		return base + latestDedup + `
+			RETURN a, rel_type AS rel, b, properties(r) AS rel_props
+			LIMIT $limit
+		`, params
 	}
 
-	query := `
+	base := `
 		MATCH (a)-[r]->(b)
 		WHERE type(r) IN $rel_types
-		RETURN a, type(r) AS rel, b, properties(r) AS rel_props
-		LIMIT $limit
 	`
-	return query, params
+	if snapshotID != "" {
+		return base + ` AND r.snapshot_id = $snapshot_id
+			RETURN a, type(r) AS rel, b, properties(r) AS rel_props
+			LIMIT $limit
+		`, params
+	}
+	return base + latestDedup + `
+		RETURN a, rel_type AS rel, b, properties(r) AS rel_props
+		LIMIT $limit
+	`, params
 }
 
-func (c *Neo4jClient) getTraceroutePaths(ctx context.Context, targetID string) ([]models.GraphPath, error) {
+func snapshotRelFilter(snapshotID string, alias string) string {
+	if snapshotID == "" {
+		return ""
+	}
+	return " AND " + alias + ".snapshot_id = $snapshot_id"
+}
+
+func (c *Neo4jClient) getTraceroutePaths(ctx context.Context, targetID, snapshotID string) ([]models.GraphPath, error) {
 	session := c.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
 	defer session.Close(ctx)
 
 	var query string
 	params := map[string]any{}
+	if snapshotID != "" {
+		params["snapshot_id"] = snapshotID
+	}
+	relFilter := snapshotRelFilter(snapshotID, "r")
+	hopFilter := ""
+	if snapshotID != "" {
+		hopFilter = " AND h.snapshot_id = $snapshot_id"
+	}
+
 	if targetID != "" {
+		params["target_id"] = targetID
 		query = `
 			MATCH (t:Target {id: $target_id})-[r:TRACEROUTE_HOP]->(h:Hop)
+			WHERE true` + relFilter + hopFilter + `
 			RETURN t.id AS target_id, t.host AS target_label, h.hop AS hop, h.ip AS ip,
 			       h.rtt_ms AS rtt_ms, h.timeout AS timeout, h.country AS country, h.city AS city,
 			       h.latitude AS latitude, h.longitude AS longitude, r.order AS ord,
 			       coalesce(h.vantage, 'local') AS vantage, h.vantage_label AS vantage_label
 			ORDER BY target_id, vantage, ord
 		`
-		params["target_id"] = targetID
 	} else {
 		query = `
 			MATCH (t:Target)-[r:TRACEROUTE_HOP]->(h:Hop)
+			WHERE true` + relFilter + hopFilter + `
 			RETURN t.id AS target_id, t.host AS target_label, h.hop AS hop, h.ip AS ip,
 			       h.rtt_ms AS rtt_ms, h.timeout AS timeout, h.country AS country, h.city AS city,
 			       h.latitude AS latitude, h.longitude AS longitude, r.order AS ord,
@@ -469,15 +516,21 @@ func compareTraceroutePaths(a, b []string) (onlyA, onlyB []string, divergesAt in
 	return onlyA, onlyB, divergesAt
 }
 
-func (c *Neo4jClient) getPeeringIX(ctx context.Context, targetID string) ([]models.GraphPeeringIX, error) {
+func (c *Neo4jClient) getPeeringIX(ctx context.Context, targetID, snapshotID string) ([]models.GraphPeeringIX, error) {
 	session := c.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
 	defer session.Close(ctx)
 
 	var query string
 	params := map[string]any{}
+	relFilter := snapshotRelFilter(snapshotID, "r")
+	hostFilter := snapshotRelFilter(snapshotID, "h")
+	if snapshotID != "" {
+		params["snapshot_id"] = snapshotID
+	}
 	if targetID != "" {
 		query = `
-			MATCH (t:Target {id: $target_id})-[:HOSTED_ON]->(a:ASN)-[r:PRESENT_AT_IX]->(x:IX)
+			MATCH (t:Target {id: $target_id})-[h:HOSTED_ON]->(a:ASN)-[r:PRESENT_AT_IX]->(x:IX)
+			WHERE true` + hostFilter + relFilter + `
 			RETURN t.id AS target_id, t.host AS target_label, a.number AS asn,
 			       toString(x.id) AS ix_id, x.name AS ix_name, x.country AS country, x.city AS city, r.speed AS speed
 			ORDER BY ix_name
@@ -485,7 +538,8 @@ func (c *Neo4jClient) getPeeringIX(ctx context.Context, targetID string) ([]mode
 		params["target_id"] = targetID
 	} else {
 		query = `
-			MATCH (t:Target)-[:HOSTED_ON]->(a:ASN)-[r:PRESENT_AT_IX]->(x:IX)
+			MATCH (t:Target)-[h:HOSTED_ON]->(a:ASN)-[r:PRESENT_AT_IX]->(x:IX)
+			WHERE true` + hostFilter + relFilter + `
 			RETURN t.id AS target_id, t.host AS target_label, a.number AS asn,
 			       toString(x.id) AS ix_id, x.name AS ix_name, x.country AS country, x.city AS city, r.speed AS speed
 			ORDER BY target_label, ix_name
@@ -703,19 +757,28 @@ func buildGeoPointsFromPaths(paths []models.GraphPath) []models.GraphGeoPoint {
 	return points
 }
 
-func (c *Neo4jClient) getBGPASPaths(ctx context.Context, targetID string) ([]models.GraphASPath, error) {
+func (c *Neo4jClient) getBGPASPaths(ctx context.Context, targetID, snapshotID string) ([]models.GraphASPath, error) {
 	session := c.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
 	defer session.Close(ctx)
 
 	var query string
 	params := map[string]any{}
+	relFilter := snapshotRelFilter(snapshotID, "r")
+	if snapshotID != "" {
+		params["snapshot_id"] = snapshotID
+	}
+	pathRelFilter := ""
+	if snapshotID != "" {
+		pathRelFilter = " AND rel.snapshot_id = $snapshot_id"
+	}
 	if targetID != "" {
 		query = `
 			MATCH (t:Target {id: $target_id})-[r:HAS_AS_PATH]->(start:ASN)
+			WHERE true` + relFilter + `
 			OPTIONAL MATCH (t)-[:IN_PREFIX]->(p:Prefix)
 			WITH t, r.path_index AS path_index, collect(DISTINCT p.cidr)[0] AS prefix, start
 			OPTIONAL MATCH path = (start)-[:AS_PATH_NEXT*0..20]->(end:ASN)
-			WHERE ALL(rel IN relationships(path) WHERE rel.target_id = $target_id AND rel.path_index = path_index)
+			WHERE ALL(rel IN relationships(path) WHERE rel.target_id = $target_id AND rel.path_index = path_index` + pathRelFilter + `)
 			WITH t, path_index, prefix, [node IN nodes(path) | node.number] AS asn_chain
 			RETURN t.id AS target_id, t.host AS target_label, prefix, path_index, asn_chain
 			ORDER BY path_index
@@ -724,7 +787,8 @@ func (c *Neo4jClient) getBGPASPaths(ctx context.Context, targetID string) ([]mod
 	} else {
 		query = `
 			MATCH (t:Target)-[r:HAS_AS_PATH]->(start:ASN)
-			OPTIONAL MATCH (t)-[:IN_PREFIX]->(p:Prefix)
+			WHERE true` + relFilter + `
+			OPTIONAL MATCH (t)-[ip:IN_PREFIX]->(p:Prefix)
 			WITH t, r.path_index AS path_index, collect(DISTINCT p.cidr)[0] AS prefix, start
 			OPTIONAL MATCH path = (start)-[:AS_PATH_NEXT*0..20]->(end:ASN)
 			WHERE ALL(rel IN relationships(path) WHERE rel.target_id = t.id AND rel.path_index = path_index)
@@ -862,7 +926,11 @@ func graphNodeID(nodeType string, props map[string]any) string {
 		if targetID == "" || hop <= 0 {
 			return ""
 		}
-		return fmt.Sprintf("hop:%s:%s:%d", targetID, vantage, hop)
+		snap := stringProp(props, "snapshot_id")
+		if snap == "" {
+			return fmt.Sprintf("hop:%s:%s:%d", targetID, vantage, hop)
+		}
+		return fmt.Sprintf("hop:%s:%s:%d:%s", targetID, vantage, hop, snap)
 	case "IX":
 		return "ix:" + stringProp(props, "id")
 	case "Subdomain":
