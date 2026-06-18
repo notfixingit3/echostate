@@ -845,13 +845,15 @@ export function GraphView() {
                               fy?: number
                             }
                             if (typeof n.x !== "number" || typeof n.y !== "number") return
+                            const x = n.x
+                            const y = n.y
                             // Library clears fx/fy after drag unless they were set before drag started.
                             // Re-pin on the live simulation node so it does not snap back on release.
-                            n.fx = n.x
-                            n.fy = n.y
+                            n.fx = x
+                            n.fy = y
                             setPinnedNodes((prev) => ({
                               ...prev,
-                              [n.id]: { x: n.x, y: n.y },
+                              [n.id]: { x, y },
                             }))
                           }}
 
