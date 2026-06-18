@@ -11,9 +11,12 @@ import (
 
 const defaultHTTPTimeout = 8 * time.Second
 
-func newHTTPClient() *http.Client {
+func newHTTPClient(timeout time.Duration) *http.Client {
+	if timeout <= 0 {
+		timeout = defaultHTTPTimeout
+	}
 	return &http.Client{
-		Timeout: defaultHTTPTimeout,
+		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return fmt.Errorf("too many redirects")
@@ -24,13 +27,17 @@ func newHTTPClient() *http.Client {
 }
 
 func httpGet(ctx context.Context, rawURL string, maxBytes int64) ([]byte, string, error) {
+	return httpGetTimeout(ctx, rawURL, maxBytes, defaultHTTPTimeout)
+}
+
+func httpGetTimeout(ctx context.Context, rawURL string, maxBytes int64, timeout time.Duration) ([]byte, string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, "", err
 	}
 	req.Header.Set("User-Agent", "EchoState/1.0 (+https://github.com/notfixingit3/echostate)")
 
-	resp, err := newHTTPClient().Do(req)
+	resp, err := newHTTPClient(timeout).Do(req)
 	if err != nil {
 		return nil, "", err
 	}

@@ -24,7 +24,8 @@ var (
 	lookupTXTFunc = func(ctx context.Context, resolver *net.Resolver, name string) ([]string, error) {
 		return resolver.LookupTXT(ctx, name)
 	}
-	enrichRoutingFunc = enrichRouting
+	enrichRoutingFunc  = enrichRouting
+	enrichPeeringDBFunc = enrichPeeringDB
 )
 
 // gatherASN performs a passive ASN/BGP lookup for host using Team Cymru's
@@ -85,6 +86,10 @@ func gatherASN(ctx context.Context, host string) (string, map[string]any, error)
 			"hijack_risk": "unknown",
 			"notes":       []string{err.Error()},
 		}
+	}
+
+	if peering, err := enrichPeeringDBFunc(ctx, fmt.Sprint(origin["asn"])); err == nil {
+		origin["peeringdb"] = peering
 	}
 
 	return "asn", origin, nil

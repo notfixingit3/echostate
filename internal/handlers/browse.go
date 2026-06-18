@@ -538,3 +538,96 @@ func (h *Handler) getSnapshotDiff(c *gin.Context) {
 	})
 }
 
+func (h *Handler) listTargetScreenshots(c *gin.Context) {
+	targetID, ok := h.parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	page, limit, ok := parseBrowsePagination(c)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	exists, err := h.targetExists(ctx, targetID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify target"})
+		return
+	}
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "target not found"})
+		return
+	}
+
+	var total int
+	err = h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM snapshots
+		WHERE target_id = $1
+		  AND (
+		    raw_data->'screenshot'->>'thumbnail' IS NOT NULL
+		    OR raw_data->'screenshot'->>'error' IS NOT NULL
+		  )
+	`, targetID).Scan(&total)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count screenshots"})
+		return
+	}
+
+	rows, err := h.db.Pool.Query(ctx, `
+		SELECT s.id, s.scanned_at,
+			COALESCE(s.raw_data->'screenshot'->>'url', '') AS url,
+			COALESCE(s.raw_data->'screenshot'->>'thumbnail', '') AS thumbnail,
+			COALESCE(s.raw_data->'screenshot'->>'format', '') AS format,
+			COALESCE(s.raw_data->'screenshot'->>'error', '') AS error,
+			COALESCE(NULLIF(s.raw_data->'screenshot'->>'width', '')::int, 0) AS width,
+			COALESCE(NULLIF(s.raw_data->'screenshot'->>'height', '')::int, 0) AS height
+		FROM snapshots s
+		WHERE s.target_id = $1
+		  AND (
+		    s.raw_data->'screenshot'->>'thumbnail' IS NOT NULL
+		    OR s.raw_data->'screenshot'->>'error' IS NOT NULL
+		  )
+		ORDER BY s.scanned_at DESC
+		LIMIT $2 OFFSET $3
+	`, targetID, limit, (page-1)*limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list screenshots"})
+		return
+	}
+	defer rows.Close()
+
+	entries := []models.ScreenshotEntry{}
+	for rows.Next() {
+		var entry models.ScreenshotEntry
+		if err := rows.Scan(
+			&entry.SnapshotID,
+			&entry.ScannedAt,
+			&entry.URL,
+			&entry.Thumbnail,
+			&entry.Format,
+			&entry.Error,
+			&entry.Width,
+			&entry.Height,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read screenshots"})
+			return
+		}
+		entries = append(entries, entry)
+	}
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to iterate screenshots"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.PaginatedResponse[models.ScreenshotEntry]{
+		Data:  entries,
+		Page:  page,
+		Limit: limit,
+		Total: total,
+	})
+}
+

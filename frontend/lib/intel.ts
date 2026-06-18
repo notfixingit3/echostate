@@ -11,6 +11,9 @@ export interface RawIntel {
   favicon?: Record<string, unknown>
   crawl?: Record<string, unknown>
   storage?: Record<string, unknown>
+  ct?: Record<string, unknown>
+  traceroute?: Record<string, unknown>
+  screenshot?: Record<string, unknown>
   errors?: string[]
 }
 
@@ -42,6 +45,8 @@ export interface IntelHighlights {
   hijackRisk?: string
   bucketCount?: number
   crawlPathCount?: number
+  ctSubdomainCount?: number
+  tracerouteHopCount?: number
   errorCount: number
   changeCount: number
 }
@@ -91,6 +96,10 @@ export function extractIntel(
   const favicon = raw?.favicon
   const crawl = raw?.crawl
   const storage = raw?.storage
+  const ct = raw?.ct
+  const traceroute = raw?.traceroute
+  const ctSubdomains = asStringArray(ct?.subdomains)
+  const tracerouteHops = Array.isArray(traceroute?.hops) ? traceroute.hops : []
   const routing = asn?.routing as Record<string, unknown> | undefined
   const buckets = Array.isArray(storage?.buckets) ? storage.buckets : []
   const sitemapURLs = Array.isArray(crawl?.sitemap_urls) ? crawl.sitemap_urls : []
@@ -132,6 +141,9 @@ export function extractIntel(
       sitemapURLs.length + disallow.length > 0
         ? sitemapURLs.length + disallow.length
         : undefined,
+    ctSubdomainCount: ctSubdomains?.length,
+    tracerouteHopCount:
+      tracerouteHops.length > 0 ? tracerouteHops.length : undefined,
     errorCount: raw?.errors?.length ?? 0,
     changeCount: snapshot?.changes?.length ?? 0,
   }
@@ -173,9 +185,10 @@ export const ASN_FIELDS = [
   "registry",
   "allocated",
   "routing",
+  "peeringdb",
 ] as const
 
-export const WEB_FIELDS = ["title", "url", "copyrights", "tech_stack", "security_headers", "headers"] as const
+export const WEB_FIELDS = ["title", "url", "header_url", "copyrights", "tech_stack", "security_headers", "headers"] as const
 
 export const PWHOIS_FIELDS = [
   "origin_as",
@@ -208,6 +221,25 @@ export const CRAWL_FIELDS = [
 ] as const
 
 export const STORAGE_FIELDS = ["buckets"] as const
+
+export const CT_FIELDS = ["domain", "source", "count", "subdomains"] as const
+
+export const TRACEROUTE_FIELDS = [
+  "destination",
+  "hop_count",
+  "vantages",
+  "warning",
+  "skipped",
+] as const
+
+export const SCREENSHOT_FIELDS = [
+  "url",
+  "captured_at",
+  "width",
+  "height",
+  "format",
+  "error",
+] as const
 
 export const DNS_FIELDS = [
   "A",

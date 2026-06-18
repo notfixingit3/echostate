@@ -54,20 +54,11 @@ def render_banner_png(dest: Path, width: int) -> None:
     canvas.paste(icon, (int(height * 0.12), icon_y), icon)
 
     font_size = int(height * 0.42)
-    echo_font = load_font(font_size, bold=True)
-    state_font = load_font(font_size, bold=False)
+    wordmark_font = load_font(font_size, bold=True)
     text_x = int(height * 0.12) + icon_size + int(height * 0.14)
     baseline = int(height * 0.67)
 
-    draw.text((text_x, baseline), "Echo", font=echo_font, fill=TEXT, anchor="ls")
-    echo_width = draw.textlength("Echo", font=echo_font)
-    draw.text(
-        (text_x + echo_width + 10, baseline),
-        "State",
-        font=state_font,
-        fill=(TEXT[0], TEXT[1], TEXT[2], 210),
-        anchor="ls",
-    )
+    draw.text((text_x, baseline), "EchoState", font=wordmark_font, fill=TEXT, anchor="ls")
 
     canvas.save(dest, "PNG", optimize=True)
 

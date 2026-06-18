@@ -16,6 +16,7 @@ import {
   FingerprintIcon,
   CloudIcon,
   FolderSearchIcon,
+  ScrollTextIcon,
 } from "lucide-react"
 
 function StatCard({
@@ -143,6 +144,13 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
           label="Crawl paths"
           value={String(intel.crawlPathCount)}
           icon={FolderSearchIcon}
+        />
+      ) : null}
+      {intel.ctSubdomainCount ? (
+        <StatCard
+          label="CT subdomains"
+          value={String(intel.ctSubdomainCount)}
+          icon={ScrollTextIcon}
         />
       ) : null}
       <StatCard

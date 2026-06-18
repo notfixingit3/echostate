@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -112,6 +113,12 @@ func TestASNParse(t *testing.T) {
 			}, nil
 		}
 		defer func() { enrichRoutingFunc = origRouting }()
+
+		origPeering := enrichPeeringDBFunc
+		enrichPeeringDBFunc = func(ctx context.Context, asn string) (map[string]any, error) {
+			return nil, fmt.Errorf("peeringdb disabled in test")
+		}
+		defer func() { enrichPeeringDBFunc = origPeering }()
 
 		key, value, err := gatherASN(context.Background(), "dns.google")
 		if err != nil {

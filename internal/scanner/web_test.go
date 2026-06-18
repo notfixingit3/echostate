@@ -111,7 +111,26 @@ func TestWebLive(t *testing.T) {
 		t.Errorf("copyrights type = %T, want []string", value["copyrights"])
 	}
 
-	t.Logf("title=%q url=%q copyrights=%d", title, finalURL, len(copyrights))
+	headers := value["headers"]
+	headerCount := 0
+	switch h := headers.(type) {
+	case map[string]string:
+		headerCount = len(h)
+	case map[string]any:
+		headerCount = len(h)
+	default:
+		t.Errorf("headers type = %T, want map", headers)
+	}
+	if headerCount == 0 {
+		t.Errorf("expected non-empty headers, got %#v", headers)
+	}
+
+	headerURL, _ := value["header_url"].(string)
+	if headerURL == "" {
+		t.Error("expected non-empty header_url")
+	}
+
+	t.Logf("title=%q url=%q header_url=%q copyrights=%d headers=%d", title, finalURL, headerURL, len(copyrights), headerCount)
 }
 
 // browserAvailable probes the browserless health endpoint derived from the

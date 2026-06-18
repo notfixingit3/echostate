@@ -26,10 +26,12 @@ jobs:
 
       - name: Build release binaries
         run: |
-          GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o echostate-linux-amd64 ./main.go
-          GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o echostate-linux-arm64 ./main.go
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-w -s" -o echostate-darwin-amd64 ./main.go
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-w -s" -o echostate-darwin-arm64 ./main.go
+          VERSION="${GITHUB_REF_NAME#v}"
+          LDFLAGS="-w -s -X github.com/notfixingit3/echostate/internal/version.Version=${VERSION}"
+          GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o echostate-linux-amd64 ./main.go
+          GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o echostate-linux-arm64 ./main.go
+          GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o echostate-darwin-amd64 ./main.go
+          GOOS=darwin GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o echostate-darwin-arm64 ./main.go
 
       - name: Remove stale releases for this tag
         env:

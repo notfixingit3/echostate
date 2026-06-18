@@ -68,6 +68,7 @@ func TestHealth(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Contains(t, w.Body.String(), `"status":"ok"`)
 	require.Contains(t, w.Body.String(), `"env":"test"`)
+	require.Contains(t, w.Body.String(), `"version":"dev"`)
 }
 
 func TestCreateScan_InvalidJSON(t *testing.T) {

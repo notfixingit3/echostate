@@ -150,7 +150,7 @@ export function TargetsTable() {
                 <TableRow
                   key={target.id}
                   className="cursor-pointer"
-                  onClick={() => router.push(`/targets/${target.id}`)}
+                  onClick={() => router.push(`/target?id=${target.id}`)}
                   data-testid={`target-row-${target.id}`}
                 >
                   <TableCell>

@@ -145,7 +145,7 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
               variant="link"
               className="h-auto justify-start p-0 font-mono text-sm"
               render={
-                <Link href={`/targets/${snapshot.target_id}/snapshots`} />
+                <Link href={`/target/snapshots?id=${snapshot.target_id}`} />
               }
               nativeButton={false}
             >

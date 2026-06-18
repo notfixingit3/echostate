@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 
 import { PageHeader } from "@/components/page-header"
 import { TargetDetailView } from "@/components/target-detail"
@@ -12,12 +12,25 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { AlertCircleIcon } from "lucide-react"
 
 export function TargetDetailPageContent() {
-  const params = useParams<{ id: string }>()
-  const id = params.id
+  const searchParams = useSearchParams()
+  const id = searchParams.get("id")
 
   const [target, setTarget] = React.useState<TargetDetail | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = React.useState(0)
+
+  const loadTarget = React.useCallback(async () => {
+    if (!id) {
+      setError("Missing target ID.")
+      setLoading(false)
+      return null
+    }
+
+    const result = await fetchApi<TargetDetail>(`/api/targets/${id}`)
+    setTarget(result)
+    return result
+  }, [id])
 
   React.useEffect(() => {
     let cancelled = false
@@ -26,17 +39,8 @@ export function TargetDetailPageContent() {
       setLoading(true)
       setError(null)
 
-      if (!id || id === "placeholder") {
-        if (!cancelled) {
-          setError("Missing target ID.")
-          setLoading(false)
-        }
-        return
-      }
-
       try {
-        const result = await fetchApi<TargetDetail>(`/api/targets/${id}`)
-        if (!cancelled) setTarget(result)
+        await loadTarget()
       } catch (err) {
         if (!cancelled) {
           if (err instanceof ApiError) {
@@ -52,12 +56,17 @@ export function TargetDetailPageContent() {
       }
     }
 
-    load()
+    void load()
 
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [loadTarget])
+
+  const handleRescanned = React.useCallback(async () => {
+    await loadTarget()
+    setRefreshKey((key) => key + 1)
+  }, [loadTarget])
 
   if (loading) {
     return (
@@ -87,7 +96,11 @@ export function TargetDetailPageContent() {
         title="Target detail"
         description={`Surveillance overview for ${target.host}.`}
       />
-      <TargetDetailView target={target} />
+      <TargetDetailView
+        target={target}
+        refreshKey={refreshKey}
+        onRescanned={handleRescanned}
+      />
     </section>
   )
 }

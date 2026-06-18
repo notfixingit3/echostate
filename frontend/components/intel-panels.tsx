@@ -29,9 +29,13 @@ import {
   FAVICON_FIELDS,
   CRAWL_FIELDS,
   STORAGE_FIELDS,
+  CT_FIELDS,
+  TRACEROUTE_FIELDS,
+  SCREENSHOT_FIELDS,
   formatFieldLabel,
   formatValue,
 } from "@/lib/intel"
+import { ScreenshotTimeline } from "@/components/screenshot-timeline"
 import type { RawIntel } from "@/lib/intel"
 import {
   GlobeIcon,
@@ -43,6 +47,9 @@ import {
   ChevronRightIcon,
   ShieldIcon,
   DatabaseIcon,
+  ScrollTextIcon,
+  RouteIcon,
+  CameraIcon,
 } from "lucide-react"
 import ReactDiffViewer from "react-diff-viewer-continued"
 import { useTheme } from "next-themes"
@@ -74,6 +81,93 @@ function HeaderMap({ data }: { data: Record<string, string> }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function TracerouteVantageList({ vantages }: { vantages?: unknown }) {
+  if (!Array.isArray(vantages) || vantages.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-6 flex flex-col gap-4 border-t border-border/50 pt-6">
+      {vantages.map((vantage, index) => {
+        if (!vantage || typeof vantage !== "object") return null
+        const entry = vantage as Record<string, unknown>
+        const label =
+          typeof entry.label === "string" ? entry.label : `Vantage ${index + 1}`
+        const warning =
+          typeof entry.warning === "string" ? entry.warning : undefined
+
+        return (
+          <div key={label} className="rounded-lg border border-border/50 bg-muted/10 p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="text-sm font-medium">{label}</div>
+              {typeof entry.hop_count === "number" ? (
+                <Badge variant="secondary" className="font-mono text-[10px]">
+                  {entry.hop_count} hops
+                </Badge>
+              ) : null}
+            </div>
+            {warning ? (
+              <p className="mb-3 text-xs text-muted-foreground">{warning}</p>
+            ) : null}
+            <TracerouteHopList hops={entry.hops} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function TracerouteHopList({ hops }: { hops?: unknown }) {
+  if (!Array.isArray(hops) || hops.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
+        {hops.map((hop, index) => {
+          if (!hop || typeof hop !== "object") return null
+          const entry = hop as Record<string, unknown>
+          const hopNum = typeof entry.hop === "number" ? entry.hop : index + 1
+          const ip = typeof entry.ip === "string" ? entry.ip : undefined
+          const timeout = entry.timeout === true
+          const rtt =
+            typeof entry.rtt_ms === "number"
+              ? `${entry.rtt_ms.toFixed(1)} ms`
+              : undefined
+          const country =
+            typeof entry.country === "string" ? entry.country : undefined
+          const city = typeof entry.city === "string" ? entry.city : undefined
+
+          return (
+            <div
+              key={`${hopNum}-${ip ?? "timeout"}`}
+              className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/15 px-3 py-2"
+              data-testid={`traceroute-hop-${hopNum}`}
+            >
+              <Badge variant="outline" className="shrink-0 font-mono text-xs">
+                {hopNum}
+              </Badge>
+              <span className="min-w-0 flex-1 font-mono text-sm">
+                {timeout ? "*" : ip ?? "—"}
+              </span>
+              <div className="flex shrink-0 flex-col items-end text-xs text-muted-foreground">
+                {rtt ? <span>{rtt}</span> : null}
+                {country ? (
+                  <span>
+                    {city ? `${city}, ` : ""}
+                    {country}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -165,10 +259,28 @@ function DataGrid({
                   </div>
                 ))}
               </div>
+            ) : key === "subdomains" && Array.isArray(value) ? (
+              <div className="flex flex-wrap gap-1.5">
+                {value.map((item) => (
+                  <Badge
+                    key={String(item)}
+                    variant="outline"
+                    className="h-auto max-w-full whitespace-normal break-all py-1 font-mono text-xs font-normal"
+                    render={
+                      <Link
+                        href={`/?scan=${encodeURIComponent(String(item))}`}
+                        data-testid={`ct-subdomain-${String(item)}`}
+                      />
+                    }
+                  >
+                    {String(item)}
+                  </Badge>
+                ))}
+              </div>
             ) : (key === "headers" || key === "security_headers") &&
               isStringRecord(value) ? (
               <HeaderMap data={value} />
-            ) : key === "url" && typeof value === "string" ? (
+            ) : (key === "url" || key === "header_url") && typeof value === "string" ? (
               <a
                 href={value}
                 target="_blank"
@@ -203,17 +315,38 @@ function DataGrid({
 
 export function IntelPanels({
   snapshotId,
+  targetId,
   raw,
   changes,
   pwhois,
 }: {
   snapshotId?: string
+  targetId?: string
   raw?: RawIntel | null
   changes?: string[]
   pwhois?: Record<string, unknown> | null
 }) {
   const errorCount = raw?.errors?.length ?? 0
   const changeCount = changes?.length ?? 0
+  const ctCount =
+    typeof raw?.ct?.count === "number"
+      ? raw.ct.count
+      : Array.isArray(raw?.ct?.subdomains)
+        ? raw.ct.subdomains.length
+        : 0
+  const tracerouteVantages = Array.isArray(raw?.traceroute?.vantages)
+    ? raw.traceroute.vantages
+    : []
+  const tracerouteCount = Array.isArray(raw?.traceroute?.hops)
+    ? raw.traceroute.hops.length
+    : tracerouteVantages.reduce((count, vantage) => {
+        if (!vantage || typeof vantage !== "object") return count
+        const hops = (vantage as Record<string, unknown>).hops
+        return count + (Array.isArray(hops) ? hops.length : 0)
+      }, 0)
+  const hasScreenshot =
+    typeof raw?.screenshot?.thumbnail === "string" ||
+    typeof raw?.screenshot?.error === "string"
 
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
@@ -244,6 +377,31 @@ export function IntelPanels({
         <TabsTrigger value="web">Web</TabsTrigger>
         <TabsTrigger value="favicon">Favicon</TabsTrigger>
         <TabsTrigger value="crawl">Crawl</TabsTrigger>
+        <TabsTrigger value="ct" className="gap-1.5">
+          CT
+          {ctCount > 0 ? (
+            <Badge variant="secondary" className="size-5 justify-center p-0 text-[10px]">
+              {ctCount}
+            </Badge>
+          ) : null}
+        </TabsTrigger>
+        <TabsTrigger value="traceroute" className="gap-1.5">
+          Traceroute
+          {tracerouteCount > 0 ? (
+            <Badge variant="secondary" className="size-5 justify-center p-0 text-[10px]">
+              {tracerouteCount}
+            </Badge>
+          ) : null}
+        </TabsTrigger>
+        <TabsTrigger value="screenshots" className="gap-1.5">
+          <CameraIcon className="size-3" />
+          Screenshots
+          {hasScreenshot ? (
+            <Badge variant="secondary" className="size-5 justify-center p-0 text-[10px]">
+              1
+            </Badge>
+          ) : null}
+        </TabsTrigger>
         <TabsTrigger value="storage">Storage</TabsTrigger>
         <TabsTrigger value="pwhois">Submitter</TabsTrigger>
         <TabsTrigger value="errors" className="gap-1.5">
@@ -384,6 +542,95 @@ export function IntelPanels({
         <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
             <DataGrid data={raw?.crawl} fields={CRAWL_FIELDS} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="ct" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ScrollTextIcon className="size-4 text-primary" />
+              Certificate transparency
+            </CardTitle>
+            <CardDescription>
+              Subdomains discovered via crt.sh. Click a hostname to scan it as a new target.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {typeof raw?.ct?.skipped === "string" ? (
+              <p className="text-sm text-muted-foreground">{raw.ct.skipped}</p>
+            ) : (
+              <DataGrid data={raw?.ct} fields={CT_FIELDS} />
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="traceroute" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <RouteIcon className="size-4 text-primary" />
+              Network path
+            </CardTitle>
+            <CardDescription>
+              Hop-by-hop path from the scanner host to the resolved destination.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {typeof raw?.traceroute?.skipped === "string" ? (
+              <p className="text-sm text-muted-foreground">{raw.traceroute.skipped}</p>
+            ) : (
+              <>
+                <DataGrid
+                  data={raw?.traceroute}
+                  fields={TRACEROUTE_FIELDS}
+                  exclude={["hops", "vantages"]}
+                />
+                {tracerouteVantages.length > 0 ? (
+                  <TracerouteVantageList vantages={tracerouteVantages} />
+                ) : (
+                  <div className="mt-6 border-t border-border/50 pt-6">
+                    <TracerouteHopList hops={raw?.traceroute?.hops} />
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="screenshots" className="mt-4">
+        <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CameraIcon className="size-4 text-primary" />
+              Visual timeline
+            </CardTitle>
+            <CardDescription>
+              JPEG thumbnails captured via browserless Chrome during each scan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {hasScreenshot ? (
+              <DataGrid data={raw?.screenshot} fields={SCREENSHOT_FIELDS} />
+            ) : null}
+            {targetId ? (
+              <ScreenshotTimeline targetId={targetId} />
+            ) : hasScreenshot && typeof raw?.screenshot?.thumbnail === "string" ? (
+              <div className="overflow-hidden rounded-md border border-border/50">
+                <img
+                  src={`data:image/jpeg;base64,${raw.screenshot.thumbnail}`}
+                  alt="Latest screenshot thumbnail"
+                  className="h-auto w-full max-w-xl object-cover"
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No screenshots captured for this snapshot.
+              </p>
+            )}
           </CardContent>
         </Card>
       </TabsContent>

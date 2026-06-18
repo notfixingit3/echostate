@@ -15,10 +15,17 @@ import (
 // Gatherer is a function that collects a portion of reconnaissance data.
 type Gatherer func(ctx context.Context, host string) (key string, value map[string]any, err error)
 
+type timedGatherer struct {
+	timeout time.Duration
+	fn      Gatherer
+}
+
+const defaultGathererTimeout = 20 * time.Second
+
 // Scanner orchestrates passive reconnaissance tasks.
 type Scanner struct {
 	browserWSURL string
-	gatherers    []Gatherer
+	gatherers    []timedGatherer
 }
 
 // NewScanner builds a scanner with the default set of gatherers.
@@ -28,15 +35,18 @@ func NewScanner(browserWSURL string) *Scanner {
 	}
 	return &Scanner{
 		browserWSURL: browserWSURL,
-		gatherers: []Gatherer{
-			gatherWHOIS,
-			gatherASN,
-			gatherTLS,
-			gatherDNS,
-			gatherFavicon,
-			gatherCrawl,
-			gatherStorage,
-			newWebGatherer(browserWSURL),
+		gatherers: []timedGatherer{
+			{timeout: defaultGathererTimeout, fn: gatherWHOIS},
+			{timeout: defaultGathererTimeout, fn: gatherASN},
+			{timeout: defaultGathererTimeout, fn: gatherTLS},
+			{timeout: defaultGathererTimeout, fn: gatherDNS},
+			{timeout: defaultGathererTimeout, fn: gatherFavicon},
+			{timeout: defaultGathererTimeout, fn: gatherCrawl},
+			{timeout: defaultGathererTimeout, fn: gatherStorage},
+			{timeout: 80 * time.Second, fn: gatherCT},
+			{timeout: 40 * time.Second, fn: gatherTraceroute},
+			{timeout: defaultGathererTimeout, fn: newWebGatherer(browserWSURL)},
+			{timeout: 25 * time.Second, fn: newScreenshotGatherer(browserWSURL)},
 		},
 	}
 }
@@ -56,7 +66,10 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 		Favicon:   make(map[string]any),
 		Crawl:     make(map[string]any),
 		Storage:   make(map[string]any),
-		Errors:    []string{},
+		CT:         make(map[string]any),
+		Traceroute:  make(map[string]any),
+		Screenshot:  make(map[string]any),
+		Errors:      []string{},
 	}
 
 	var mu sync.Mutex
@@ -64,13 +77,17 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 
 	for _, g := range s.gatherers {
 		wg.Add(1)
-		go func(gatherer Gatherer) {
+		go func(g timedGatherer) {
 			defer wg.Done()
 
-			gatherCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			timeout := g.timeout
+			if timeout <= 0 {
+				timeout = defaultGathererTimeout
+			}
+			gatherCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 
-			key, value, err := gatherer(gatherCtx, normalized)
+			key, value, err := g.fn(gatherCtx, normalized)
 			if err != nil {
 				mu.Lock()
 				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", key, err))
@@ -109,6 +126,12 @@ func assignGathererResult(result *models.ScanResult, key string, value map[strin
 		result.Crawl = value
 	case "storage":
 		result.Storage = value
+	case "ct":
+		result.CT = value
+	case "traceroute":
+		result.Traceroute = value
+	case "screenshot":
+		result.Screenshot = value
 	}
 }
 
@@ -130,6 +153,12 @@ func mergeGathererResult(result *models.ScanResult, key string, value map[string
 		mergeMap(result.Crawl, value)
 	case "storage":
 		mergeMap(result.Storage, value)
+	case "ct":
+		mergeMap(result.CT, value)
+	case "traceroute":
+		mergeMap(result.Traceroute, value)
+	case "screenshot":
+		mergeMap(result.Screenshot, value)
 	}
 }
 

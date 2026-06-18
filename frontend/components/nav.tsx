@@ -20,6 +20,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/targets", label: "Targets" },
   { href: "/snapshots", label: "Snapshots" },
+  { href: "/graph", label: "Graph" },
   { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
 ]
@@ -38,8 +39,8 @@ export function Nav() {
           <BrandLogo variant="banner" className="h-8 w-auto" />
         </Link>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <nav className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => {
               const isActive =
                 link.href === "/"
@@ -64,11 +65,7 @@ export function Nav() {
             })}
           </nav>
           <ThemeToggle />
-        </div>
-
-        <div className="flex items-center gap-2 md:hidden">
-          <ThemeToggle />
-        <Sheet>
+          <Sheet>
           <SheetTrigger
             render={
               <Button variant="outline" size="icon" aria-label="Open menu" />
@@ -105,7 +102,7 @@ export function Nav() {
               })}
             </nav>
           </SheetContent>
-        </Sheet>
+          </Sheet>
         </div>
       </div>
     </header>

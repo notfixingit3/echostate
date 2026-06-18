@@ -31,18 +31,24 @@ Output lands in `dist/` for nginx serving.
 
 Built as `echostate-frontend` via `docker compose up --build`. Inside Compose, `NEXT_PUBLIC_API_URL` is empty so the UI proxies `/api` through nginx to the API container.
 
+`NEXT_PUBLIC_APP_VERSION` is set at build time from `ECHOSTATE_VERSION` (see root `.env.example`) and shown in the footer version badge.
+
 ## Pages
 
 | Route | Purpose |
 | ----- | ------- |
 | `/` | Scan form + intel summary |
 | `/targets` | Browse targets |
-| `/targets/[id]` | Target detail + latest intel |
-| `/targets/[id]/snapshots` | Snapshot history for a target |
+| `/target?id=` | Target detail, intel tabs, rescan button |
+| `/target/snapshots?id=` | Snapshot history for a target |
 | `/snapshots` | Browse all snapshots |
 | `/snapshot?id=` | Snapshot detail |
 | `/reports` | Browse reports |
 | `/report?id=` | Report status + PDF download |
+| `/settings` | DNS resolvers, pWhois, rate limit, webhooks (Slack, Discord, Teams, Pushover) |
+| `/graph` | Interactive Neo4j graph (views: infra, CT, DNS, cert, BGP, traceroute, peering) |
+
+Target and snapshot detail pages use query-param routes because the app is a static export — UUIDs are not baked into the build.
 
 ## Tests
 

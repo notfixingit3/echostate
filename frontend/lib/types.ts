@@ -113,3 +113,159 @@ export interface ApiErrorResponse {
   retry_after?: number
   message?: string
 }
+
+export interface GraphNode {
+  id: string
+  label: string
+  type: string
+  props?: Record<string, unknown>
+}
+
+export interface GraphEdge {
+  id: string
+  source: string
+  target: string
+  label: string
+  color?: string
+  props?: Record<string, unknown>
+}
+
+export interface GraphPathHop {
+  hop: number
+  ip?: string
+  label: string
+  rtt_ms?: number
+  timeout?: boolean
+  country?: string
+  city?: string
+  lat?: number
+  lon?: number
+}
+
+export interface GraphGeoPoint {
+  ip: string
+  lat: number
+  lon: number
+  country?: string
+  city?: string
+  hop?: number
+  target_id?: string
+  target_label?: string
+  label?: string
+}
+
+export interface GraphASPath {
+  target_id: string
+  target_label: string
+  prefix?: string
+  path: string[]
+  path_label: string
+}
+
+export interface GraphPath {
+  target_id: string
+  target_label: string
+  vantage?: string
+  vantage_label?: string
+  hops: GraphPathHop[]
+}
+
+export interface GraphVantageDivergence {
+  target_id: string
+  target_label: string
+  vantage_a: string
+  vantage_b: string
+  diverges_at?: number
+  only_in_a?: string[]
+  only_in_b?: string[]
+}
+
+export interface GraphPeeringIX {
+  target_id: string
+  target_label: string
+  asn: string
+  ix_id: string
+  ix_name: string
+  country?: string
+  city?: string
+  speed_mbps?: number
+}
+
+export interface ScreenshotEntry {
+  snapshot_id: string
+  scanned_at: string
+  url?: string
+  width?: number
+  height?: number
+  format?: string
+  thumbnail?: string
+  error?: string
+}
+
+export interface GraphResponse {
+  view: string
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  stats: Record<string, number>
+  paths?: GraphPath[]
+  geo?: GraphGeoPoint[]
+  as_paths?: GraphASPath[]
+  shared_hops?: GraphSharedHop[]
+  shared_sans?: GraphSharedSAN[]
+  clusters?: GraphCluster[]
+  route_diff?: GraphRouteDiff
+  vantage_divergence?: GraphVantageDivergence[]
+  peering_ix?: GraphPeeringIX[]
+}
+
+export interface GraphSharedSAN {
+  name: string
+  target_count: number
+  target_ids: string[]
+  target_labels: string[]
+}
+
+export interface GraphCluster {
+  id: string
+  target_count: number
+  target_ids: string[]
+  target_labels: string[]
+  shared_signals?: string[]
+}
+
+export interface GraphSharedHop {
+  ip: string
+  target_count: number
+  target_ids: string[]
+  target_labels: string[]
+}
+
+export interface BGPRouteDiff {
+  hijack_risk_from?: string
+  hijack_risk_to?: string
+  rpki_from?: string
+  rpki_to?: string
+  visible_origins_added?: string[]
+  visible_origins_removed?: string[]
+  as_paths_added?: string[]
+  as_paths_removed?: string[]
+  changed: boolean
+}
+
+export interface TracerouteRouteDiff {
+  hop_count_from?: number
+  hop_count_to?: number
+  hops_added?: string[]
+  hops_removed?: string[]
+  changed: boolean
+}
+
+export interface GraphRouteDiff {
+  has_previous: boolean
+  current_snapshot_id?: string
+  previous_snapshot_id?: string
+  bgp?: BGPRouteDiff
+  traceroute?: TracerouteRouteDiff
+}
+
+

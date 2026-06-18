@@ -49,7 +49,10 @@ type ScanResult struct {
 	Favicon   map[string]any `json:"favicon,omitempty"`
 	Crawl     map[string]any `json:"crawl,omitempty"`
 	Storage   map[string]any `json:"storage,omitempty"`
-	Errors    []string       `json:"errors,omitempty"`
+	CT          map[string]any `json:"ct,omitempty"`
+	Traceroute  map[string]any `json:"traceroute,omitempty"`
+	Screenshot  map[string]any `json:"screenshot,omitempty"`
+	Errors      []string       `json:"errors,omitempty"`
 }
 
 // ReportStatus represents the lifecycle state of a PDF report.
@@ -122,6 +125,18 @@ type TargetSummary struct {
 type TargetDetail struct {
 	TargetSummary
 	LatestSnapshot *Snapshot `json:"latest_snapshot,omitempty"`
+}
+
+// ScreenshotEntry is a thumbnail captured during a snapshot scan.
+type ScreenshotEntry struct {
+	SnapshotID  uuid.UUID `json:"snapshot_id"`
+	ScannedAt   time.Time `json:"scanned_at"`
+	URL         string    `json:"url,omitempty"`
+	Width       int       `json:"width,omitempty"`
+	Height      int       `json:"height,omitempty"`
+	Format      string    `json:"format,omitempty"`
+	Thumbnail   string    `json:"thumbnail,omitempty"`
+	Error       string    `json:"error,omitempty"`
 }
 
 type SnapshotSummary struct {
