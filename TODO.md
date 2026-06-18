@@ -98,6 +98,7 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | G14 | Screenshot timeline | ✅ Done | `/api/targets/:id/screenshots`, intel timeline tab |
 | G15 | Wire new intel into graph | ✅ Done | `IntelEvent`/`EnrichmentHit` Neo4j sync, DMARC nodes, `/graph` events panel |
 | G16 | Graph PNG/SVG export | ✅ Done | Canvas toolbar export buttons + `graph-export.ts` |
+| G17 | Saved graph views | ✅ Done | Named lenses: filters, history, pins, layout restore |
 
 ---
 
@@ -116,8 +117,8 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 47 items (core + graph + platform batch) |
+| **Done** | 48 items (core + graph + platform batch) |
 | **Skipped** | 2 (#6 port scan, G9 port graph) |
 | **Later / platform** | 2 (agents, OIDC/RBAC) |
 
-**Suggested next picks:** saved graph views → OIDC/RBAC
+**Suggested next picks:** OIDC/RBAC → distributed scanning agents

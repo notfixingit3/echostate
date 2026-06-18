@@ -211,6 +211,25 @@ func Migrate(db *DB) error {
 		CREATE INDEX IF NOT EXISTS idx_investigation_notes_trashed_at
 			ON investigation_notes(trashed_at)
 			WHERE status = 'trashed';
+
+		CREATE TABLE IF NOT EXISTS graph_views (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name TEXT NOT NULL UNIQUE,
+			description TEXT NOT NULL DEFAULT '',
+			view_mode TEXT NOT NULL DEFAULT 'infra',
+			target_id UUID REFERENCES targets(id) ON DELETE SET NULL,
+			vantage_filter TEXT NOT NULL DEFAULT 'all',
+			snapshot_id UUID REFERENCES snapshots(id) ON DELETE SET NULL,
+			compare_snapshot_id UUID REFERENCES snapshots(id) ON DELETE SET NULL,
+			compare_mode TEXT NOT NULL DEFAULT 'previous',
+			pinned_nodes JSONB NOT NULL DEFAULT '{}',
+			selected_node_id TEXT,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_graph_views_updated
+			ON graph_views(updated_at DESC);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

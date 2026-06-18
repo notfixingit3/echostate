@@ -62,6 +62,8 @@ export const HELP_COPY: Record<string, string> = {
     "Download the current canvas view as a PNG image, including zoom and pan state.",
   "graph.toolbar.export_svg":
     "Download node positions and edges as a lightweight SVG for reports or slides.",
+  "graph.saved_views":
+    "Save the current graph lens — view tab, target filter, snapshot compare, vantage, pinned layout, and selection.",
   "graph.rescan_hint":
     "Temporal graph edges are versioned per snapshot. Rescan to accumulate history for the slider and compare modes.",
 

@@ -111,6 +111,12 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	router.POST("/api/notes/:id/restore", auth, h.restoreNote)
 	router.DELETE("/api/notes/:id", auth, h.deleteNote)
 
+	router.GET("/api/graph/views", h.listGraphViews)
+	router.POST("/api/graph/views", auth, h.createGraphView)
+	router.GET("/api/graph/views/:id", h.getGraphView)
+	router.PUT("/api/graph/views/:id", auth, h.updateGraphView)
+	router.DELETE("/api/graph/views/:id", auth, h.deleteGraphView)
+
 	return &Workers{
 		Reports:   h.reportWorker,
 		Scans:     h.scanWorker,

@@ -30,6 +30,7 @@ import {
   GraphHistoryBar,
   type GraphCompareMode,
 } from "@/components/graph-history-bar"
+import { GraphSavedViews } from "@/components/graph-saved-views"
 import { HelpTip } from "@/components/help-tip"
 import { GraphNodeInspector } from "@/components/graph-node-inspector"
 import { HopGeoMap } from "@/components/hop-geo-map"
@@ -42,6 +43,7 @@ import type {
   GraphPath,
   GraphResponse,
   PaginatedResponse,
+  SavedGraphView,
   SnapshotSummary,
   TargetSummary,
 } from "@/lib/types"
@@ -233,12 +235,13 @@ export function GraphView() {
       preserveSelection = false,
       nextSnapshotId?: string,
       nextCompareSnapshotId?: string,
-      nextCompareMode?: GraphCompareMode
-    ) => {
+      nextCompareMode?: GraphCompareMode,
+      restoreNodeId?: string
+    ): Promise<GraphResponse | null> => {
       setLoading(true)
       setError(null)
-      const previousID = preserveSelection ? selected?.id : null
-      if (!preserveSelection) {
+      const previousID = preserveSelection ? selected?.id : restoreNodeId ?? null
+      if (!preserveSelection && !restoreNodeId) {
         setSelected(null)
       }
 
@@ -256,9 +259,11 @@ export function GraphView() {
           const match = data.nodes.find((node) => node.id === previousID)
           setSelected(match ?? null)
         }
+        return data
       } catch (err) {
         setGraph(null)
         setError(err instanceof Error ? err.message : "Failed to load graph")
+        return null
       } finally {
         setLoading(false)
       }
@@ -415,6 +420,61 @@ export function GraphView() {
     exportCanvasPNG(canvas, exportFilename("png"))
   }
 
+  const getViewSnapshot = React.useCallback(
+    () => ({
+      viewMode,
+      targetFilter,
+      vantageFilter,
+      snapshotId,
+      compareSnapshotId,
+      compareMode,
+      pinnedNodes,
+      selectedNodeId: selected?.id,
+    }),
+    [
+      viewMode,
+      targetFilter,
+      vantageFilter,
+      snapshotId,
+      compareSnapshotId,
+      compareMode,
+      pinnedNodes,
+      selected,
+    ]
+  )
+
+  async function applySavedView(view: SavedGraphView) {
+    const target = view.target_id ?? "all"
+    const nextView = (view.view_mode as GraphViewMode) || "infra"
+    const nextCompare = (view.compare_mode as GraphCompareMode) || "previous"
+    const nextSnapshot = view.snapshot_id ?? undefined
+    const nextCompareSnapshot = view.compare_snapshot_id ?? undefined
+    const nextPins = Object.fromEntries(
+      Object.entries(view.pinned_nodes ?? {}).map(([id, pin]) => [
+        id,
+        { x: pin.x, y: pin.y },
+      ])
+    )
+
+    setTargetFilter(target)
+    setViewMode(nextView)
+    setVantageFilter(view.vantage_filter || "all")
+    setSnapshotId(nextSnapshot)
+    setCompareSnapshotId(nextCompareSnapshot)
+    setCompareMode(nextCompare)
+    setPinnedNodes(nextPins)
+
+    await loadGraph(
+      target === "all" ? undefined : target,
+      nextView,
+      false,
+      nextSnapshot,
+      nextCompareSnapshot,
+      nextCompare,
+      view.selected_node_id ?? undefined
+    )
+  }
+
   function exportSVG() {
     const api = graphApiRef.current
     const data = api?.graphData?.()
@@ -539,7 +599,9 @@ export function GraphView() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 lg:items-end">
+            <GraphSavedViews getSnapshot={getViewSnapshot} onApply={applySavedView} />
+            <div className="flex flex-wrap items-center gap-2">
             {viewMode === "traceroute" && vantageOptions.length > 1 ? (
               <Select
                 value={vantageFilter}
@@ -601,6 +663,7 @@ export function GraphView() {
               />
               Refresh
             </Button>
+            </div>
           </div>
         </div>
 

@@ -318,6 +318,54 @@ type UpdateInvestigationNoteRequest struct {
 	References     []NoteReference `json:"references"`
 }
 
+type GraphPinnedNode struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+type SavedGraphView struct {
+	ID                  uuid.UUID                  `json:"id"`
+	Name                string                     `json:"name"`
+	Description         string                     `json:"description"`
+	ViewMode            string                     `json:"view_mode"`
+	TargetID            *uuid.UUID                 `json:"target_id,omitempty"`
+	VantageFilter       string                     `json:"vantage_filter"`
+	SnapshotID          *uuid.UUID                 `json:"snapshot_id,omitempty"`
+	CompareSnapshotID   *uuid.UUID                 `json:"compare_snapshot_id,omitempty"`
+	CompareMode         string                     `json:"compare_mode"`
+	PinnedNodes         map[string]GraphPinnedNode `json:"pinned_nodes"`
+	SelectedNodeID      *string                    `json:"selected_node_id,omitempty"`
+	CreatedAt           time.Time                  `json:"created_at"`
+	UpdatedAt           time.Time                  `json:"updated_at"`
+	TargetHost          *string                    `json:"target_host,omitempty"`
+}
+
+type CreateSavedGraphViewRequest struct {
+	Name              string                     `json:"name" binding:"required"`
+	Description       string                     `json:"description"`
+	ViewMode          string                     `json:"view_mode"`
+	TargetID          *uuid.UUID                 `json:"target_id"`
+	VantageFilter     string                     `json:"vantage_filter"`
+	SnapshotID        *uuid.UUID                 `json:"snapshot_id"`
+	CompareSnapshotID *uuid.UUID                 `json:"compare_snapshot_id"`
+	CompareMode       string                     `json:"compare_mode"`
+	PinnedNodes       map[string]GraphPinnedNode `json:"pinned_nodes"`
+	SelectedNodeID    *string                    `json:"selected_node_id"`
+}
+
+type UpdateSavedGraphViewRequest struct {
+	Name              string                     `json:"name" binding:"required"`
+	Description       string                     `json:"description"`
+	ViewMode          string                     `json:"view_mode"`
+	TargetID          *uuid.UUID                 `json:"target_id"`
+	VantageFilter     string                     `json:"vantage_filter"`
+	SnapshotID        *uuid.UUID                 `json:"snapshot_id"`
+	CompareSnapshotID *uuid.UUID                 `json:"compare_snapshot_id"`
+	CompareMode       string                     `json:"compare_mode"`
+	PinnedNodes       map[string]GraphPinnedNode `json:"pinned_nodes"`
+	SelectedNodeID    *string                    `json:"selected_node_id"`
+}
+
 type Webhook struct {
 	ID        uuid.UUID      `json:"id"`
 	Name      string         `json:"name"`
