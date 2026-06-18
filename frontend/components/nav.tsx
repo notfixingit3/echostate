@@ -74,7 +74,7 @@ export function Nav() {
                 {user.display_name}
               </span>
               <Button variant="ghost" size="sm" render={<Link href="/settings/account" />}>
-                Account
+                Profile
               </Button>
               <Button variant="ghost" size="sm" onClick={() => void signOut()}>
                 <LogOutIcon data-icon="inline-start" />
@@ -136,7 +136,7 @@ export function Nav() {
                     className="justify-start"
                     render={<Link href="/settings/account" />}
                   >
-                    Account
+                    Profile
                   </Button>
                   <Button
                     variant="ghost"

@@ -296,6 +296,8 @@ func Migrate(db *DB) error {
 			expires_at TIMESTAMPTZ NOT NULL,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
+
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'UTC';
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

@@ -4,6 +4,7 @@ export type AuthUser = {
   id: string
   display_name: string
   role: "admin" | "scanner"
+  timezone?: string
   disabled: boolean
 }
 
@@ -220,5 +221,18 @@ export async function loginWithPasskey(userId: string) {
 
 export async function logout() {
   await fetchApi("/api/auth/logout", { method: "POST", body: "{}" })
-  clearStoredUserId()
+}
+
+export async function updateProfile(timezone: string) {
+  return fetchApi<{ user: AuthUser }>("/api/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify({ timezone }),
+  })
+}
+
+export async function renameCredential(userId: string, credId: string, nickname: string) {
+  return fetchApi(`/api/users/${userId}/credentials/${credId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ nickname }),
+  })
 }

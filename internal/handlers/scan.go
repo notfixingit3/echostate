@@ -79,6 +79,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.POST("/auth/webauthn/login/begin", h.webauthnLoginBegin)
 	api.POST("/auth/webauthn/login/finish", h.webauthnLoginFinish)
 	api.POST("/auth/logout", h.authLogout)
+	api.PATCH("/auth/profile", requireScanner, h.authUpdateProfile)
 	api.POST("/auth/device-code", requireScanner, h.issueDeviceCode)
 
 	api.POST("/scan", requireScanner, rateLimiter.Middleware(), h.createScan)
@@ -140,6 +141,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.POST("/users/:id/codes", requireAdmin, h.issueUserCode)
 	api.GET("/users/:id/credentials", requireScanner, h.listUserCredentials)
 	api.DELETE("/users/:id/credentials/:credId", requireScanner, h.deleteUserCredential)
+	api.PATCH("/users/:id/credentials/:credId", requireScanner, h.renameUserCredential)
 
 	return &Workers{
 		Reports:   h.reportWorker,
