@@ -1,4 +1,0 @@
-=== RUN   TestWorkerFailsMissingSnapshot
---- PASS: TestWorkerFailsMissingSnapshot (2.16s)
-PASS
-ok  	github.com/notfixingit3/echostate/internal/reports	(cached)

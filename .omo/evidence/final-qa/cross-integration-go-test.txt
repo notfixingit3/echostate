@@ -1,6 +1,0 @@
-?   	github.com/notfixingit3/echostate	[no test files]
-?   	github.com/notfixingit3/echostate/internal/config	[no test files]
-?   	github.com/notfixingit3/echostate/internal/db	[no test files]
-?   	github.com/notfixingit3/echostate/internal/handlers	[no test files]
-?   	github.com/notfixingit3/echostate/internal/models	[no test files]
-ok  	github.com/notfixingit3/echostate/internal/scanner	(cached)

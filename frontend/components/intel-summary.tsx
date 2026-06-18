@@ -9,6 +9,8 @@ import {
   FileTextIcon,
   AlertTriangleIcon,
   GitCompareIcon,
+  ShieldIcon,
+  DatabaseIcon,
 } from "lucide-react"
 
 function StatCard({
@@ -86,6 +88,26 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       </div>
       <StatCard label="Web title" value={intel.webTitle} icon={FileTextIcon} />
       <StatCard label="Registrar" value={intel.registrar} icon={GlobeIcon} />
+      <StatCard
+        label="Cert expires"
+        value={intel.certExpires}
+        icon={ShieldIcon}
+      />
+      <StatCard
+        label="Cert issuer"
+        value={intel.certIssuer}
+        icon={ShieldIcon}
+      />
+      <StatCard
+        label="DNS A records"
+        value={
+          intel.dnsARecords?.length
+            ? intel.dnsARecords.join(", ")
+            : undefined
+        }
+        icon={DatabaseIcon}
+        mono
+      />
       <StatCard
         label="Submitter IP"
         value={intel.clientIp}

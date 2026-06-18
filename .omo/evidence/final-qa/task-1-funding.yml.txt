@@ -1,5 +1,0 @@
-github: [notfixingit3]
-custom: ["https://github.com/sponsors/notfixingit3"]
-valid yaml
-key: github
-key: custom

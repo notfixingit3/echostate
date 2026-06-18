@@ -44,6 +44,8 @@ type ScanResult struct {
 	WHOIS     map[string]any `json:"whois,omitempty"`
 	ASN       map[string]any `json:"asn,omitempty"`
 	Web       map[string]any `json:"web,omitempty"`
+	TLS       map[string]any `json:"tls,omitempty"`
+	DNS       map[string]any `json:"dns,omitempty"`
 	Errors    []string       `json:"errors,omitempty"`
 }
 

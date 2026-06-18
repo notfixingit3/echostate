@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
@@ -35,6 +36,48 @@ func newWebGatherer(browserWSURL string) Gatherer {
 		defer allocCancel()
 
 		var title, text, url string
+		var headers map[string]string
+		var securityHeaders map[string]string
+		var techStack []string
+
+		// Fetch headers quickly via standard net/http
+		client := &http.Client{Timeout: 5 * time.Second}
+		if resp, err := client.Get("https://" + host); err == nil {
+			headers = make(map[string]string)
+			securityHeaders = make(map[string]string)
+			for k, v := range resp.Header {
+				val := strings.Join(v, ", ")
+				headers[k] = val
+
+				kl := strings.ToLower(k)
+				if kl == "strict-transport-security" || kl == "content-security-policy" || kl == "x-frame-options" || kl == "x-content-type-options" {
+					securityHeaders[kl] = val
+				}
+
+				if kl == "server" || kl == "x-powered-by" {
+					techStack = append(techStack, fmt.Sprintf("%s: %s", k, val))
+				}
+			}
+			resp.Body.Close()
+		} else if resp, err := client.Get("http://" + host); err == nil {
+			headers = make(map[string]string)
+			securityHeaders = make(map[string]string)
+			for k, v := range resp.Header {
+				val := strings.Join(v, ", ")
+				headers[k] = val
+
+				kl := strings.ToLower(k)
+				if kl == "strict-transport-security" || kl == "content-security-policy" || kl == "x-frame-options" || kl == "x-content-type-options" {
+					securityHeaders[kl] = val
+				}
+
+				if kl == "server" || kl == "x-powered-by" {
+					techStack = append(techStack, fmt.Sprintf("%s: %s", k, val))
+				}
+			}
+			resp.Body.Close()
+		}
+
 		if err := scrapePage(allocCtx, "https://"+host, &title, &text, &url); err != nil {
 			title, text, url = "", "", ""
 			if err2 := scrapePage(allocCtx, "http://"+host, &title, &text, &url); err2 != nil {
@@ -43,9 +86,12 @@ func newWebGatherer(browserWSURL string) Gatherer {
 		}
 
 		return "web", map[string]any{
-			"title":      title,
-			"url":        url,
-			"copyrights": extractCopyrights(text),
+			"title":            title,
+			"url":              url,
+			"copyrights":       extractCopyrights(text),
+			"headers":          headers,
+			"security_headers": securityHeaders,
+			"tech_stack":       techStack,
 		}, nil
 	}
 }

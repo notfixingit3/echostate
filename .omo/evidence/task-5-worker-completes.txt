@@ -1,4 +1,0 @@
-=== RUN   TestWorkerCompletes
---- PASS: TestWorkerCompletes (0.17s)
-PASS
-ok  	github.com/notfixingit3/echostate/internal/reports	0.495s

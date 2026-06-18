@@ -1,4 +1,0 @@
-=== RUN   TestASNLive
---- PASS: TestASNLive (0.01s)
-PASS
-ok  	github.com/notfixingit3/echostate/internal/scanner	0.234s

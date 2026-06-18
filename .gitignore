@@ -21,4 +21,4 @@ coverage.out
 *~
 .DS_Store
 postgres_data/
-.omo/evidence/
+.omo/

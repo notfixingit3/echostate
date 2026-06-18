@@ -6,6 +6,8 @@ export interface RawIntel {
   whois?: Record<string, unknown>
   asn?: Record<string, unknown>
   web?: Record<string, unknown>
+  tls?: Record<string, unknown>
+  dns?: Record<string, unknown>
   errors?: string[]
 }
 
@@ -29,12 +31,26 @@ export interface IntelHighlights {
   pwhoisCity?: string
   pwhoisPrefix?: string
   pwhoisOriginAs?: string
+  certExpires?: string
+  certIssuer?: string
+  dnsARecords?: string[]
   errorCount: number
   changeCount: number
 }
 
 function asString(value: unknown): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim()
+  return undefined
+}
+
+function formatDateField(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) {
+    const parsed = new Date(value)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleDateString()
+    }
+    return value.trim()
+  }
   return undefined
 }
 
@@ -62,6 +78,8 @@ export function extractIntel(
   const whois = raw?.whois
   const asn = raw?.asn
   const web = raw?.web
+  const tls = raw?.tls
+  const dns = raw?.dns
 
   return {
     host: asString(raw?.host) || "Unknown host",
@@ -87,6 +105,9 @@ export function extractIntel(
     pwhoisCity: snapshot?.pwhois_city || undefined,
     pwhoisPrefix: snapshot?.pwhois_prefix || undefined,
     pwhoisOriginAs: snapshot?.pwhois_origin_as || undefined,
+    certExpires: formatDateField(tls?.not_after),
+    certIssuer: asString(tls?.issuer),
+    dnsARecords: asStringArray(dns?.A),
     errorCount: raw?.errors?.length ?? 0,
     changeCount: snapshot?.changes?.length ?? 0,
   }
@@ -129,7 +150,7 @@ export const ASN_FIELDS = [
   "allocated",
 ] as const
 
-export const WEB_FIELDS = ["title", "url", "copyrights"] as const
+export const WEB_FIELDS = ["title", "url", "copyrights", "tech_stack", "security_headers", "headers"] as const
 
 export const PWHOIS_FIELDS = [
   "origin_as",
@@ -137,4 +158,24 @@ export const PWHOIS_FIELDS = [
   "country_code",
   "city",
   "prefix",
+] as const
+
+export const TLS_FIELDS = [
+  "issuer",
+  "subject",
+  "dns_names",
+  "ip_sans",
+  "not_before",
+  "not_after",
+  "version",
+  "signature_algorithm",
+] as const
+
+export const DNS_FIELDS = [
+  "A",
+  "MX",
+  "NS",
+  "TXT",
+  "CNAME",
+  "DMARC",
 ] as const

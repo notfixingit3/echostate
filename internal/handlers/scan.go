@@ -222,9 +222,16 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 		}()
 	}
 
-	go webhooks.Dispatch(context.Background(), h.db, result.Host, snapshot, h.config.FrontendURL)
+	go webhooks.Dispatch(context.Background(), h.db, result.Host, snapshot, h.frontendURL())
 
 	return snapshot, nil
+}
+
+func (h *Handler) frontendURL() string {
+	if h.config == nil {
+		return ""
+	}
+	return h.config.FrontendURL
 }
 
 func computeChanges(previous map[string]any, current *models.ScanResult) []string {
