@@ -220,6 +220,31 @@ func (h *Handler) webauthnLoginFinish(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
+func (h *Handler) authUpdateProfile(c *gin.Context) {
+	actor := middleware.GetUser(c)
+	if actor == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+	var req struct {
+		Timezone string `json:"timezone"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	user, err := h.auth.UpdateUserProfile(c.Request.Context(), actor.ID, req.Timezone)
+	if err != nil {
+		if err.Error() == "invalid timezone" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
 func (h *Handler) authLogout(c *gin.Context) {
 	if token, err := c.Cookie(auth.SessionCookieName); err == nil {
 		_ = h.auth.DeleteSession(c.Request.Context(), token)

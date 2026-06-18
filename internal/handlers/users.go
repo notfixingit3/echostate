@@ -123,6 +123,40 @@ func (h *Handler) deleteUserCredential(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
+func (h *Handler) renameUserCredential(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+	credID, err := uuid.Parse(c.Param("credId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid credential id"})
+		return
+	}
+	var req struct {
+		Nickname string `json:"nickname"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	actor := middleware.GetUser(c)
+	if actor != nil && actor.Role != auth.RoleAdmin && actor.ID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		return
+	}
+	if err := h.auth.RenameCredential(c.Request.Context(), userID, credID, req.Nickname); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "credential not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to rename credential"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"updated": true})
+}
+
 func (h *Handler) cliIssueAdminCode(c *gin.Context) {
 	secret := strings.TrimSpace(os.Getenv("ECHOSTATE_BREAK_GLASS_SECRET"))
 	if secret == "" {

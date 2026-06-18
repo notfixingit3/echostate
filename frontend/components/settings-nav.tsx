@@ -27,7 +27,7 @@ export function SettingsNav() {
   const isAdmin = user?.role === "admin"
 
   const items = [
-    { href: "/settings/account", label: "Account & passkeys", icon: UserCogIcon, helpId: "settings.nav.account" },
+    { href: "/settings/account", label: "Profile", icon: UserCogIcon, helpId: "settings.nav.profile" },
     ...(isAdmin ? adminItems : []),
   ]
 
