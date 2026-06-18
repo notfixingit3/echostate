@@ -29,11 +29,8 @@ func newWebGatherer(browserWSURL string) Gatherer {
 		}
 
 		// Per-gatherer timeout; the caller may have a wider handler context.
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
-
-		allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, browserWSURL)
-		defer allocCancel()
 
 		var title, text, url string
 		var headers map[string]string
@@ -78,21 +75,31 @@ func newWebGatherer(browserWSURL string) Gatherer {
 			resp.Body.Close()
 		}
 
-		if err := scrapePage(allocCtx, "https://"+host, &title, &text, &url); err != nil {
+		resolvedWS := resolveBrowserWSURL(ctx, browserWSURL)
+		allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, resolvedWS)
+		defer allocCancel()
+
+		scrapeErr := scrapePage(allocCtx, "https://"+host, &title, &text, &url)
+		if scrapeErr != nil {
 			title, text, url = "", "", ""
-			if err2 := scrapePage(allocCtx, "http://"+host, &title, &text, &url); err2 != nil {
-				return "web", map[string]any{"error": err2.Error()}, fmt.Errorf("web gather failed for %s: %w", host, err2)
-			}
+			scrapeErr = scrapePage(allocCtx, "http://"+host, &title, &text, &url)
 		}
 
-		return "web", map[string]any{
+		webData := map[string]any{
 			"title":            title,
 			"url":              url,
 			"copyrights":       extractCopyrights(text),
 			"headers":          headers,
 			"security_headers": securityHeaders,
 			"tech_stack":       techStack,
-		}, nil
+		}
+
+		if scrapeErr != nil {
+			webData["error"] = scrapeErr.Error()
+			return "web", webData, fmt.Errorf("web gather failed for %s: %w", host, scrapeErr)
+		}
+
+		return "web", webData, nil
 	}
 }
 

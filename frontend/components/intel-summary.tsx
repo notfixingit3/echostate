@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { CountryFlag } from "@/components/country-flag"
 import type { IntelHighlights } from "@/lib/intel"
+import { cn } from "@/lib/utils"
 import {
   GlobeIcon,
   NetworkIcon,
@@ -19,31 +20,40 @@ function StatCard({
   icon: Icon,
   mono = false,
   badge,
+  className,
 }: {
   label: string
   value?: string
   icon: React.ComponentType<{ className?: string }>
   mono?: boolean
   badge?: string
+  className?: string
 }) {
   return (
-    <div className="intel-stat flex flex-col gap-2 rounded-xl border bg-card/80 p-4 backdrop-blur-sm">
+    <div
+      className={cn(
+        "intel-stat flex min-w-0 flex-col gap-2 rounded-xl border bg-card/80 p-4 backdrop-blur-sm",
+        className
+      )}
+    >
       <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        <Icon className="size-3.5 text-primary/70" />
+        <Icon className="size-3.5 shrink-0 text-primary/70" />
         {label}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         {badge ? (
-          <Badge variant="secondary" className="font-mono text-xs">
-            {badge}
+          <Badge variant="secondary" className="max-w-full font-mono text-xs">
+            <span className="truncate">{badge}</span>
           </Badge>
         ) : null}
         <span
-          className={
+          className={cn(
+            "min-w-0 text-sm leading-snug",
             mono
-              ? "font-mono text-sm leading-snug break-all"
-              : "text-sm font-medium leading-snug"
-          }
+              ? "break-all font-mono"
+              : "line-clamp-3 break-words font-medium"
+          )}
+          title={value}
         >
           {value || "—"}
         </span>
@@ -53,8 +63,15 @@ function StatCard({
 }
 
 export function IntelSummary({ intel }: { intel: IntelHighlights }) {
+  const asnLabel =
+    intel.asn && intel.asName
+      ? `AS${intel.asn} · ${intel.asName}`
+      : intel.asn
+        ? `AS${intel.asn}`
+        : intel.asName
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <StatCard label="Host" value={intel.host} icon={GlobeIcon} mono />
       <StatCard
         label="Resolved IP"
@@ -62,26 +79,16 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         icon={ServerIcon}
         mono
       />
-      <StatCard
-        label="ASN"
-        value={
-          intel.asn && intel.asName
-            ? `AS${intel.asn} · ${intel.asName}`
-            : intel.asn
-              ? `AS${intel.asn}`
-              : intel.asName
-        }
-        icon={NetworkIcon}
-      />
+      <StatCard label="ASN" value={asnLabel} icon={NetworkIcon} />
       <StatCard
         label="BGP Prefix"
         value={intel.prefix}
         icon={NetworkIcon}
         mono
       />
-      <div className="intel-stat flex flex-col gap-2 rounded-xl border bg-card/80 p-4 backdrop-blur-sm">
+      <div className="intel-stat flex min-w-0 flex-col gap-2 rounded-xl border bg-card/80 p-4 backdrop-blur-sm">
         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          <MapPinIcon className="size-3.5 text-primary/70" />
+          <MapPinIcon className="size-3.5 shrink-0 text-primary/70" />
           Country
         </div>
         <CountryFlag code={intel.country} />

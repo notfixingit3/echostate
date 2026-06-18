@@ -45,6 +45,36 @@ import ReactDiffViewer from "react-diff-viewer-continued"
 import { useTheme } from "next-themes"
 import { fetchApi } from "@/lib/api"
 
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false
+  return Object.values(value).every((item) => typeof item === "string")
+}
+
+function HeaderMap({ data }: { data: Record<string, string> }) {
+  const entries = Object.entries(data)
+  if (entries.length === 0) {
+    return <p className="text-sm text-muted-foreground">No data available.</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {entries.map(([header, val]) => (
+        <div
+          key={header}
+          className="min-w-0 rounded-md border border-border/50 bg-background/60 px-3 py-2"
+        >
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {header}
+          </div>
+          <div className="mt-1 break-all font-mono text-xs leading-relaxed">
+            {val}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function DataGrid({
   data,
   fields,
@@ -73,13 +103,16 @@ function DataGrid({
   }
 
   return (
-    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(8rem,auto)_1fr] sm:gap-x-6 sm:gap-y-3">
+    <dl className="flex flex-col gap-3">
       {entries.map(([key, value]) => (
-        <React.Fragment key={key}>
-          <dt className="text-sm font-medium text-muted-foreground">
+        <div
+          key={key}
+          className="min-w-0 rounded-lg border border-border/50 bg-muted/15 p-3 sm:p-4"
+        >
+          <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {formatFieldLabel(key)}
           </dt>
-          <dd className="text-sm break-words">
+          <dd className="mt-2 min-w-0 text-sm">
             {key === "name_servers" ||
             key === "status" ||
             key === "copyrights" ||
@@ -93,24 +126,37 @@ function DataGrid({
             key === "tech_stack" ? (
               <div className="flex flex-wrap gap-1.5">
                 {(Array.isArray(value) ? value : [value]).map((item) => (
-                  <Badge key={String(item)} variant="outline" className="font-mono text-xs font-normal">
+                  <Badge
+                    key={String(item)}
+                    variant="outline"
+                    className="h-auto max-w-full whitespace-normal break-all py-1 font-mono text-xs font-normal"
+                  >
                     {String(item)}
                   </Badge>
                 ))}
               </div>
+            ) : (key === "headers" || key === "security_headers") &&
+              isStringRecord(value) ? (
+              <HeaderMap data={value} />
             ) : key === "url" && typeof value === "string" ? (
               <a
                 href={value}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-primary hover:underline"
+                className="inline-flex max-w-full items-start gap-1 break-all font-mono text-primary hover:underline"
               >
-                {value}
-                <ExternalLinkIcon className="size-3" />
+                <span className="min-w-0 break-all">{value}</span>
+                <ExternalLinkIcon className="mt-0.5 size-3 shrink-0" />
               </a>
             ) : (
-              <div className="flex items-center gap-1">
-                <span className={key === "raw" ? "block whitespace-pre-wrap font-mono text-xs leading-relaxed" : "font-mono"}>
+              <div className="flex min-w-0 items-start gap-2">
+                <span
+                  className={
+                    key === "raw"
+                      ? "block min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed"
+                      : "min-w-0 flex-1 break-words font-mono text-sm leading-relaxed"
+                  }
+                >
                   {formatValue(value)}
                 </span>
                 {(typeof value === "string" || typeof value === "number") && (
@@ -119,7 +165,7 @@ function DataGrid({
               </div>
             )}
           </dd>
-        </React.Fragment>
+        </div>
       ))}
     </dl>
   )
@@ -192,7 +238,7 @@ export function IntelPanels({
       </TabsList>
 
       <TabsContent value="overview" className="mt-4">
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -231,7 +277,7 @@ export function IntelPanels({
               <DataGrid data={raw?.web} fields={WEB_FIELDS} />
             </CardContent>
           </Card>
-          <Card className="border-border/60 bg-card/80 backdrop-blur-sm lg:col-span-3">
+          <Card className="border-border/60 bg-card/80 backdrop-blur-sm md:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <ShieldIcon className="size-4 text-primary" />

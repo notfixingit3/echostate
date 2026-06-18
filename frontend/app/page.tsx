@@ -43,7 +43,7 @@ export default function Page() {
         </p>
       </div>
 
-      <div className="w-full max-w-2xl rounded-2xl border border-border/60 bg-card/80 p-6 shadow-sm backdrop-blur-sm md:p-8">
+      <div className="w-full max-w-5xl rounded-2xl border border-border/60 bg-card/80 p-6 shadow-sm backdrop-blur-sm md:p-8">
         <ScanForm />
       </div>
 

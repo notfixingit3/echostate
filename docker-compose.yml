@@ -68,7 +68,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-echostate}
       POSTGRES_DB: ${POSTGRES_DB:-echostate}
       DATABASE_URL: postgres://${POSTGRES_USER:-echostate}:${POSTGRES_PASSWORD:-echostate}@db:5432/${POSTGRES_DB:-echostate}?sslmode=disable
-      BROWSER_WS_URL: ${BROWSER_WS_URL:-ws://browser:3000/}
+      BROWSER_WS_URL: ws://browser:3000/
       NEO4J_URI: ${NEO4J_URI:-bolt://neo4j:7687}
       NEO4J_USER: ${NEO4J_USER:-neo4j}
       NEO4J_PASSWORD: ${NEO4J_PASSWORD:-echostate123}
