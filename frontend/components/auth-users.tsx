@@ -80,11 +80,11 @@ export function AuthUsersPanel() {
     <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="inline-flex items-center gap-1.5">
-          Users & enrollment codes
+          User management
           <HelpTip id="settings.auth_users" />
         </CardTitle>
         <CardDescription>
-          Create scanner or admin accounts and issue single-use enrollment or recovery codes.
+          Create accounts and issue single-use enrollment or recovery codes.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.21] - 2026-06-17
+
+### Added
+
+- **Admin console** — Settings renamed to Admin with sidebar navigation: Account & passkeys, Integrations, System, Authentication, and User management.
+- **Account & passkeys** — `/settings/account` for registering and removing passkeys on the signed-in account (nav **Account** link).
+- **Login device enrollment** — After code verification, choose **Sign in with passkey** or **Register passkey on this device** instead of auto-attempting passkey login.
+
+### Changed
+
+- **User management** — Users and enrollment codes moved from monolithic Settings to **Admin → User management**.
+- **Nav** — Top-level **Settings** link renamed **Admin**; **Account** shortcut added to the user menu (desktop and mobile).
+
 ## [0.0.1-beta.20] - 2026-06-17
 
 ### Added

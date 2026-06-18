@@ -69,7 +69,7 @@ EchoState uses **passkeys (WebAuthn)** for day-to-day sign-in and **single-use c
 
 **After bootstrap**, protected routes require an HTTP-only session cookie (`echostate_session`). The UI redirects unauthenticated users to `/login`.
 
-Auth defaults (code length/TTL, session lifetime, attempt limits, WebAuthn RP ID/origin) are **admin-configurable in Settings**.
+Auth defaults (code length/TTL, session lifetime, attempt limits, WebAuthn RP ID/origin) are **admin-configurable in Admin → Authentication**.
 
 ### Environment variables
 
@@ -94,7 +94,7 @@ Set these in `.env` (Docker) or your shell (local `go run`). See `.env.example`.
 
    This prints a single-use **enrollment code**. `bootstrap-admin` fails with "admin user already exists" if an admin is already present — use [Recovery codes](#recovery-codes) instead.
 
-3. Open **http://localhost:3001/login**, enter the code, and register a passkey (Touch ID, Windows Hello, YubiKey, etc.).
+3. Open **http://localhost:3001/login**, enter the code, then choose **Register passkey on this device** (or go to **Admin → Account & passkeys** after signing in).
 
 #### Without Docker (local dev)
 
@@ -112,19 +112,30 @@ Set these in `.env` (Docker) or your shell (local `go run`). See `.env.example`.
    go run ./main.go auth bootstrap-admin --name "Admin"
    ```
 
-3. Start the frontend (`cd frontend && npm run dev`), open **http://localhost:3000/login** (or whatever port Next uses), enter the code, and register a passkey.
+3. Start the frontend (`cd frontend && npm run dev`), open **http://localhost:3000/login** (or whatever port Next uses), enter the code, then register a passkey on this device.
 
    For local Next dev, set `FRONTEND_URL` in `.env` to match the UI origin (e.g. `http://localhost:3000`) so WebAuthn RP ID/origin align.
 
 ### Sign-in flow (UI)
 
 1. **Returning user** — `/login` → **Sign in with passkey** (uses the passkey registered in this browser).
-2. **New device or first enrollment** — enter an **enrollment code** or **recovery code** → verify → register or sign in with passkey.
-3. **Sign out** — nav bar **Sign out** (or `POST /api/auth/logout`).
+2. **New device or first enrollment** — enter an **enrollment code** or **recovery code** → verify → **Register passkey on this device** or sign in with an existing passkey.
+3. **Add passkey while signed in** — **Admin → Account & passkeys** → **Register passkey** (also linked from the nav **Account** button).
+4. **Sign out** — nav bar **Sign out** (or `POST /api/auth/logout`).
 
-### Managing users (admin)
+### Admin console
 
-In **Settings → Users & enrollment codes**:
+The nav **Admin** link opens a sidebar with:
+
+| Section | Path | Who |
+| ------- | ---- | --- |
+| Account & passkeys | `/settings/account` | All signed-in users |
+| Integrations | `/settings/integrations` | Admin |
+| System | `/settings/system` | Admin |
+| Authentication | `/settings/authentication` | Admin |
+| User management | `/settings/users` | Admin |
+
+**User management** (admin):
 
 - Create `admin` or `scanner` users
 - Issue **enrollment codes** (numeric, for new passkey setup)
@@ -164,7 +175,7 @@ Paste the printed code at `/login`.
 | Endpoint | Description |
 | -------- | ----------- |
 | `GET /api/auth/config` | Auth required flag + public tunables |
-| `GET /api/auth/session` | Current session (`authenticated`, `user`) |
+| `GET /api/auth/session` | Current session (`authenticated`, `user`, `credentials`) |
 | `POST /api/auth/enroll/verify` | Verify enrollment/recovery code (`{"code":"..."}`) |
 | `POST /api/auth/webauthn/register/begin` | Start passkey registration |
 | `POST /api/auth/webauthn/register/finish` | Complete passkey registration |

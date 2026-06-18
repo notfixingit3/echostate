@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { KeyRoundIcon, ShieldCheckIcon } from "lucide-react"
 
@@ -13,9 +14,12 @@ import {
   getStoredUserId,
   loginWithPasskey,
   registerPasskey,
+  storeUserId,
   verifyEnrollmentCode,
 } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
+
+type Step = "signin" | "code-verified" | "register"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,7 +27,7 @@ export default function LoginPage() {
   const [code, setCode] = React.useState("")
   const [nickname, setNickname] = React.useState("")
   const [pendingUserId, setPendingUserId] = React.useState<string | null>(null)
-  const [needsPasskey, setNeedsPasskey] = React.useState(false)
+  const [step, setStep] = React.useState<Step>("signin")
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
 
@@ -42,16 +46,15 @@ export default function LoginPage() {
     try {
       const result = await verifyEnrollmentCode(code.trim())
       setPendingUserId(result.user.id)
-      setNeedsPasskey(result.needs_passkey)
       setUser(result.user)
-      if (!result.needs_passkey) {
-        const login = await loginWithPasskey(result.user.id)
-        if (!login.needsPasskey && login.user) {
-          setUser(login.user)
-          await refresh()
-          router.replace("/")
-        }
+      storeUserId(result.user.id)
+
+      if (result.needs_passkey) {
+        setStep("register")
+        return
       }
+
+      setStep("code-verified")
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Verification failed")
     } finally {
@@ -66,7 +69,7 @@ export default function LoginPage() {
       const result = await loginWithPasskey(userId)
       if (result.needsPasskey) {
         setPendingUserId(userId)
-        setNeedsPasskey(true)
+        setStep("register")
         return
       }
       if (result.user) {
@@ -108,8 +111,7 @@ export default function LoginPage() {
             Sign in to EchoState
           </CardTitle>
           <CardDescription>
-            Passkey-first access with single-use enrollment codes. Admins manage users and
-            defaults from Settings.
+            Passkey-first access with single-use enrollment codes.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -119,7 +121,7 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          {!needsPasskey ? (
+          {step === "signin" ? (
             <>
               {storedUserId ? (
                 <div className="space-y-3">
@@ -132,9 +134,6 @@ export default function LoginPage() {
                     <KeyRoundIcon data-icon="inline-start" />
                     Sign in with passkey
                   </Button>
-                  <p className="text-center text-xs text-muted-foreground">
-                    Uses the passkey registered on this browser.
-                  </p>
                 </div>
               ) : null}
 
@@ -155,10 +154,32 @@ export default function LoginPage() {
                 </Button>
               </form>
             </>
-          ) : (
+          ) : null}
+
+          {step === "code-verified" ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Code accepted. Sign in with an existing passkey or register this device.
+              </p>
+              <Button
+                type="button"
+                className="w-full"
+                disabled={busy}
+                onClick={() => pendingUserId && handlePasskeyLogin(pendingUserId)}
+              >
+                <KeyRoundIcon data-icon="inline-start" />
+                Sign in with passkey
+              </Button>
+              <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={() => setStep("register")}>
+                Register passkey on this device
+              </Button>
+            </div>
+          ) : null}
+
+          {step === "register" ? (
             <form onSubmit={handleRegisterPasskey} className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Register a passkey for this device to finish enrollment
+                Register a passkey for this device
                 {pendingUserId ? ` (${pendingUserId.slice(0, 8)}…)` : ""}.
               </p>
               <div className="space-y-2">
@@ -174,8 +195,21 @@ export default function LoginPage() {
                 <KeyRoundIcon data-icon="inline-start" />
                 {busy ? "Registering..." : "Create passkey"}
               </Button>
+              {pendingUserId ? (
+                <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("code-verified")}>
+                  Back
+                </Button>
+              ) : null}
             </form>
-          )}
+          ) : null}
+
+          <p className="text-center text-xs text-muted-foreground">
+            Already signed in elsewhere?{" "}
+            <Link href="/settings/account" className="text-primary hover:underline">
+              Manage passkeys
+            </Link>{" "}
+            after signing in.
+          </p>
         </CardContent>
       </Card>
     </div>

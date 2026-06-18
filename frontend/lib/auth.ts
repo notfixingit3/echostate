@@ -20,9 +20,17 @@ export type AuthConfig = {
   webauthn_rp_origin: string
 }
 
+export type AuthCredential = {
+  id: string
+  nickname: string
+  created_at: string
+  last_used_at?: string
+}
+
 export type AuthSession = {
   authenticated: boolean
   user?: AuthUser
+  credentials?: AuthCredential[]
 }
 
 const USER_ID_KEY = "echostate_user_id"
