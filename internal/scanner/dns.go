@@ -98,6 +98,8 @@ func gatherDNS(ctx context.Context, host string) (string, map[string]any, error)
 
 	wg.Wait()
 
+	enrichMailSecurity(ctx, resolver, host, data)
+
 	if len(data) == 0 {
 		return "dns", nil, fmt.Errorf("no dns records found for %s", host)
 	}

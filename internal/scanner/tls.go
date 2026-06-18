@@ -38,22 +38,40 @@ func gatherTLS(ctx context.Context, host string) (string, map[string]any, error)
 	}
 
 	cert := state.PeerCertificates[0]
+	now := time.Now().UTC()
 
 	var ipSans []string
 	for _, ip := range cert.IPAddresses {
 		ipSans = append(ipSans, ip.String())
 	}
 
+	chain := make([]map[string]any, 0, len(state.PeerCertificates))
+	for index, chainCert := range state.PeerCertificates {
+		chain = append(chain, map[string]any{
+			"index":      index,
+			"issuer":     chainCert.Issuer.String(),
+			"subject":    chainCert.Subject.String(),
+			"not_before": chainCert.NotBefore,
+			"not_after":  chainCert.NotAfter,
+		})
+	}
+
+	daysRemaining := int(cert.NotAfter.Sub(now).Hours() / 24)
+
 	data := map[string]any{
 		"issuer":              cert.Issuer.String(),
 		"subject":             cert.Subject.String(),
 		"not_before":          cert.NotBefore,
 		"not_after":           cert.NotAfter,
+		"days_remaining":      daysRemaining,
+		"expired":             now.After(cert.NotAfter),
 		"dns_names":           cert.DNSNames,
 		"ip_sans":             ipSans,
 		"version":             cert.Version,
 		"signature_algorithm": cert.SignatureAlgorithm.String(),
 		"cipher_suite":        tls.CipherSuiteName(state.CipherSuite),
+		"chain":               chain,
+		"chain_length":        len(chain),
 	}
 
 	if jarmHash, err := fingerprintJARM(ctx, host, 443); err == nil {

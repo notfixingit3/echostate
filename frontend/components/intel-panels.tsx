@@ -37,6 +37,7 @@ import {
 } from "@/lib/intel"
 import { ScreenshotTimeline } from "@/components/screenshot-timeline"
 import type { RawIntel } from "@/lib/intel"
+import type { ChangeDetail } from "@/lib/types"
 import {
   GlobeIcon,
   NetworkIcon,
@@ -313,21 +314,34 @@ function DataGrid({
   )
 }
 
+function severityStyles(severity: string) {
+  switch (severity) {
+    case "critical":
+      return "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+    case "warning":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+    default:
+      return "border-blue-500/20 bg-blue-500/5 text-foreground"
+  }
+}
+
 export function IntelPanels({
   snapshotId,
   targetId,
   raw,
   changes,
+  changeDetails,
   pwhois,
 }: {
   snapshotId?: string
   targetId?: string
   raw?: RawIntel | null
   changes?: string[]
+  changeDetails?: ChangeDetail[]
   pwhois?: Record<string, unknown> | null
 }) {
   const errorCount = raw?.errors?.length ?? 0
-  const changeCount = changes?.length ?? 0
+  const changeCount = changeDetails?.length ?? changes?.length ?? 0
   const ctCount =
     typeof raw?.ct?.count === "number"
       ? raw.ct.count
@@ -711,13 +725,38 @@ export function IntelPanels({
       <TabsContent value="changes" className="mt-4">
         <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
-            {changes && changes.length > 0 ? (
+            {changeDetails && changeDetails.length > 0 ? (
+              <ul className="flex flex-col gap-2">
+                {changeDetails.map((entry, index) => (
+                  <li
+                    key={`${entry.type}-${entry.summary}-${index}`}
+                    className={`flex flex-col gap-1 rounded-lg border px-3 py-2 text-sm ${severityStyles(entry.severity)}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="font-mono text-[10px] uppercase">
+                        {entry.type.replaceAll("_", " ")}
+                      </Badge>
+                      <Badge
+                        variant={entry.severity === "critical" ? "destructive" : "secondary"}
+                        className="text-[10px] uppercase"
+                      >
+                        {entry.severity}
+                      </Badge>
+                      <span className="font-medium">{entry.summary}</span>
+                    </div>
+                    {entry.detail ? (
+                      <p className="font-mono text-xs text-muted-foreground">{entry.detail}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : changes && changes.length > 0 ? (
               <ul className="flex flex-col gap-2">
                 {changes.map((change) => {
                   const isAdded = change.startsWith("added ")
                   const isRemoved = change.startsWith("removed ")
                   const isChanged = change.startsWith("changed ")
-                  
+
                   return (
                     <li
                       key={change}

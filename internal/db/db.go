@@ -126,6 +126,34 @@ func Migrate(db *DB) error {
 			value JSONB NOT NULL,
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
+
+		CREATE TABLE IF NOT EXISTS scan_jobs (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			host TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending',
+			snapshot_id UUID REFERENCES snapshots(id) ON DELETE SET NULL,
+			target_id UUID REFERENCES targets(id) ON DELETE SET NULL,
+			error_message TEXT,
+			client_ip TEXT,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			completed_at TIMESTAMPTZ
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_scan_jobs_status_created
+			ON scan_jobs(status, created_at);
+
+		ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS change_details JSONB DEFAULT '[]';
+
+		CREATE TABLE IF NOT EXISTS snapshot_blobs (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			snapshot_id UUID NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
+			kind TEXT NOT NULL,
+			content_type TEXT NOT NULL,
+			data BYTEA NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			UNIQUE (snapshot_id, kind)
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

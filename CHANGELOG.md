@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.11] - 2026-06-17
+
+### Added
+
+- **Async scan jobs** — `POST /api/scan` returns `202` with a job ID; poll `GET /api/scans/:id` until complete.
+- **Field-level snapshot diffs** — structured `change_details` (type, severity, summary) stored per snapshot and shown in the Changes intel tab.
+- **Richer webhooks** — structured change payloads with configurable alert rules (severity/type filters).
+- **Scheduled rescans** — background scheduler re-enqueues stale targets (configurable interval and max age).
+- **Snapshot retention** — optional pruning of old snapshots per target after each scan.
+- **Blob offload** — screenshot thumbnails stored in `snapshot_blobs` instead of inline `raw_data`.
+- **API key auth** — optional `ECHOSTATE_API_KEY` (or Settings UI key) protects write endpoints; read/browse stays open.
+- **Enrichment worker** — optional Shodan/Censys lookups keyed off Settings API keys.
+- **Deeper passive intel** — SPF/DKIM/DMARC parsing, TLS chain + expiry, CertSpotter CT fallback.
+- **Settings expansion** — scan concurrency, per-gatherer timeouts, scheduler, retention, alert rules, and enrichment keys in the UI.
+
+### Changed
+
+- Scan handler no longer blocks on long CT/TLS gathers; work runs in a bounded-concurrency worker pool.
+- Dedup hash excludes volatile fields (screenshot thumbnails, scan timestamps).
+
 ## [0.0.1-beta.10] - 2026-06-17
 
 ### Added
@@ -111,6 +131,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial EchoState release — Go API, Next.js UI, PostgreSQL snapshots, PDF reports, WHOIS/ASN/web gatherers, Docker Compose stack.
 
+[0.0.1-beta.11]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.11
 [0.0.1-beta.10]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.10
 [0.0.1-beta.5]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.5
 [0.0.1-beta.4]: https://github.com/notfixingit3/echostate/releases/tag/v0.0.1-beta.4

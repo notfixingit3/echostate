@@ -26,10 +26,35 @@ type Webhook = {
   enabled: boolean
 }
 
+type AlertRule = {
+  id: string
+  name: string
+  enabled: boolean
+  min_severity: string
+  match_types: string[]
+  webhook_ids: string[]
+}
+
 type SystemSettings = {
   dns_servers: string
   pwhois_server: string
   rate_limit: number
+  api_key?: string
+  shodan_api_key?: string
+  censys_api_id?: string
+  censys_api_secret?: string
+  scan_concurrency?: number
+  scan_job_timeout_sec?: number
+  default_gatherer_timeout_sec?: number
+  ct_http_timeout_sec?: number
+  traceroute_timeout_sec?: number
+  screenshot_timeout_sec?: number
+  retention_max_snapshots?: number
+  schedule_enabled?: boolean
+  schedule_interval_minutes?: number
+  schedule_stale_hours?: number
+  schedule_tags?: string[]
+  alert_rules?: AlertRule[]
 }
 
 export default function SettingsPage() {
@@ -45,6 +70,18 @@ export default function SettingsPage() {
     dns_servers: "8.8.8.8,1.1.1.1",
     pwhois_server: "whois.pwhois.org",
     rate_limit: 30,
+    scan_concurrency: 2,
+    scan_job_timeout_sec: 120,
+    default_gatherer_timeout_sec: 20,
+    ct_http_timeout_sec: 60,
+    traceroute_timeout_sec: 40,
+    screenshot_timeout_sec: 25,
+    retention_max_snapshots: 0,
+    schedule_enabled: false,
+    schedule_interval_minutes: 60,
+    schedule_stale_hours: 24,
+    schedule_tags: [],
+    alert_rules: [],
   })
   const [savingSys, setSavingSys] = React.useState(false)
 
@@ -73,12 +110,10 @@ export default function SettingsPage() {
     try {
       await fetchApi("/api/settings", {
         method: "PUT",
-        body: JSON.stringify({
-          dns_servers: sysSettings.dns_servers,
-          pwhois_server: sysSettings.pwhois_server,
-          rate_limit: Number(sysSettings.rate_limit)
-        }),
+        body: JSON.stringify(sysSettings),
       })
+      const refreshed = await fetchApi<SystemSettings>("/api/settings")
+      setSysSettings(refreshed)
     } catch (e) {
       console.error(e)
     } finally {
@@ -339,6 +374,174 @@ export default function SettingsPage() {
               {savingSys ? "Saving..." : "Save Configuration"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+        <CardHeader>
+          <CardTitle>API Access & Enrichment Keys</CardTitle>
+          <CardDescription>
+            Optional API key for write endpoints and passive Shodan/Censys correlation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="api_key">EchoState API key</Label>
+            <Input id="api_key" value={sysSettings.api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, api_key: e.target.value })} placeholder="Required for POST/PUT/DELETE when set" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="shodan_api_key">Shodan API key</Label>
+            <Input id="shodan_api_key" value={sysSettings.shodan_api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, shodan_api_key: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="censys_api_id">Censys API ID</Label>
+            <Input id="censys_api_id" value={sysSettings.censys_api_id || ""} onChange={(e) => setSysSettings({ ...sysSettings, censys_api_id: e.target.value })} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="censys_api_secret">Censys API secret</Label>
+            <Input id="censys_api_secret" value={sysSettings.censys_api_secret || ""} onChange={(e) => setSysSettings({ ...sysSettings, censys_api_secret: e.target.value })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+        <CardHeader>
+          <CardTitle>Scan Performance</CardTitle>
+          <CardDescription>Worker concurrency and per-gatherer timeouts (seconds).</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          {[
+            ["scan_concurrency", "Scan concurrency"],
+            ["scan_job_timeout_sec", "Scan job timeout"],
+            ["default_gatherer_timeout_sec", "Default gatherer timeout"],
+            ["ct_http_timeout_sec", "CT HTTP timeout"],
+            ["traceroute_timeout_sec", "Traceroute timeout"],
+            ["screenshot_timeout_sec", "Screenshot timeout"],
+          ].map(([key, label]) => (
+            <div className="space-y-2" key={key}>
+              <Label htmlFor={key}>{label}</Label>
+              <Input
+                id={key}
+                type="number"
+                min="1"
+                value={Number(sysSettings[key as keyof SystemSettings] ?? 0)}
+                onChange={(e) =>
+                  setSysSettings({
+                    ...sysSettings,
+                    [key]: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+        <CardHeader>
+          <CardTitle>Scheduled Rescans</CardTitle>
+          <CardDescription>Enqueue stale targets automatically (tag filter optional).</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <Switch
+              checked={!!sysSettings.schedule_enabled}
+              onCheckedChange={(checked) => setSysSettings({ ...sysSettings, schedule_enabled: checked })}
+              id="schedule_enabled"
+            />
+            <Label htmlFor="schedule_enabled">Enable scheduler</Label>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="schedule_interval_minutes">Interval (minutes)</Label>
+            <Input id="schedule_interval_minutes" type="number" min="5" value={sysSettings.schedule_interval_minutes || 60} onChange={(e) => setSysSettings({ ...sysSettings, schedule_interval_minutes: Number(e.target.value) })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="schedule_stale_hours">Stale after (hours)</Label>
+            <Input id="schedule_stale_hours" type="number" min="1" value={sysSettings.schedule_stale_hours || 24} onChange={(e) => setSysSettings({ ...sysSettings, schedule_stale_hours: Number(e.target.value) })} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="schedule_tags">Limit to tags (comma-separated)</Label>
+            <Input id="schedule_tags" value={(sysSettings.schedule_tags || []).join(", ")} onChange={(e) => setSysSettings({ ...sysSettings, schedule_tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+        <CardHeader>
+          <CardTitle>Retention</CardTitle>
+          <CardDescription>Keep only the newest N snapshots per target (0 = unlimited).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 max-w-xs">
+            <Label htmlFor="retention_max_snapshots">Max snapshots per target</Label>
+            <Input id="retention_max_snapshots" type="number" min="0" value={sysSettings.retention_max_snapshots || 0} onChange={(e) => setSysSettings({ ...sysSettings, retention_max_snapshots: Number(e.target.value) })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
+        <CardHeader>
+          <CardTitle>Alert Rules</CardTitle>
+          <CardDescription>Filter webhook notifications by severity and change type.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(sysSettings.alert_rules || []).map((rule, index) => (
+            <div key={rule.id || index} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input value={rule.name} onChange={(e) => {
+                  const rules = [...(sysSettings.alert_rules || [])]
+                  rules[index] = { ...rule, name: e.target.value }
+                  setSysSettings({ ...sysSettings, alert_rules: rules })
+                }} />
+              </div>
+              <div className="space-y-2">
+                <Label>Min severity</Label>
+                <Select value={rule.min_severity} onValueChange={(val) => val && (() => {
+                  const rules = [...(sysSettings.alert_rules || [])]
+                  rules[index] = { ...rule, min_severity: val }
+                  setSysSettings({ ...sysSettings, alert_rules: rules })
+                })()}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="info">info</SelectItem>
+                    <SelectItem value="warning">warning</SelectItem>
+                    <SelectItem value="critical">critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Match types (comma-separated, empty = all)</Label>
+                <Input value={(rule.match_types || []).join(", ")} onChange={(e) => {
+                  const rules = [...(sysSettings.alert_rules || [])]
+                  rules[index] = { ...rule, match_types: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) }
+                  setSysSettings({ ...sysSettings, alert_rules: rules })
+                }} />
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <Switch checked={rule.enabled} onCheckedChange={(checked) => {
+                  const rules = [...(sysSettings.alert_rules || [])]
+                  rules[index] = { ...rule, enabled: checked }
+                  setSysSettings({ ...sysSettings, alert_rules: rules })
+                }} id={`rule-${index}`} />
+                <Label htmlFor={`rule-${index}`}>Enabled</Label>
+              </div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => setSysSettings({
+            ...sysSettings,
+            alert_rules: [...(sysSettings.alert_rules || []), {
+              id: `rule-${Date.now()}`,
+              name: "New rule",
+              enabled: true,
+              min_severity: "warning",
+              match_types: [],
+              webhook_ids: [],
+            }],
+          })}>
+            <PlusIcon data-icon="inline-start" />
+            Add alert rule
+          </Button>
         </CardContent>
       </Card>
 

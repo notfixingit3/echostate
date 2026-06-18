@@ -63,7 +63,7 @@ func (h *Handler) createReport(c *gin.Context) {
 		snapshotID = id
 	}
 
-	reportID, err := h.worker.CreateReport(ctx, snapshotID)
+	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})
 		return
@@ -87,7 +87,7 @@ func (h *Handler) getReport(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	report, err := h.worker.GetReport(ctx, reportID)
+	report, err := h.reportWorker.GetReport(ctx, reportID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch report"})
 		return
@@ -111,7 +111,7 @@ func (h *Handler) downloadReport(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	report, err := h.worker.GetReport(ctx, reportID)
+	report, err := h.reportWorker.GetReport(ctx, reportID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch report"})
 		return
@@ -149,7 +149,7 @@ func (h *Handler) snapshotReport(c *gin.Context) {
 		return
 	}
 
-	reportsList, err := h.worker.ListReportsForSnapshot(ctx, snapshotID)
+	reportsList, err := h.reportWorker.ListReportsForSnapshot(ctx, snapshotID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list reports"})
 		return
@@ -162,7 +162,7 @@ func (h *Handler) snapshotReport(c *gin.Context) {
 		}
 	}
 
-	reportID, err := h.worker.CreateReport(ctx, snapshotID)
+	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})
 		return

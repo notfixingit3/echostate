@@ -195,6 +195,7 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
         snapshotId={snapshot.id}
         raw={snapshot.raw_data}
         changes={snapshot.changes}
+        changeDetails={snapshot.change_details}
         pwhois={snapshot.pwhois_data}
       />
     </div>

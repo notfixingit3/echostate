@@ -72,10 +72,14 @@ func main() {
 	rateLimiter := middleware.NewRateLimiter()
 	defer rateLimiter.Stop()
 
-	worker := handlers.Register(router, database, neo4jClient, cfg, rateLimiter)
-	if err := worker.Start(workerCtx); err != nil {
+	workers := handlers.Register(router, database, neo4jClient, cfg, rateLimiter)
+	if err := workers.Reports.Start(workerCtx); err != nil {
 		log.Fatalf("failed to start report worker: %v", err)
 	}
+	if err := workers.Scans.Start(workerCtx); err != nil {
+		log.Fatalf("failed to start scan worker: %v", err)
+	}
+	workers.Scheduler.Start(workerCtx)
 
 	srv := newServer(cfg, router)
 
@@ -92,7 +96,9 @@ func main() {
 
 	log.Println("shutting down EchoState API")
 
-	worker.Stop()
+	workers.Scheduler.Stop()
+	workers.Scans.Stop()
+	workers.Reports.Stop()
 
 	if pwhoisWorker != nil {
 		pwhoisWorker.Stop()

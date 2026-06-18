@@ -20,6 +20,29 @@ export class ApiError extends Error {
   }
 }
 
+type ScanJobResponse = {
+  id: string
+  host: string
+  status: "pending" | "running" | "completed" | "failed"
+  snapshot_id?: string
+  target_id?: string
+  error?: string
+  snapshot?: {
+    id: string
+    target_id: string
+    scanned_at: string
+    raw_data?: ScanResponse["raw_data"]
+    changes?: string[]
+  }
+}
+
+const SCAN_POLL_INTERVAL_MS = 2000
+const SCAN_POLL_TIMEOUT_MS = 130_000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export async function fetchApi<T = unknown>(
   path: string,
   options: RequestInit = {}
@@ -61,25 +84,54 @@ export async function fetchApi<T = unknown>(
   return response.json() as Promise<T>
 }
 
-export async function scanHost(host: string): Promise<ScanResponse> {
-  const data = (await fetchApi("/api/scan", {
+async function waitForScanJob(
+  jobId: string,
+  onStatus?: (status: ScanJobResponse["status"]) => void
+): Promise<ScanJobResponse> {
+  const deadline = Date.now() + SCAN_POLL_TIMEOUT_MS
+
+  while (Date.now() < deadline) {
+    const job = await fetchApi<ScanJobResponse>(`/api/scans/${jobId}`)
+    onStatus?.(job.status)
+    if (job.status === "completed" && job.snapshot) {
+      return job
+    }
+    if (job.status === "failed") {
+      throw new ApiError(job.error || "Scan failed", 500)
+    }
+    await sleep(SCAN_POLL_INTERVAL_MS)
+  }
+
+  throw new ApiError("Scan timed out", 504)
+}
+
+export async function scanHost(
+  host: string,
+  onStatus?: (status: ScanJobResponse["status"]) => void
+): Promise<ScanResponse> {
+  const job = await fetchApi<ScanJobResponse>("/api/scan", {
     method: "POST",
     body: JSON.stringify({ host }),
-  })) as {
-    id: string
-    target_id: string
-    scanned_at: string
-    raw_data?: ScanResponse["raw_data"]
-    changes?: string[]
+  })
+  onStatus?.(job.status)
+
+  const completed =
+    job.status === "completed" && job.snapshot
+      ? job
+      : await waitForScanJob(job.id, onStatus)
+
+  const snapshot = completed.snapshot
+  if (!snapshot) {
+    throw new ApiError("Scan completed without snapshot data", 500)
   }
 
   return {
-    snapshot_id: data.id,
-    target_id: data.target_id,
-    host: data.raw_data?.host || host,
-    scanned_at: data.scanned_at,
-    raw_data: data.raw_data,
-    changes: data.changes,
+    snapshot_id: snapshot.id,
+    target_id: snapshot.target_id,
+    host: snapshot.raw_data?.host || host,
+    scanned_at: snapshot.scanned_at,
+    raw_data: snapshot.raw_data,
+    changes: snapshot.changes,
   }
 }
 

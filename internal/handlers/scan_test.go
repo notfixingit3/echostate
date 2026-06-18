@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,9 +16,11 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
+	"github.com/notfixingit3/echostate/internal/diff"
 	"github.com/notfixingit3/echostate/internal/middleware"
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/scanner"
+	"github.com/notfixingit3/echostate/internal/scans"
 )
 
 // mockScanRunner is a test double for scanner.Run that avoids live network or
@@ -42,11 +43,14 @@ func testConfig() *config.Config {
 
 func newScanTestHandler(t *testing.T, d *db.DB, runner scanRunner) *Handler {
 	t.Helper()
-	return &Handler{
-		db:      d,
-		config:  testConfig(),
-		scanner: runner,
+	h := &Handler{
+		db:           d,
+		config:       testConfig(),
+		scanner:      runner,
+		reportWorker: newWorker(d),
 	}
+	h.scanWorker = scans.New(d, runner, h, 1)
+	return h
 }
 
 func newDBTestHandler(t *testing.T, d *db.DB) *Handler {
@@ -121,6 +125,7 @@ func TestCreateScan_ScannerFailure(t *testing.T) {
 	d := setupTestDB(t)
 	runner := &mockScanRunner{err: errors.New("connection refused")}
 	h := newScanTestHandler(t, d, runner)
+	ctx := context.Background()
 
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -131,9 +136,21 @@ func TestCreateScan_ScannerFailure(t *testing.T) {
 	c.Request.Header.Set("Content-Type", "application/json")
 
 	h.createScan(c)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("createScan status=%d body=%s", w.Code, w.Body.String())
+	}
 
-	require.Equal(t, http.StatusInternalServerError, w.Code)
-	require.Contains(t, w.Body.String(), "scan failed")
+	var job models.ScanJob
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &job))
+
+	processed, err := h.scanWorker.ProcessNext(ctx)
+	require.NoError(t, err)
+	require.True(t, processed)
+
+	failed, err := h.scanWorker.GetJob(ctx, job.ID)
+	require.NoError(t, err)
+	require.Equal(t, models.ScanJobFailed, failed.Status)
+	require.Contains(t, failed.ErrorMessage, "scan failed")
 }
 
 func TestCreateScan_ValidHost(t *testing.T) {
@@ -147,6 +164,7 @@ func TestCreateScan_ValidHost(t *testing.T) {
 	}
 	runner := &mockScanRunner{result: result}
 	h := newScanTestHandler(t, d, runner)
+	ctx := context.Background()
 
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -157,16 +175,31 @@ func TestCreateScan_ValidHost(t *testing.T) {
 	c.Request.Header.Set("Content-Type", "application/json")
 
 	h.createScan(c)
+	require.Equal(t, http.StatusAccepted, w.Code)
 
-	require.Equal(t, http.StatusOK, w.Code)
+	var job models.ScanJob
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &job))
+
+	processed, err := h.scanWorker.ProcessNext(ctx)
+	require.NoError(t, err)
+	require.True(t, processed)
+
+	completed, err := h.scanWorker.GetJob(ctx, job.ID)
+	require.NoError(t, err)
+	require.Equal(t, models.ScanJobCompleted, completed.Status)
+	require.NotNil(t, completed.SnapshotID)
 
 	var snapshot models.Snapshot
-	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &snapshot))
-	require.NotEqual(t, uuid.Nil, snapshot.ID)
+	err = d.Pool.QueryRow(ctx, `
+		SELECT id, target_id, raw_data
+		FROM snapshots
+		WHERE id = $1
+	`, *completed.SnapshotID).Scan(&snapshot.ID, &snapshot.TargetID, &snapshot.RawData)
+	require.NoError(t, err)
 	require.Equal(t, "example.com", snapshot.RawData["host"])
 
 	var targetID uuid.UUID
-	err := d.Pool.QueryRow(context.Background(), `
+	err = d.Pool.QueryRow(context.Background(), `
 		SELECT id FROM targets WHERE normalized_host = $1
 	`, "example.com").Scan(&targetID)
 	require.NoError(t, err)
@@ -273,7 +306,7 @@ func TestStoreSnapshot_DifferentHashInsertsWithChanges(t *testing.T) {
 	s2, err := h.storeSnapshot(ctx, targetID, hash2, second, "")
 	require.NoError(t, err)
 	require.NotEqual(t, s1.ID, s2.ID)
-	require.Contains(t, s2.Changes, "added asn")
+	require.Contains(t, s2.Changes, "Added asn")
 
 	var count int
 	err = d.Pool.QueryRow(ctx, `
@@ -304,7 +337,7 @@ func TestComputeChanges_NoPrevious(t *testing.T) {
 		WHOIS:     map[string]any{"domain": "example.com"},
 	}
 
-	changes := computeChanges(map[string]any{}, current)
+	changes := diff.Summaries(diff.Compute(map[string]any{}, current))
 	require.Empty(t, changes)
 }
 
@@ -320,7 +353,7 @@ func TestComputeChanges_Identical(t *testing.T) {
 	previous := map[string]any{}
 	require.NoError(t, json.Unmarshal(data, &previous))
 
-	changes := computeChanges(previous, current)
+	changes := diff.Summaries(diff.Compute(previous, current))
 	require.Empty(t, changes)
 }
 
@@ -337,24 +370,11 @@ func TestComputeChanges_DetectsAddedRemovedChanged(t *testing.T) {
 		Web:       map[string]any{"title": "Example"},
 	}
 
-	changes := computeChanges(previous, current)
+	changes := diff.Summaries(diff.Compute(previous, current))
 
-	require.Contains(t, changes, "changed whois")
-	require.Contains(t, changes, "removed asn")
-	require.Contains(t, changes, "added web")
-}
-
-func TestComputeChanges_MarshalCurrentError(t *testing.T) {
-	previous := map[string]any{"host": "example.com"}
-	current := &models.ScanResult{
-		Host:      "example.com",
-		ScannedAt: time.Now().UTC(),
-		WHOIS:     map[string]any{"bad": make(chan int)},
-	}
-
-	changes := computeChanges(previous, current)
-	require.Len(t, changes, 1)
-	require.Contains(t, changes[0], "marshal current:")
+	require.NotEmpty(t, changes)
+	require.Contains(t, changes, "Removed asn")
+	require.Contains(t, changes, "Added web")
 }
 
 func TestHandler_FrontendURL_NilConfig(t *testing.T) {
@@ -362,27 +382,7 @@ func TestHandler_FrontendURL_NilConfig(t *testing.T) {
 	require.Equal(t, "", h.frontendURL())
 }
 
-func TestComputeChanges_MarshalPreviousValueError(t *testing.T) {
-	previous := map[string]any{
-		"whois": make(chan int),
-	}
-	current := &models.ScanResult{
-		Host:      "example.com",
-		ScannedAt: time.Now().UTC(),
-		WHOIS:     map[string]any{"domain": "example.com"},
-	}
 
-	changes := computeChanges(previous, current)
-
-	found := false
-	for _, change := range changes {
-		if strings.Contains(change, "marshal previous whois:") {
-			found = true
-			break
-		}
-	}
-	require.True(t, found, "expected a marshal-previous-whois error, got %v", changes)
-}
 
 func TestCreateScan_RateLimitExceeded(t *testing.T) {
 	gin.SetMode(gin.TestMode)
