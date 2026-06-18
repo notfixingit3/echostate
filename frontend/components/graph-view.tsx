@@ -33,18 +33,24 @@ import {
 import { HelpTip } from "@/components/help-tip"
 import { GraphNodeInspector } from "@/components/graph-node-inspector"
 import { HopGeoMap } from "@/components/hop-geo-map"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { fetchApi } from "@/lib/api"
+import { exportCanvasPNG, exportGraphSVG } from "@/lib/graph-export"
 import type {
   GraphIntelEvent,
   GraphNode,
   GraphPath,
   GraphResponse,
   PaginatedResponse,
+  SnapshotSummary,
   TargetSummary,
 } from "@/lib/types"
 import {
   AlertCircleIcon,
   ArrowRightIcon,
+  DownloadIcon,
+  ImageIcon,
+  InfoIcon,
   Maximize2Icon,
   MinusIcon,
   NetworkIcon,
@@ -188,7 +194,7 @@ const VIEW_META: Record<
   },
 }
 
-type ForceNode = GraphNode & { color?: string }
+type ForceNode = GraphNode & { color?: string; x?: number; y?: number }
 type ForceLink = {
   source: string
   target: string
@@ -202,6 +208,8 @@ export function GraphView() {
     zoomToFit?: (ms?: number, padding?: number) => void
     zoom?: (k?: number, durationMs?: number) => void
     d3ReheatSimulation?: () => void
+    graphData?: () => { nodes: ForceNode[]; links: ForceLink[] }
+    graph2ScreenCoords?: (x: number, y: number) => { x: number; y: number }
   } | null>(null)
   const [size, setSize] = React.useState({ width: 800, height: 520 })
   const [graph, setGraph] = React.useState<GraphResponse | null>(null)
@@ -216,6 +224,7 @@ export function GraphView() {
   const [compareSnapshotId, setCompareSnapshotId] = React.useState<string | undefined>()
   const [compareMode, setCompareMode] = React.useState<GraphCompareMode>("previous")
   const [pinnedNodes, setPinnedNodes] = React.useState<Record<string, { x: number; y: number }>>({})
+  const [snapshotCount, setSnapshotCount] = React.useState<number | null>(null)
 
   const loadGraph = React.useCallback(
     async (
@@ -285,6 +294,26 @@ export function GraphView() {
       .then((data) => setTargets(data.data ?? []))
       .catch(() => setTargets([]))
   }, [loadGraph])
+
+  React.useEffect(() => {
+    if (targetFilter === "all") {
+      setSnapshotCount(null)
+      return
+    }
+    let cancelled = false
+    void fetchApi<PaginatedResponse<SnapshotSummary>>(
+      `/api/targets/${targetFilter}/snapshots?limit=2`
+    )
+      .then((result) => {
+        if (!cancelled) setSnapshotCount(result.data?.length ?? 0)
+      })
+      .catch(() => {
+        if (!cancelled) setSnapshotCount(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [targetFilter])
 
   React.useEffect(() => {
     const element = containerRef.current
@@ -370,6 +399,48 @@ export function GraphView() {
   function resetLayout() {
     setPinnedNodes({})
     graphApiRef.current?.d3ReheatSimulation?.()
+  }
+
+  function exportFilename(ext: string) {
+    const host =
+      targetFilter === "all"
+        ? "all-targets"
+        : (targets.find((target) => target.id === targetFilter)?.host ?? "target")
+            .replace(/[^a-zA-Z0-9.-]+/g, "-")
+    return `echostate-graph-${host}-${viewMode}.${ext}`
+  }
+
+  function exportPNG() {
+    const canvas = containerRef.current?.querySelector("canvas") ?? null
+    exportCanvasPNG(canvas, exportFilename("png"))
+  }
+
+  function exportSVG() {
+    const api = graphApiRef.current
+    const data = api?.graphData?.()
+    if (!api?.graph2ScreenCoords || !data) return
+
+    const nodes = data.nodes
+      .filter((node) => typeof node.x === "number" && typeof node.y === "number")
+      .map((node) => {
+        const screen = api.graph2ScreenCoords!(node.x!, node.y!)
+        return {
+          id: node.id,
+          label: node.label,
+          type: node.type,
+          x: screen.x,
+          y: screen.y,
+        }
+      })
+
+    exportGraphSVG({
+      nodes,
+      links: data.links,
+      width: size.width,
+      height: size.height,
+      nodeColor: (node) => graphNodeColor({ ...node, color: legend[node.type] }),
+      filename: exportFilename("svg"),
+    })
   }
 
   const filterLabel =
@@ -544,6 +615,22 @@ export function GraphView() {
           />
         ) : null}
 
+        {targetFilter !== "all" && snapshotCount !== null && snapshotCount < 2 ? (
+          <Alert className="border-border/60 bg-card/60">
+            <InfoIcon />
+            <AlertDescription className="text-sm">
+              Snapshot history and compare modes need multiple scans.{" "}
+              <Link
+                href={`/target?id=${targetFilter}`}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Rescan this target
+              </Link>{" "}
+              to build temporal topology on the graph.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {graph?.stats ? (
           <div className="flex flex-wrap gap-2">
             {Object.entries(graph.stats).map(([type, count]) => (
@@ -597,7 +684,7 @@ export function GraphView() {
                       </div>
                     ) : mode === viewMode ? (
                       <>
-                        <div className="absolute right-3 top-3 z-10 flex gap-1">
+                        <div className="absolute right-3 top-3 z-10 flex flex-wrap justify-end gap-1">
                           <Button type="button" variant="secondary" size="icon-sm" onClick={() => graphApiRef.current?.zoom?.(1.4)} aria-label="Zoom in">
                             <PlusIcon />
                           </Button>
@@ -609,6 +696,28 @@ export function GraphView() {
                           </Button>
                           <Button type="button" variant="secondary" size="sm" onClick={resetLayout}>
                             Reset
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon-sm"
+                            onClick={exportPNG}
+                            disabled={forceData.nodes.length === 0}
+                            aria-label="Export PNG"
+                            data-testid="graph-export-png"
+                          >
+                            <ImageIcon />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon-sm"
+                            onClick={exportSVG}
+                            disabled={forceData.nodes.length === 0}
+                            aria-label="Export SVG"
+                            data-testid="graph-export-svg"
+                          >
+                            <DownloadIcon />
                           </Button>
                         </div>
                         <ForceGraph2D

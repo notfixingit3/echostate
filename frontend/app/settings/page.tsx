@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { HelpTip, LabelWithHelp } from "@/components/help-tip"
 import {
   PushoverFields,
   defaultPushoverConfig,
@@ -220,11 +221,15 @@ export default function SettingsPage() {
       <div className="mb-8 flex items-center gap-2">
         <WebhookIcon className="size-6 text-primary" />
         <h1 className="text-3xl font-bold tracking-tight">Settings & Integrations</h1>
+        <HelpTip id="page.settings" />
       </div>
 
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm mb-8">
         <CardHeader>
-          <CardTitle>Add Notification Integration</CardTitle>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            Add Notification Integration
+            <HelpTip id="settings.webhooks" />
+          </CardTitle>
           <CardDescription>
             Receive alerts when snapshot diffs are detected. Supports Slack, Discord,
             MS Teams webhooks, and Pushover mobile/desktop notifications.
@@ -262,7 +267,9 @@ export default function SettingsPage() {
               <PushoverFields config={pushover} onChange={setPushover} />
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="url">Webhook URL</Label>
+                <Label htmlFor="url">
+                  <LabelWithHelp label="Webhook URL" helpId="settings.webhook_url" />
+                </Label>
                 <Input
                   id="url"
                   placeholder="https://..."
@@ -339,9 +346,10 @@ export default function SettingsPage() {
         )}
       </div>
 
-      <div className="mb-8 flex items-center gap-2 mt-16">
+      <div className="mb-8 mt-16 flex items-center gap-2">
         <SettingsIcon className="size-6 text-primary" />
         <h2 className="text-2xl font-bold tracking-tight">System Configuration</h2>
+        <HelpTip id="page.settings" />
       </div>
 
       <form onSubmit={saveSysSettings} className="flex flex-col gap-8">
@@ -355,7 +363,9 @@ export default function SettingsPage() {
         <CardContent>
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="dns_servers">DNS Resolvers</Label>
+                <Label htmlFor="dns_servers">
+                  <LabelWithHelp label="DNS Resolvers" helpId="settings.dns_servers" />
+                </Label>
                 <Input
                   id="dns_servers"
                   placeholder="e.g. 8.8.8.8, 1.1.1.1"
@@ -365,7 +375,9 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Comma-separated IPs. Leave blank for system default.</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pwhois_server">pWhois Address</Label>
+                <Label htmlFor="pwhois_server">
+                  <LabelWithHelp label="pWhois Address" helpId="settings.pwhois_server" />
+                </Label>
                 <Input
                   id="pwhois_server"
                   placeholder="whois.pwhois.org"
@@ -375,7 +387,9 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Used for IP ASN/org enrichment.</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate_limit">API Rate Limit</Label>
+                <Label htmlFor="rate_limit">
+                  <LabelWithHelp label="API Rate Limit" helpId="settings.rate_limit" />
+                </Label>
                 <Input
                   id="rate_limit"
                   type="number"
@@ -391,22 +405,31 @@ export default function SettingsPage() {
 
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>API Access & Enrichment Keys</CardTitle>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            API Access & Enrichment Keys
+            <HelpTip id="settings.api_key" />
+          </CardTitle>
           <CardDescription>
             Write-endpoint API key plus passive Shodan, Censys, HIBP, and RiskIQ (PassiveTotal) correlation.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="api_key">EchoState API key</Label>
+            <Label htmlFor="api_key">
+              <LabelWithHelp label="EchoState API key" helpId="settings.api_key" />
+            </Label>
             <Input id="api_key" value={sysSettings.api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, api_key: e.target.value })} placeholder="Required for POST/PUT/DELETE when set" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="shodan_api_key">Shodan API key</Label>
+            <Label htmlFor="shodan_api_key">
+              <LabelWithHelp label="Shodan API key" helpId="settings.shodan_key" />
+            </Label>
             <Input id="shodan_api_key" value={sysSettings.shodan_api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, shodan_api_key: e.target.value })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="censys_api_id">Censys API ID</Label>
+            <Label htmlFor="censys_api_id">
+              <LabelWithHelp label="Censys API ID" helpId="settings.censys_keys" />
+            </Label>
             <Input id="censys_api_id" value={sysSettings.censys_api_id || ""} onChange={(e) => setSysSettings({ ...sysSettings, censys_api_id: e.target.value })} />
           </div>
           <div className="space-y-2 sm:col-span-2">
@@ -414,11 +437,15 @@ export default function SettingsPage() {
             <Input id="censys_api_secret" value={sysSettings.censys_api_secret || ""} onChange={(e) => setSysSettings({ ...sysSettings, censys_api_secret: e.target.value })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="hibp_api_key">HIBP API key</Label>
+            <Label htmlFor="hibp_api_key">
+              <LabelWithHelp label="HIBP API key" helpId="settings.hibp_key" />
+            </Label>
             <Input id="hibp_api_key" value={sysSettings.hibp_api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, hibp_api_key: e.target.value })} placeholder="Breach checks for WHOIS emails" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="riskiq_api_user">RiskIQ / PassiveTotal user</Label>
+            <Label htmlFor="riskiq_api_user">
+              <LabelWithHelp label="RiskIQ / PassiveTotal user" helpId="settings.riskiq_keys" />
+            </Label>
             <Input id="riskiq_api_user" value={sysSettings.riskiq_api_user || ""} onChange={(e) => setSysSettings({ ...sysSettings, riskiq_api_user: e.target.value })} />
           </div>
           <div className="space-y-2 sm:col-span-2">
@@ -430,8 +457,14 @@ export default function SettingsPage() {
 
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Scan Performance</CardTitle>
-          <CardDescription>Worker concurrency and per-gatherer timeouts (seconds).</CardDescription>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            Scan Performance
+            <HelpTip id="settings.scan_concurrency" />
+          </CardTitle>
+          <CardDescription>
+            Worker concurrency and per-gatherer timeouts (seconds).
+            <HelpTip id="settings.scan_timeouts" className="ml-1.5" />
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           {[
@@ -443,7 +476,12 @@ export default function SettingsPage() {
             ["screenshot_timeout_sec", "Screenshot timeout"],
           ].map(([key, label]) => (
             <div className="space-y-2" key={key}>
-              <Label htmlFor={key}>{label}</Label>
+              <Label htmlFor={key}>
+                <LabelWithHelp
+                  label={label}
+                  helpId={key === "scan_concurrency" ? "settings.scan_concurrency" : "settings.scan_timeouts"}
+                />
+              </Label>
               <Input
                 id={key}
                 type="number"
@@ -463,7 +501,10 @@ export default function SettingsPage() {
 
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Scheduled Rescans</CardTitle>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            Scheduled Rescans
+            <HelpTip id="settings.scheduler" />
+          </CardTitle>
           <CardDescription>Enqueue stale targets automatically (tag filter optional).</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -484,7 +525,9 @@ export default function SettingsPage() {
             <Input id="schedule_stale_hours" type="number" min="1" value={sysSettings.schedule_stale_hours || 24} onChange={(e) => setSysSettings({ ...sysSettings, schedule_stale_hours: Number(e.target.value) })} />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="schedule_tags">Limit to tags (comma-separated)</Label>
+            <Label htmlFor="schedule_tags">
+              <LabelWithHelp label="Limit to tags (comma-separated)" helpId="settings.schedule_tags" />
+            </Label>
             <Input id="schedule_tags" value={(sysSettings.schedule_tags || []).join(", ")} onChange={(e) => setSysSettings({ ...sysSettings, schedule_tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })} />
           </div>
         </CardContent>
@@ -492,12 +535,17 @@ export default function SettingsPage() {
 
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Retention</CardTitle>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            Retention
+            <HelpTip id="settings.retention" />
+          </CardTitle>
           <CardDescription>Keep only the newest N snapshots per target (0 = unlimited).</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-w-xs">
-            <Label htmlFor="retention_max_snapshots">Max snapshots per target</Label>
+            <Label htmlFor="retention_max_snapshots">
+              <LabelWithHelp label="Max snapshots per target" helpId="settings.retention" />
+            </Label>
             <Input id="retention_max_snapshots" type="number" min="0" value={sysSettings.retention_max_snapshots || 0} onChange={(e) => setSysSettings({ ...sysSettings, retention_max_snapshots: Number(e.target.value) })} />
           </div>
         </CardContent>
@@ -505,7 +553,10 @@ export default function SettingsPage() {
 
       <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Alert Rules</CardTitle>
+          <CardTitle className="inline-flex items-center gap-1.5">
+            Alert Rules
+            <HelpTip id="settings.alert_rules" />
+          </CardTitle>
           <CardDescription>
             Filter webhook notifications by severity, change type, and destination integration.
           </CardDescription>
@@ -537,7 +588,12 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Match types (comma-separated, empty = all)</Label>
+                <Label>
+                  <LabelWithHelp
+                    label="Match types (comma-separated, empty = all)"
+                    helpId="settings.alert_match_types"
+                  />
+                </Label>
                 <Input value={(rule.match_types || []).join(", ")} onChange={(e) => {
                   const rules = [...(sysSettings.alert_rules || [])]
                   rules[index] = { ...rule, match_types: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) }
@@ -547,7 +603,12 @@ export default function SettingsPage() {
               </div>
               {webhooks.length > 0 ? (
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>Deliver to integrations (empty = all enabled)</Label>
+                  <Label>
+                    <LabelWithHelp
+                      label="Deliver to integrations (empty = all enabled)"
+                      helpId="settings.alert_webhooks"
+                    />
+                  </Label>
                   <div className="flex flex-wrap gap-3">
                     {webhooks.map((wh) => {
                       const selected = (rule.webhook_ids || []).includes(wh.id)

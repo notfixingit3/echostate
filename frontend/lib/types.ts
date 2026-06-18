@@ -27,6 +27,30 @@ export interface TargetDetail extends TargetSummary {
   latest_snapshot?: Snapshot | null
 }
 
+export interface TargetCollectionSummary {
+  id: string
+  name: string
+  description: string
+  created_at: string
+  updated_at: string
+  target_count: number
+}
+
+export interface TargetCollectionDetail extends TargetCollectionSummary {
+  targets: TargetSummary[]
+}
+
+export interface CollectionRescanJob {
+  target_id: string
+  host: string
+  job_id: string
+}
+
+export interface CollectionRescanResponse {
+  collection_id: string
+  jobs: CollectionRescanJob[]
+}
+
 export interface SnapshotSummary {
   id: string
   target_id: string

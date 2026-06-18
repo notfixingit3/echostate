@@ -8,8 +8,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/dreadl0ck/ja3"
-	"github.com/dreadl0ck/tlsx"
 )
 
 func fingerprintJA3S(ctx context.Context, host string, port int) (string, error) {
@@ -39,12 +37,12 @@ func fingerprintJA3S(ctx context.Context, host string, port int) (string, error)
 		return "", fmt.Errorf("ja3s read: %w", err)
 	}
 
-	var hello tlsx.ServerHelloBasic
-	if err := hello.Unmarshal(buff[:n]); err != nil {
+	hello, err := parseServerHelloBasic(buff[:n])
+	if err != nil {
 		return "", fmt.Errorf("ja3s parse: %w", err)
 	}
 
-	hash := ja3.DigestHexJa3s(&hello)
+	hash := digestJA3S(hello)
 	if hash == "" {
 		return "", fmt.Errorf("ja3s fingerprint unavailable")
 	}
