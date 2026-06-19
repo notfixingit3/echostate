@@ -116,6 +116,89 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | — | Richer PDF reports | ✅ Done | beta.28 foundation (logo, screenshot, changes, DNS/TLS blocks) |
 | — | Report E2E on snapshot page | ✅ Done | Playwright waits on snapshot + `snapshot-download-report-button` (beta.28) |
 | — | PDF report overhaul | ✅ Done | beta.30 — wrapping key/value rows, paginated raw WHOIS, full intel sections (DNS w/ mail posture, BGP routing, TLS chain, web/favicon/crawl/storage/CT/traceroute), pWhois from snapshot row |
+| — | Sitemap index recursion | ✅ Done | beta.31 — BFS child sitemaps, common path fallbacks, PDF crawl highlights |
+| — | PDF enrichment + pWhois record | ✅ Done | beta.31 — `raw_data.enrichment` section, full `pwhois_data`, sitemap/bucket highlight counts |
+
+---
+
+## Collection & reporting backlog
+
+Passive recon gaps, wiring fixes, and follow-on UI/PDF/graph work. Grouped by priority; all **🔲 Next** unless noted.
+
+### P1 — Quick wins (easy, high signal)
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| C1 | `security.txt` gatherer | 🔲 Next | `/.well-known/security.txt` + `security.txt` redirect; contacts, policy, `Canonical`, `Expires` |
+| C2 | Plain-text sitemaps | 🔲 Next | `/sitemap.txt` and one-URL-per-line formats (complements XML crawl) |
+| C3 | MTA-STS + TLS-RPT | 🔲 Next | `/.well-known/mta-sts.txt`; `_smtp._tls` TXT for TLS-RPT; extend DNS/mail posture |
+| C4 | Fix HIBP email extraction | 🔲 Next | Bug: `extractEmails` reads `crawl.robots_txt` (string) but crawl stores `robots` (map) — HIBP rarely runs |
+| C5 | Emails from web page text | 🔲 Next | Scrape visible text / contact patterns for HIBP input (cap per snapshot) |
+| C6 | CAA DNS records | 🔲 Next | Certificate Authority Authorization; mail/DNS tab + diff on policy change |
+| C7 | Redirect chain | 🔲 Next | http→https, apex↔www, final URL; store hop list from Chrome or HEAD follow |
+| C8 | Extra security headers | 🔲 Next | `Permissions-Policy`, `Referrer-Policy`, `Cross-Origin-*` alongside existing four |
+
+### P2 — Depth (medium effort)
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| C9 | `humans.txt` + `ads.txt` | 🔲 Next | `/humans.txt`, `/ads.txt`, `/app-ads.txt` — crawl tab + PDF |
+| C10 | BIMI DNS | 🔲 Next | `default._bimi` TXT; tie to DMARC posture grade |
+| C11 | PTR for IP targets | 🔲 Next | Reverse DNS when scan target is raw IP (ASN tab complement) |
+| C12 | Expanded DKIM selectors | 🔲 Next | Beyond 6 hardcoded selectors; optional Settings list |
+| C13 | Storage from rendered HTML | 🔲 Next | Bucket regex on Chrome-captured HTML/JS, not only plain `GET /` (SPA leaks) |
+| C14 | Meta / OG tags | 🔲 Next | `description`, `generator`, `canonical`, `og:*` from existing Chrome scrape |
+| C15 | RDAP WHOIS fallback | 🔲 Next | When classic WHOIS thin/fails; registrant/abuse fields |
+| C16 | CDN / email provider labels | 🔲 Next | Summarize CNAME→Cloudflare/Fastly/Akamai, MX→Google/M365 in intel highlights |
+| C17 | Provider hints in HTML | 🔲 Next | Firebase, Supabase, CloudFront, Fastly URL patterns in storage/web gatherers |
+| C18 | Split A vs AAAA in DNS | 🔲 Next | Store/report v4 and v6 separately (today both land in `A` via `LookupIPAddr`) |
+
+### P3 — Enrichment & async intel
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| E1 | Shodan host/IP lookup | 🔲 Next | Enrich resolved IP, not only favicon-hash search |
+| E2 | Censys host/cert by IP | 🔲 Next | Complement JARM-only search |
+| E3 | Enrichment-before-report UX | 🔲 Next | Snapshot UI: “enrichment pending” badge; optional wait/re-queue report after enrichment worker |
+| E4 | Enrichment diff + alerts | 🔲 Next | `change_details` when Shodan/Censys/HIBP/RiskIQ results change between snapshots |
+| E5 | Wayback/CDX URLs | 🔲 Next | Passive historical URL list for domain (no crawl) |
+| E6 | Optional VT passive DNS | 🔲 Next | Third-party key in Settings (lower priority than E1–E2) |
+
+### P4 — TLS, CT, DNS hardening
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| C19 | CT cert metadata | 🔲 Next | Issuer, serial, not-before/not-after per cert from crt.sh (not just subdomain names) |
+| C20 | DNSSEC status | 🔲 Next | DO bit / chain validation summary on DNS tab |
+| C21 | OCSP stapling + TLS version | 🔲 Next | Prominent negotiated version/cipher; staple status on TLS gatherer |
+| C22 | HSTS preload check | 🔲 Next | Chromium preload list lookup when HSTS header present |
+| C23 | Cookie name fingerprint | 🔲 Next | Names only (no values) from document load — session stack hints |
+
+### P5 — Reporting, UI & platform wiring
+
+New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF renderer**, **snapshot diffs**, **webhooks**, and **Neo4j** where applicable.
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| R1 | Crawl intel tab fields | 🔲 Next | Add UI/PDF fields for C1–C2, C9 when implemented (`security.txt`, `mta_sts`, `sitemap_txt`, etc.) |
+| R2 | PDF enrichment formatting | 🔲 Next | Human-readable Shodan/Censys match summaries (not truncated map dumps) |
+| R3 | PDF “pending enrichment” note | 🔲 Next | Footnote when report generated before async enrichment completes |
+| R4 | Intel highlights parity | 🔲 Next | Summary cards for new signals (security.txt contact, MTA-STS mode, CAA, redirect count) |
+| R5 | `change_details` for new fields | 🔲 Next | Diff rules for CAA, security.txt, MTA-STS, redirect chain, BIMI, etc. |
+| R6 | Webhook payloads | 🔲 Next | Include new change types in structured webhook entries + alert-rule filters |
+| R7 | Neo4j sync | 🔲 Next | Graph nodes/edges for security.txt contacts, MTA-STS, CAA, Wayback URLs as needed |
+| R8 | README + help copy | 🔲 Next | Document new gatherers in README features list and Settings `help-copy.ts` |
+| R9 | Gatherer unit + integration tests | 🔲 Next | Each new gatherer: parser tests + `scanner_integration_test` smoke where network allows |
+| R10 | E2E report coverage | 🔲 Next | Extend Playwright report spec when new PDF sections ship |
+
+### Explicitly out of scope (unchanged)
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| — | Port/banner grabbing | ❌ Skipped | Active probing; see #6 |
+| — | Subdomain brute force | ❌ Skipped | Active DNS guessing |
+| — | Vulnerability scanning | ❌ Skipped | Different product category |
+| — | Port / banner graph (G9) | ❌ Skipped | Depends on port gatherer |
 
 ---
 
@@ -123,9 +206,9 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 | | Count |
 |---|------|
-| **Done** | 53 items (core + graph + platform batch) |
-| **Next** | 0 (platform: OIDC/RBAC or distributed agents) |
-| **Skipped** | 2 (#6 port scan, G9 port graph) |
-| **Later / platform** | 2 (agents, OIDC/RBAC) |
+| **Done** | 55 items (core + graph + platform batch through beta.31) |
+| **Next** | 32 (collection C1–C23, enrichment E1–E6, reporting R1–R10) |
+| **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
+| **Later / platform** | 2 (distributed agents, OIDC/RBAC) |
 
-**Suggested next picks:** OIDC/RBAC → distributed scanning agents
+**Suggested next picks:** C1 `security.txt` → C4 HIBP email fix → C3 MTA-STS → C2 plain-text sitemaps → C13 storage from Chrome HTML → E3 enrichment/report UX
