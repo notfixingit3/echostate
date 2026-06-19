@@ -52,8 +52,12 @@ function formatAction(action: string): string {
   return ACTION_LABELS[action] ?? action
 }
 
+function isIPInfo(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
 function formatDetail(detail: Record<string, unknown>): string {
-  const keys = Object.keys(detail)
+  const keys = Object.keys(detail).filter((key) => key !== "ip_info")
   if (keys.length === 0) return "—"
   return keys
     .slice(0, 4)
@@ -64,6 +68,35 @@ function formatDetail(detail: Record<string, unknown>): string {
       return `${key}: ${String(value)}`
     })
     .join(" · ")
+}
+
+function formatIPCell(event: AuditEvent): { primary: string; secondary?: string } {
+  const ip = event.ip?.trim()
+  if (!ip) return { primary: "—" }
+
+  const info = event.detail?.ip_info
+  if (!isIPInfo(info)) return { primary: ip }
+
+  const parts: string[] = []
+  if (typeof info.origin_as === "string" && info.origin_as.trim()) {
+    parts.push(info.origin_as.trim())
+  }
+  if (typeof info.org_name === "string" && info.org_name.trim()) {
+    parts.push(info.org_name.trim())
+  }
+  const location = [info.city, info.country_code]
+    .filter((value): value is string => typeof value === "string" && value.trim() !== "")
+    .map((value) => value.trim())
+    .join(", ")
+  if (location) parts.push(location)
+  if (typeof info.prefix === "string" && info.prefix.trim()) {
+    parts.push(info.prefix.trim())
+  }
+
+  return {
+    primary: ip,
+    secondary: parts.length > 0 ? parts.join(" · ") : undefined,
+  }
 }
 
 type AuditResponse = PaginatedResponse<AuditEvent>
@@ -131,7 +164,7 @@ export function AuditEventsTable() {
         className="flex items-center gap-2"
       >
         <Input
-          placeholder="Search actor, resource, or detail"
+          placeholder="Search actor, IP, resource, or detail"
           value={q}
           onChange={(event) => {
             setQ(event.target.value)
@@ -165,8 +198,8 @@ export function AuditEventsTable() {
               <TableHead className="w-[14%]">Actor</TableHead>
               <TableHead className="w-[18%]">Action</TableHead>
               <TableHead className="w-[14%]">Resource</TableHead>
-              <TableHead className="w-[24%]">Detail</TableHead>
-              <TableHead className="w-[14%]">IP</TableHead>
+              <TableHead className="w-[22%]">Detail</TableHead>
+              <TableHead className="w-[16%]">Client IP</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -203,6 +236,10 @@ export function AuditEventsTable() {
                   ? `${event.resource_type}${event.resource_id ? ` · ${event.resource_id}` : ""}`
                   : "—"
                 const detail = formatDetail(event.detail ?? {})
+                const ipCell = formatIPCell(event)
+                const ipTitle = ipCell.secondary
+                  ? `${ipCell.primary}\n${ipCell.secondary}`
+                  : ipCell.primary
 
                 return (
                   <TableRow key={event.id} data-testid={`audit-row-${event.id}`}>
@@ -223,8 +260,15 @@ export function AuditEventsTable() {
                     <TableCell className="max-w-0 text-xs text-muted-foreground">
                       <div className="truncate" title={detail}>{detail}</div>
                     </TableCell>
-                    <TableCell className="max-w-0 font-mono text-xs text-muted-foreground">
-                      <div className="truncate" title={event.ip}>{event.ip || "—"}</div>
+                    <TableCell className="max-w-0 text-xs text-muted-foreground">
+                      <div className="truncate font-mono" title={ipTitle}>
+                        {ipCell.primary}
+                      </div>
+                      {ipCell.secondary ? (
+                        <div className="truncate text-[11px] leading-snug" title={ipCell.secondary}>
+                          {ipCell.secondary}
+                        </div>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 )

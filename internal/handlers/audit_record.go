@@ -17,12 +17,13 @@ func (h *Handler) recordAudit(c *gin.Context, action, resourceType, resourceID s
 		return
 	}
 
+	ip := resolveClientIP(c)
 	entry := audit.Entry{
 		Action:       action,
 		ResourceType: resourceType,
 		ResourceID:   resourceID,
 		Detail:       detail,
-		IP:           c.ClientIP(),
+		IP:           ip,
 		UserAgent:    c.Request.UserAgent(),
 	}
 	if user := middleware.GetUser(c); user != nil {
@@ -32,8 +33,9 @@ func (h *Handler) recordAudit(c *gin.Context, action, resourceType, resourceID s
 	}
 
 	go func(entry audit.Entry) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 		defer cancel()
+		entry.Detail = mergeIPInfo(entry.Detail, lookupIPInfo(ctx, entry.IP))
 		if err := h.audit.Record(ctx, entry); err != nil {
 			log.Printf("audit record failed action=%s: %v", entry.Action, err)
 		}
@@ -63,8 +65,9 @@ func (h *Handler) recordAuditActor(
 	}
 
 	go func(entry audit.Entry) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 		defer cancel()
+		entry.Detail = mergeIPInfo(entry.Detail, lookupIPInfo(ctx, entry.IP))
 		if err := h.audit.Record(ctx, entry); err != nil {
 			log.Printf("audit record failed action=%s: %v", entry.Action, err)
 		}

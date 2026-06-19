@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.48] - 2026-06-19
+
+### Added
+
+- **Audit log IP context** — Client IP is resolved from proxy headers when needed; public IPs are enriched via pWhois (ASN, org, location, prefix) and shown in the admin audit table.
+
 ## [0.0.1-beta.47] - 2026-06-19
 
 ### Added

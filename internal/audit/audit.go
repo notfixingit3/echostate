@@ -111,8 +111,9 @@ func (s *Service) List(ctx context.Context, opts ListOptions) (models.PaginatedR
 		where = append(where, fmt.Sprintf(`(
 			actor_name ILIKE $%d OR
 			resource_id ILIKE $%d OR
+			ip ILIKE $%d OR
 			detail::text ILIKE $%d
-		)`, argPos, argPos, argPos))
+		)`, argPos, argPos, argPos, argPos))
 		args = append(args, pattern)
 		argPos++
 	}

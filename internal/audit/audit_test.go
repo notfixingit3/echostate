@@ -72,3 +72,21 @@ func TestRecordAndList(t *testing.T) {
 	require.Equal(t, ActionTargetDelete, result.Data[0].Action)
 	require.Equal(t, "example.com", result.Data[0].Detail["host"])
 }
+
+func TestListSearchMatchesIP(t *testing.T) {
+	database := setupAuditTestDB(t)
+	svc := New(database)
+	ctx := context.Background()
+
+	require.NoError(t, svc.Record(ctx, Entry{
+		ActorName: "Admin",
+		ActorRole: "admin",
+		Action:    ActionSettingsUpdate,
+		IP:        "203.0.113.55",
+	}))
+
+	result, err := svc.List(ctx, ListOptions{Page: 1, Limit: 10, Query: "203.0.113"})
+	require.NoError(t, err)
+	require.Equal(t, 1, result.Total)
+	require.Equal(t, "203.0.113.55", result.Data[0].IP)
+}
