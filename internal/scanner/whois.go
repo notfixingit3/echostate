@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -18,11 +19,14 @@ var whoisLookup = whois.Whois
 
 // gatherWHOIS normalizes the host, performs a WHOIS lookup with a 10-second
 // timeout, parses the response, and returns selected fields plus a truncated
-// copy of the raw text.
+// copy of the raw text. RDAP is used as a fallback when classic WHOIS is thin.
 func gatherWHOIS(ctx context.Context, host string) (string, map[string]any, error) {
 	host = NormalizeHost(host)
 	if host == "" {
 		return "whois", nil, fmt.Errorf("empty host")
+	}
+	if net.ParseIP(host) != nil {
+		return "whois", nil, fmt.Errorf("whois lookup not applicable to IP addresses")
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -39,15 +43,43 @@ func gatherWHOIS(ctx context.Context, host string) (string, map[string]any, erro
 		ch <- result{raw: raw, err: err}
 	}()
 
+	var (
+		value map[string]any
+		err   error
+	)
+
 	select {
 	case <-ctx.Done():
 		return "whois", nil, fmt.Errorf("whois lookup timed out: %w", ctx.Err())
 	case res := <-ch:
 		if res.err != nil {
-			return "whois", nil, fmt.Errorf("whois lookup failed: %w", res.err)
+			value = map[string]any{}
+			err = res.err
+		} else {
+			_, value, err = parseWHOISResponse(res.raw)
 		}
-		return parseWHOISResponse(res.raw)
 	}
+
+	if whoisNeedsRdapFallback(value) {
+		if rdap, rdapErr := rdapFetchFunc(ctx, host); rdapErr == nil && len(rdap) > 0 {
+			if value == nil {
+				value = map[string]any{}
+			}
+			mergeWhoisRdap(value, rdap)
+			if err != nil {
+				err = nil
+			}
+		}
+	}
+
+	if len(value) == 0 {
+		if err != nil {
+			return "whois", nil, err
+		}
+		return "whois", nil, fmt.Errorf("no whois data for %s", host)
+	}
+
+	return "whois", value, err
 }
 
 func parseWHOISResponse(raw string) (string, map[string]any, error) {

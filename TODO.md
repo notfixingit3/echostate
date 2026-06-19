@@ -138,20 +138,20 @@ Passive recon gaps, wiring fixes, and follow-on UI/PDF/graph work.
 | C7 | Redirect chain | ✅ Done | beta.32 — `web.redirect_chain` via HEAD/GET follow (http + https) |
 | C8 | Extra security headers | ✅ Done | beta.32 — Permissions-Policy, Referrer-Policy, Cross-Origin-* |
 
-### P2 — Depth (medium effort)
+### P2 — Depth (medium effort) ✅
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| C9 | `humans.txt` + `ads.txt` | 🔲 Next | `/humans.txt`, `/ads.txt`, `/app-ads.txt` — crawl tab + PDF |
-| C10 | BIMI DNS | 🔲 Next | `default._bimi` TXT; tie to DMARC posture grade |
-| C11 | PTR for IP targets | 🔲 Next | Reverse DNS when scan target is raw IP (ASN tab complement) |
-| C12 | Expanded DKIM selectors | 🔲 Next | Beyond 6 hardcoded selectors; optional Settings list |
-| C13 | Storage from rendered HTML | 🔲 Next | Bucket regex on Chrome-captured HTML/JS, not only plain `GET /` (SPA leaks) |
-| C14 | Meta / OG tags | 🔲 Next | `description`, `generator`, `canonical`, `og:*` from existing Chrome scrape |
-| C15 | RDAP WHOIS fallback | 🔲 Next | When classic WHOIS thin/fails; registrant/abuse fields |
-| C16 | CDN / email provider labels | 🔲 Next | Summarize CNAME→Cloudflare/Fastly/Akamai, MX→Google/M365 in intel highlights |
-| C17 | Provider hints in HTML | 🔲 Next | Firebase, Supabase, CloudFront, Fastly URL patterns in storage/web gatherers |
-| C18 | Split A vs AAAA in DNS | 🔲 Next | Store/report v4 and v6 separately (today both land in `A` via `LookupIPAddr`) |
+| C9 | `humans.txt` + `ads.txt` | ✅ Done | beta.33 — `/humans.txt`, `/ads.txt`, `/app-ads.txt`; crawl tab + PDF |
+| C10 | BIMI DNS | ✅ Done | beta.33 — `default._bimi` TXT; mail posture grade |
+| C11 | PTR for IP targets | ✅ Done | beta.33 — reverse DNS when scan target is raw IP |
+| C12 | Expanded DKIM selectors | ✅ Done | beta.33 — 15 default selectors + Settings `dkim_selectors` |
+| C13 | Storage from rendered HTML | ✅ Done | beta.33 — bucket/provider hints from Chrome HTML merged into storage |
+| C14 | Meta / OG tags | ✅ Done | beta.33 — `web.meta` from rendered page |
+| C15 | RDAP WHOIS fallback | ✅ Done | beta.33 — RDAP when classic WHOIS thin; registrant/abuse fields |
+| C16 | CDN / email provider labels | ✅ Done | beta.33 — `dns.INFRA_LABELS` in intel highlights + PDF |
+| C17 | Provider hints in HTML | ✅ Done | beta.33 — Firebase, Supabase, CDN URL patterns in storage/web |
+| C18 | Split A vs AAAA in DNS | ✅ Done | beta.33 — separate `A` (v4) and `AAAA` (v6) records |
 
 ### P3 — Enrichment & async intel
 
@@ -206,9 +206,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 66 items (core + graph + platform + P1 batch through beta.32) |
-| **Next** | 22 (P2–P5 backlog: C9–C23, E1–E6, R2–R3, R5–R8, R10) |
+| **Done** | 76 items (core + graph + platform + P1/P2 batches through beta.33) |
+| **Next** | 12 (P3–P5 backlog: C19–C23, E1–E6, R2–R3, R5–R8, R10) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 2 (distributed agents, OIDC/RBAC) |
 
-**Suggested next picks:** C9 `humans.txt`/`ads.txt` → C13 storage from Chrome HTML → C15 RDAP fallback → E1 Shodan IP lookup → E3 enrichment/report UX
+**Suggested next picks:** E1 Shodan IP lookup → E3 enrichment/report UX → C19 DNSSEC → C20 DANE

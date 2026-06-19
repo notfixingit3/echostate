@@ -15,6 +15,7 @@ type AlertRule struct {
 
 type SystemSettings struct {
 	DNSServers                string      `json:"dns_servers"`
+	DKIMSelectors             string      `json:"dkim_selectors,omitempty"`
 	PwhoisServer              string      `json:"pwhois_server"`
 	RateLimit                 float64     `json:"rate_limit"`
 	APIKey                    string      `json:"api_key,omitempty"`

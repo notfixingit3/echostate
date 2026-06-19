@@ -185,8 +185,13 @@ func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhois
 	addKeyValueRow(m, "Favicon MMH3", firstNonNA(stringVal(result.Favicon, "mmh3"), stringVal(result.Favicon, "shodan")))
 	addKeyValueRow(m, "Cert Expires", stringVal(result.TLS, "not_after"))
 	addKeyValueRow(m, "Cert Issuer", stringVal(result.TLS, "issuer"))
-	addKeyValueRow(m, "DNS A/AAAA", joinDNSRecords(result.DNS))
+	addKeyValueRow(m, "DNS A", stringVal(result.DNS, "A"))
+	addKeyValueRow(m, "DNS AAAA", stringVal(result.DNS, "AAAA"))
+	addKeyValueRow(m, "PTR", stringVal(result.DNS, "PTR"))
+	addKeyValueRow(m, "CDN Provider", stringVal(nestedMap(result.DNS, "INFRA_LABELS"), "cdn_provider"))
+	addKeyValueRow(m, "Mail Provider", stringVal(nestedMap(result.DNS, "INFRA_LABELS"), "mail_provider"))
 	addKeyValueRow(m, "Mail Posture", mailPostureSummary(result.DNS))
+	addKeyValueRow(m, "BIMI", bimiSummary(result.DNS))
 	addKeyValueRow(m, "Hijack Risk", stringVal(nestedMap(result.ASN, "routing"), "hijack_risk"))
 	addKeyValueRow(m, "BGP Path Stability", stringVal(nestedMap(nestedMap(result.ASN, "routing"), "path_profile"), "stability"))
 	addKeyValueRow(m, "CT Subdomains", ctCount(result.CT))
@@ -196,6 +201,8 @@ func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhois
 	addKeyValueRow(m, "CAA Records", caaCount(result.DNS))
 	addKeyValueRow(m, "Redirects", redirectSummaryFromWeb(result.Web))
 	addKeyValueRow(m, "Storage Buckets", storageBucketSummary(result.Storage))
+	addKeyValueRow(m, "Provider Hints", providerHintSummary(result.Storage))
+	addKeyValueRow(m, "Meta Description", stringVal(nestedMap(result.Web, "meta"), "description"))
 }
 
 func crawlPathSummary(data map[string]any) string {
@@ -257,6 +264,25 @@ func redirectSummaryFromWeb(data map[string]any) string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%d hops", len(chain)-1)
+}
+
+func bimiSummary(data map[string]any) string {
+	bimi := nestedMap(data, "BIMI")
+	if len(bimi) == 0 {
+		return "N/A"
+	}
+	if record := stringVal(bimi, "record"); record != "N/A" {
+		return "published"
+	}
+	return "present"
+}
+
+func providerHintSummary(data map[string]any) string {
+	hints := mapSlice(data, "provider_hints")
+	if len(hints) == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", len(hints))
 }
 
 func addPWhoisSection(m core.Maroto, info *PWhoisInfo, data map[string]any) {
@@ -363,9 +389,21 @@ func addWHOIS(m core.Maroto, data map[string]any) {
 
 	addKeyValueRow(m, "Domain", stringVal(data, "domain"))
 	addKeyValueRow(m, "Registrar", stringVal(data, "registrar"))
+	addKeyValueRow(m, "Registrant Email", stringVal(data, "registrant_email"))
+	addKeyValueRow(m, "Abuse Email", stringVal(data, "abuse_email"))
 	addKeyValueRow(m, "Expiration Date", stringVal(data, "expiration_date"))
 	addKeyValueRow(m, "Name Servers", stringVal(data, "name_servers"))
 	addKeyValueRow(m, "Status", stringVal(data, "status"))
+	addKeyValueRow(m, "RDAP Source", stringVal(data, "rdap_source"))
+
+	if rdap := nestedMap(data, "rdap"); len(rdap) > 0 {
+		addSubheader(m, "RDAP")
+		for _, key := range []string{"domain", "registrar", "registrant_org", "registrant_email", "abuse_email", "expiration_date", "registration_date"} {
+			if val := stringVal(rdap, key); val != "N/A" {
+				addKeyValueRow(m, formatFieldLabel(key), val)
+			}
+		}
+	}
 
 	if raw, ok := data["raw"].(string); ok && strings.TrimSpace(raw) != "" {
 		addMultilineBlock(m, "Raw WHOIS Record", raw, maxRawWHOISLines)
@@ -418,7 +456,9 @@ func addDNS(m core.Maroto, data map[string]any) {
 		return
 	}
 
-	addKeyValueRow(m, "A / AAAA", joinDNSRecords(data))
+	addKeyValueRow(m, "A", stringVal(data, "A", "a"))
+	addKeyValueRow(m, "AAAA", stringVal(data, "AAAA", "aaaa"))
+	addKeyValueRow(m, "PTR", stringVal(data, "PTR", "ptr"))
 	addKeyValueRow(m, "MX", stringVal(data, "MX", "mx"))
 	addKeyValueRow(m, "NS", stringVal(data, "NS", "ns"))
 	addKeyValueRow(m, "TXT", stringVal(data, "TXT", "txt"))
@@ -466,6 +506,20 @@ func addDNS(m core.Maroto, data map[string]any) {
 			}
 			addKeyValueRow(m, fmt.Sprintf("Record %d", i+1), stringVal(record, "record"))
 		}
+	}
+
+	if bimi := nestedMap(data, "BIMI"); len(bimi) > 0 {
+		addSubheader(m, "BIMI")
+		addKeyValueRow(m, "Record", stringVal(bimi, "record"))
+		addKeyValueRow(m, "Logo URL", stringVal(bimi, "l"))
+		addKeyValueRow(m, "Authority", stringVal(bimi, "a"))
+	}
+
+	if infra := nestedMap(data, "INFRA_LABELS"); len(infra) > 0 {
+		addSubheader(m, "Infrastructure Labels")
+		addKeyValueRow(m, "CDN Provider", stringVal(infra, "cdn_provider"))
+		addKeyValueRow(m, "Mail Provider", stringVal(infra, "mail_provider"))
+		addKeyValueRow(m, "CNAME Target", stringVal(infra, "cname_target"))
 	}
 
 	if mtaSts := nestedMap(data, "MTA_STS"); len(mtaSts) > 0 {
@@ -611,6 +665,32 @@ func addWeb(m core.Maroto, data map[string]any) {
 		addBulletItems(m, formatWordPressItems(themes), maxTechStackItems)
 	}
 
+	if meta := nestedMap(data, "meta"); len(meta) > 0 {
+		addSubheader(m, "Meta / Open Graph")
+		for _, key := range sortedMapKeys(meta) {
+			addKeyValueRow(m, formatFieldLabel(key), formatScalar(meta[key]))
+		}
+	}
+
+	if hints := mapSlice(data, "provider_hints"); len(hints) > 0 {
+		addSubheader(m, "Provider Hints")
+		var lines []string
+		for i, hint := range hints {
+			if i >= maxTechStackItems {
+				lines = append(lines, fmt.Sprintf("... and %d more hint(s)", len(hints)-maxTechStackItems))
+				break
+			}
+			provider := stringVal(hint, "provider")
+			pattern := stringVal(hint, "pattern")
+			if provider != "N/A" && pattern != "N/A" {
+				lines = append(lines, fmt.Sprintf("%s (%s)", provider, pattern))
+			} else {
+				lines = append(lines, formatMapLines(hint, ""))
+			}
+		}
+		addBulletItems(m, lines, 0)
+	}
+
 	copyrights := extractCopyrights(data)
 	if len(copyrights) == 0 {
 		addKeyValueRow(m, "Copyrights", "None detected")
@@ -637,6 +717,23 @@ func addCrawl(m core.Maroto, data map[string]any) {
 	if len(data) == 0 {
 		m.AddRows(text.NewRow(6, "No crawl data available.", props.Text{Size: 10}))
 		return
+	}
+
+	for _, item := range []struct {
+		title string
+		key   string
+	}{
+		{title: "humans.txt", key: "humans_txt"},
+		{title: "ads.txt", key: "ads_txt"},
+		{title: "app-ads.txt", key: "app_ads_txt"},
+	} {
+		if file := nestedMap(data, item.key); len(file) > 0 {
+			addSubheader(m, item.title)
+			addKeyValueRow(m, "Source", stringVal(file, "source"))
+			if lines := stringSlice(file, "lines"); len(lines) > 0 {
+				addBulletItems(m, lines, maxCrawlPaths)
+			}
+		}
 	}
 
 	if securityTxt := nestedMap(data, "security_txt"); len(securityTxt) > 0 {
@@ -720,8 +817,32 @@ func addStorage(m core.Maroto, data map[string]any) {
 	}
 
 	buckets := mapSlice(data, "buckets")
-	if len(buckets) == 0 {
+	hints := mapSlice(data, "provider_hints")
+	if len(buckets) == 0 && len(hints) == 0 {
 		m.AddRows(text.NewRow(6, "No cloud storage buckets detected.", props.Text{Size: 10}))
+		return
+	}
+
+	if len(hints) > 0 {
+		addSubheader(m, "Provider Hints")
+		var hintLines []string
+		for i, hint := range hints {
+			if i >= maxTechStackItems {
+				hintLines = append(hintLines, fmt.Sprintf("... and %d more hint(s)", len(hints)-maxTechStackItems))
+				break
+			}
+			provider := stringVal(hint, "provider")
+			pattern := stringVal(hint, "pattern")
+			if provider != "N/A" && pattern != "N/A" {
+				hintLines = append(hintLines, fmt.Sprintf("%s (%s)", provider, pattern))
+			} else {
+				hintLines = append(hintLines, formatMapLines(hint, ""))
+			}
+		}
+		addBulletItems(m, hintLines, 0)
+	}
+
+	if len(buckets) == 0 {
 		return
 	}
 

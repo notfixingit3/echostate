@@ -23,6 +23,32 @@ func TestComputeMailPosture(t *testing.T) {
 	}
 }
 
+func TestComputeMailPostureBIMI(t *testing.T) {
+	withBIMI := computeMailPosture(map[string]any{
+		"SPF": map[string]any{"policy": "-all"},
+		"DMARC_PARSED": map[string]any{
+			"policy": "reject",
+		},
+		"DKIM": []any{
+			map[string]any{"selector": "google"},
+		},
+		"BIMI": map[string]any{"record": "v=BIMI1; l=https://example.com/logo.svg"},
+	})
+	withoutBIMI := computeMailPosture(map[string]any{
+		"SPF": map[string]any{"policy": "-all"},
+		"DMARC_PARSED": map[string]any{
+			"policy": "reject",
+		},
+		"DKIM": []any{
+			map[string]any{"selector": "google"},
+		},
+	})
+
+	if intValMap(withBIMI, "score") <= intValMap(withoutBIMI, "score") {
+		t.Fatalf("BIMI should increase score: with=%v without=%v", withBIMI["score"], withoutBIMI["score"])
+	}
+}
+
 func TestComputeMailPostureWeak(t *testing.T) {
 	posture := computeMailPosture(map[string]any{
 		"SPF": map[string]any{"policy": "+all"},

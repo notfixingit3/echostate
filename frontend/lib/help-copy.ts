@@ -104,8 +104,15 @@ export const HELP_COPY: Record<string, string> = {
 
   "intel.cert_expires": "TLS certificate not-after date from the leaf cert.",
   "intel.cert_issuer": "Certificate authority that signed the active TLS certificate.",
-  "intel.dns_a": "IPv4/IPv6 addresses returned by DNS resolution at scan time.",
+  "intel.dns_a": "IPv4 addresses returned by DNS resolution at scan time.",
+  "intel.dns_aaaa": "IPv6 addresses returned by DNS resolution at scan time.",
+  "intel.dns_ptr": "Reverse DNS (PTR) names when the scan target is a raw IP address.",
   "intel.dns_soa": "Authoritative SOA zone and serial for the target.",
+  "intel.cdn_provider": "CDN inferred from CNAME target (Cloudflare, Fastly, Akamai, etc.).",
+  "intel.mail_provider": "Hosted email provider inferred from MX records.",
+  "intel.bimi": "BIMI brand-indicator TXT at default._bimi; included in mail posture grade.",
+  "intel.meta_description": "HTML meta description and Open Graph tags from the rendered page.",
+  "intel.provider_hints": "Third-party service URL patterns (Firebase, Supabase, CDN hosts) in page HTML.",
   "intel.favicon_mmh3": "Shodan-compatible MurmurHash3 of the favicon.",
   "intel.jarm": "JARM TLS fingerprint hash from port 443.",
   "intel.ja3s": "JA3S TLS server fingerprint from the port 443 ServerHello.",
@@ -125,6 +132,8 @@ export const HELP_COPY: Record<string, string> = {
     "Incoming webhook URL from your chat platform. EchoState posts change summaries with target links.",
   "settings.dns_servers":
     "Comma-separated DNS resolvers used by gatherers (default 8.8.8.8, 1.1.1.1).",
+  "settings.dkim_selectors":
+    "Extra DKIM selector hostnames to probe beyond built-in defaults (comma-separated).",
   "settings.pwhois_server": "pWhois server hostname for async client-IP ASN and org enrichment.",
   "settings.rate_limit": "Maximum API requests per minute per client IP.",
   "settings.scan_concurrency": "Maximum scan jobs processed in parallel by the API worker pool.",

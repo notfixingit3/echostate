@@ -55,6 +55,16 @@ export interface IntelHighlights {
   mtaStsMode?: string
   caaRecordCount?: number
   redirectHopCount?: number
+  dnsAAAARecords?: string[]
+  ptrRecords?: string[]
+  cdnProvider?: string
+  mailProvider?: string
+  bimiRecord?: string
+  metaDescription?: string
+  providerHintCount?: number
+  humansTxtLines?: number
+  adsTxtLines?: number
+  rdapSource?: string
   jsAssetCount?: number
   jsLibHints?: string[]
   bucketCount?: number
@@ -209,6 +219,14 @@ export function extractIntel(
   const mtaSts = dns?.MTA_STS as Record<string, unknown> | undefined
   const caaRecords = Array.isArray(dns?.CAA) ? dns.CAA : []
   const redirectChain = Array.isArray(web?.redirect_chain) ? web.redirect_chain : []
+  const infraLabels = dns?.INFRA_LABELS as Record<string, unknown> | undefined
+  const bimi = dns?.BIMI as Record<string, unknown> | undefined
+  const meta = web?.meta as Record<string, unknown> | undefined
+  const humansTxt = crawl?.humans_txt as Record<string, unknown> | undefined
+  const adsTxt = crawl?.ads_txt as Record<string, unknown> | undefined
+  const providerHints = Array.isArray(storage?.provider_hints)
+    ? storage.provider_hints
+    : []
 
   return {
     host: asString(raw?.host) || "Unknown host",
@@ -237,6 +255,19 @@ export function extractIntel(
     certExpires: formatDateField(tls?.not_after),
     certIssuer: asString(tls?.issuer),
     dnsARecords: asStringArray(dns?.A),
+    dnsAAAARecords: asStringArray(dns?.AAAA),
+    ptrRecords: asStringArray(dns?.PTR),
+    cdnProvider: asString(infraLabels?.cdn_provider),
+    mailProvider: asString(infraLabels?.mail_provider),
+    bimiRecord: asString(bimi?.record),
+    metaDescription: asString(meta?.description),
+    providerHintCount:
+      providerHints.length > 0 ? providerHints.length : undefined,
+    humansTxtLines: Array.isArray(humansTxt?.lines)
+      ? humansTxt.lines.length
+      : undefined,
+    adsTxtLines: Array.isArray(adsTxt?.lines) ? adsTxt.lines.length : undefined,
+    rdapSource: asString(whois?.rdap_source),
     dnsSoaZone: asString((dns?.SOA as Record<string, unknown> | undefined)?.zone),
     dnsSoaMname: asString((dns?.SOA as Record<string, unknown> | undefined)?.mname),
     dnsSoaSerial:
@@ -302,9 +333,13 @@ export function formatValue(value: unknown): string {
 export const WHOIS_FIELDS = [
   "domain",
   "registrar",
+  "registrant_email",
+  "abuse_email",
   "expiration_date",
   "name_servers",
   "status",
+  "rdap_source",
+  "rdap",
 ] as const
 
 export const ASN_FIELDS = [
@@ -325,6 +360,7 @@ export const WEB_FIELDS = [
   "header_url",
   "redirect_chain",
   "contact_emails",
+  "meta",
   "copyrights",
   "tech_stack",
   "js_assets",
@@ -332,6 +368,8 @@ export const WEB_FIELDS = [
   "wordpress_themes",
   "security_headers",
   "headers",
+  "detected_buckets",
+  "provider_hints",
 ] as const
 
 export const PWHOIS_FIELDS = [
@@ -365,12 +403,15 @@ export const FAVICON_FIELDS = ["url", "mmh3", "shodan", "sha256", "size"] as con
 export const CRAWL_FIELDS = [
   "robots",
   "security_txt",
+  "humans_txt",
+  "ads_txt",
+  "app_ads_txt",
   "sitemap_urls",
   "sitemap_url_count",
   "errors",
 ] as const
 
-export const STORAGE_FIELDS = ["buckets"] as const
+export const STORAGE_FIELDS = ["buckets", "provider_hints"] as const
 
 export const CT_FIELDS = ["domain", "source", "count", "subdomains"] as const
 
@@ -404,6 +445,8 @@ export const ENRICHMENT_FIELDS = [
 
 export const DNS_FIELDS = [
   "A",
+  "AAAA",
+  "PTR",
   "MX",
   "NS",
   "TXT",
@@ -413,8 +456,10 @@ export const DNS_FIELDS = [
   "DMARC",
   "SPF",
   "DKIM",
+  "BIMI",
   "DMARC_PARSED",
   "MTA_STS",
   "TLS_RPT",
+  "INFRA_LABELS",
   "MAIL_POSTURE",
 ] as const

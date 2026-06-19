@@ -2,10 +2,20 @@ package scanner
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+func disableRdapFallback(t *testing.T) {
+	t.Helper()
+	orig := rdapFetchFunc
+	rdapFetchFunc = func(ctx context.Context, domain string) (map[string]any, error) {
+		return nil, fmt.Errorf("rdap disabled in test")
+	}
+	t.Cleanup(func() { rdapFetchFunc = orig })
+}
 
 func TestWHOIS(t *testing.T) {
 	if testing.Short() {
@@ -32,6 +42,8 @@ func TestWHOIS(t *testing.T) {
 }
 
 func TestWHOISError(t *testing.T) {
+	disableRdapFallback(t)
+
 	orig := whoisLookup
 	whoisLookup = func(domain string, servers ...string) (string, error) {
 		return "", context.DeadlineExceeded
@@ -45,6 +57,8 @@ func TestWHOISError(t *testing.T) {
 }
 
 func TestWHOISParse(t *testing.T) {
+	disableRdapFallback(t)
+
 	validRaw := `Domain Name: example.com
 Registrar: Example Registrar Inc.
 Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited

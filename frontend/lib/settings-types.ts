@@ -32,6 +32,7 @@ export type AlertRule = {
 
 export type SystemSettings = {
   dns_servers: string
+  dkim_selectors?: string
   pwhois_server: string
   rate_limit: number
   api_key?: string

@@ -83,6 +83,8 @@ func gatherCrawl(ctx context.Context, host string) (string, map[string]any, erro
 		}
 	}
 
+	enrichOptionalCrawlFiles(ctx, host, result)
+
 	allURLs = uniqueStrings(allURLs)
 	if len(allURLs) > 0 {
 		if len(allURLs) > maxSitemapURLsStored {

@@ -3,6 +3,8 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"net"
+	"strings"
 	"sync"
 )
 
@@ -23,15 +25,49 @@ func gatherDNS(ctx context.Context, host string) (string, map[string]any, error)
 	go func() {
 		defer wg.Done()
 		if addrs, err := resolver.LookupIPAddr(ctx, host); err == nil {
-			var ips []string
+			var v4, v6 []string
 			for _, a := range addrs {
-				ips = append(ips, a.String())
+				if ip4 := a.IP.To4(); ip4 != nil {
+					v4 = append(v4, ip4.String())
+					continue
+				}
+				if a.IP.To16() != nil {
+					v6 = append(v6, a.IP.String())
+				}
 			}
 			mu.Lock()
-			data["A"] = ips
+			if len(v4) > 0 {
+				data["A"] = v4
+			}
+			if len(v6) > 0 {
+				data["AAAA"] = v6
+			}
 			mu.Unlock()
 		}
 	}()
+
+	if parsed := net.ParseIP(host); parsed != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			names, err := resolver.LookupAddr(ctx, host)
+			if err != nil || len(names) == 0 {
+				return
+			}
+			ptr := make([]string, 0, len(names))
+			for _, name := range names {
+				name = strings.TrimSuffix(strings.TrimSpace(name), ".")
+				if name != "" {
+					ptr = append(ptr, name)
+				}
+			}
+			if len(ptr) > 0 {
+				mu.Lock()
+				data["PTR"] = ptr
+				mu.Unlock()
+			}
+		}()
+	}
 
 	// MX
 	wg.Add(1)
@@ -122,6 +158,7 @@ func gatherDNS(ctx context.Context, host string) (string, map[string]any, error)
 
 	enrichMailSecurity(ctx, resolver, host, data)
 	enrichMailTransport(ctx, host, data)
+	enrichInfraLabels(data)
 
 	if len(data) == 0 {
 		return "dns", nil, fmt.Errorf("no dns records found for %s", host)

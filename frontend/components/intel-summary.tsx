@@ -147,6 +147,87 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         icon={DatabaseIcon}
         mono
       />
+      {intel.dnsAAAARecords?.length ? (
+        <StatCard
+          helpId="intel.dns_aaaa"
+          label="DNS AAAA records"
+          value={intel.dnsAAAARecords.join(", ")}
+          icon={DatabaseIcon}
+          mono
+        />
+      ) : null}
+      {intel.ptrRecords?.length ? (
+        <StatCard
+          helpId="intel.dns_ptr"
+          label="PTR records"
+          value={intel.ptrRecords.join(", ")}
+          icon={DatabaseIcon}
+          mono
+        />
+      ) : null}
+      {intel.cdnProvider ? (
+        <StatCard
+          helpId="intel.cdn_provider"
+          label="CDN provider"
+          value={intel.cdnProvider}
+          icon={CloudIcon}
+        />
+      ) : null}
+      {intel.mailProvider ? (
+        <StatCard
+          helpId="intel.mail_provider"
+          label="Mail provider"
+          value={intel.mailProvider}
+          icon={ShieldIcon}
+        />
+      ) : null}
+      {intel.bimiRecord ? (
+        <StatCard
+          helpId="intel.bimi"
+          label="BIMI"
+          value="Published"
+          icon={ShieldIcon}
+          badge="Brand indicator"
+        />
+      ) : null}
+      {intel.metaDescription ? (
+        <StatCard
+          helpId="intel.meta_description"
+          label="Meta description"
+          value={intel.metaDescription}
+          icon={FileTextIcon}
+        />
+      ) : null}
+      {intel.providerHintCount ? (
+        <StatCard
+          helpId="intel.provider_hints"
+          label="Provider hints"
+          value={`${intel.providerHintCount} detected`}
+          icon={CloudIcon}
+        />
+      ) : null}
+      {intel.humansTxtLines ? (
+        <StatCard
+          label="humans.txt"
+          value={`${intel.humansTxtLines} lines`}
+          icon={ScrollTextIcon}
+        />
+      ) : null}
+      {intel.adsTxtLines ? (
+        <StatCard
+          label="ads.txt"
+          value={`${intel.adsTxtLines} lines`}
+          icon={ScrollTextIcon}
+        />
+      ) : null}
+      {intel.rdapSource ? (
+        <StatCard
+          label="WHOIS source"
+          value={intel.rdapSource}
+          icon={GlobeIcon}
+          mono
+        />
+      ) : null}
       {intel.dnsSoaZone ? (
         <StatCard
           helpId="intel.dns_soa"

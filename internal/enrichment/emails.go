@@ -35,6 +35,13 @@ func extractEmails(payload map[string]any) []string {
 				add(value)
 			}
 		}
+		if rdap, ok := whois["rdap"].(map[string]any); ok {
+			for _, key := range []string{"registrant_email", "abuse_email", "registrar_email"} {
+				if value := strings.TrimSpace(fmt.Sprint(rdap[key])); value != "" && value != "<nil>" {
+					add(value)
+				}
+			}
+		}
 		if raw, ok := whois["raw"].(string); ok {
 			add(raw)
 		}

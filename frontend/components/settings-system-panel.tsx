@@ -71,6 +71,22 @@ export function SettingsSystemPanel() {
                       <p className="text-xs text-muted-foreground">Comma-separated IPs. Leave blank for system default.</p>
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="dkim_selectors">
+                        <LabelWithHelp label="DKIM Selectors" helpId="settings.dkim_selectors" />
+                      </Label>
+                      <Input
+                        id="dkim_selectors"
+                        placeholder="e.g. selector3, custom1"
+                        value={sysSettings.dkim_selectors || ""}
+                        onChange={(e) =>
+                          setSysSettings({ ...sysSettings, dkim_selectors: e.target.value })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Comma-separated extra DKIM selectors probed beyond built-in defaults.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="pwhois_server">
                         <LabelWithHelp label="pWhois Address" helpId="settings.pwhois_server" />
                       </Label>

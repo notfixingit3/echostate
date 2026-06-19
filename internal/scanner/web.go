@@ -19,10 +19,12 @@ const defaultBrowserWSURL = "ws://localhost:3000/"
 type pageCapture struct {
 	title            string
 	text             string
+	html             string
 	location         string
 	headerURL        string
 	headers          map[string]string
 	htmlHints        []string
+	meta             map[string]any
 	jsAssets         []map[string]any
 	jsHints          []string
 	wordpressPlugins []map[string]any
@@ -103,6 +105,17 @@ func newWebGatherer(browserWSURL string) Gatherer {
 		if emails := extractEmailsFromText(capture.text); len(emails) > 0 {
 			webData["contact_emails"] = emails
 		}
+		if len(capture.meta) > 0 {
+			webData["meta"] = capture.meta
+		}
+		if capture.html != "" {
+			if buckets := detectBuckets(capture.html); len(buckets) > 0 {
+				webData["detected_buckets"] = buckets
+			}
+			if hints := detectProviderHints(capture.html); len(hints) > 0 {
+				webData["provider_hints"] = hints
+			}
+		}
 		if plugins := capture.wordpressPlugins; len(plugins) > 0 {
 			webData["wordpress_plugins"] = plugins
 		}
@@ -168,14 +181,17 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 
 	var wpIntel wordpressIntel
 	var jsIntel jsAssetIntel
+	var metaIntel map[string]any
 	err := chromedp.Run(ctx,
 		network.Enable(),
 		chromedp.Navigate(url),
 		chromedp.WaitVisible("body", chromedp.ByQuery),
 		chromedp.Title(&capture.title),
 		chromedp.Text("body", &capture.text, chromedp.ByQuery),
+		chromedp.OuterHTML("html", &capture.html, chromedp.ByQuery),
 		chromedp.Location(&capture.location),
 		chromedp.Evaluate(htmlTechHintsJS, &capture.htmlHints),
+		chromedp.Evaluate(metaIntelJS, &metaIntel),
 		chromedp.Evaluate(jsAssetIntelJS, &jsIntel),
 		chromedp.Evaluate(wordpressIntelJS, &wpIntel),
 	)
@@ -186,6 +202,12 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 	capture.jsAssets, capture.jsHints = normalizeJSAssets(jsIntel)
 	capture.wordpressPlugins = normalizeWordPressItems(wpIntel.Plugins)
 	capture.wordpressThemes = normalizeWordPressItems(wpIntel.Themes)
+	if len(metaIntel) > 0 {
+		capture.meta = metaIntel
+	}
+	if len(capture.html) > 1024*1024 {
+		capture.html = capture.html[:1024*1024]
+	}
 
 	mu.Lock()
 	capture.headers = lastDoc.headers

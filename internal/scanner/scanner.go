@@ -121,6 +121,7 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 	}
 
 	wg.Wait()
+	finalizeScanResult(result)
 	return result, nil
 }
 

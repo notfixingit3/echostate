@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.33] - 2026-06-18
+
+### Added
+
+- **humans.txt / ads.txt / app-ads.txt** — Crawl gatherer fetches optional text files; crawl tab + PDF sections.
+- **BIMI DNS** — `default._bimi` TXT lookup; included in mail posture grade.
+- **PTR records** — Reverse DNS when scan target is a raw IP address.
+- **Expanded DKIM selectors** — 15 built-in selectors plus optional `dkim_selectors` in Settings.
+- **Storage from rendered HTML** — Bucket and provider-hint detection on Chrome-captured page HTML, merged into storage intel.
+- **Meta / OG tags** — `description`, `generator`, `canonical`, and `og:*` from rendered page scrape.
+- **RDAP WHOIS fallback** — RDAP enrichment when classic WHOIS is thin; registrant/abuse emails for HIBP.
+- **CDN / mail provider labels** — `INFRA_LABELS` summarizes CNAME CDN and MX-hosted email providers.
+- **Provider hints** — Firebase, Supabase, CloudFront, Fastly, Vercel, Netlify URL patterns in HTML.
+- **Split A vs AAAA** — DNS gatherer stores IPv4 (`A`) and IPv6 (`AAAA`) separately.
+
+### Changed
+
+- **Intel UI + PDF** — New summary cards and report sections for all P2 signals; WHOIS tab shows RDAP fields.
+
 ## [0.0.1-beta.32] - 2026-06-18
 
 ### Added

@@ -4,9 +4,14 @@ import (
 	"context"
 	"net"
 	"strings"
+
+	"github.com/notfixingit3/echostate/internal/config"
 )
 
-var dkimSelectors = []string{"default", "google", "selector1", "k1", "s1", "dkim"}
+var defaultDKIMSelectors = []string{
+	"default", "google", "selector1", "selector2", "k1", "s1", "s2", "dkim",
+	"mail", "mandrill", "sendgrid", "smtp", "mx", "dkim1", "dkim2",
+}
 
 func enrichMailSecurity(ctx context.Context, resolver *net.Resolver, host string, data map[string]any) {
 	if txts, ok := data["TXT"].([]string); ok {
@@ -24,6 +29,64 @@ func enrichMailSecurity(ctx context.Context, resolver *net.Resolver, host string
 	if dkim := lookupDKIMRecords(ctx, resolver, host); len(dkim) > 0 {
 		data["DKIM"] = dkim
 	}
+
+	if bimi := lookupBIMIRecord(ctx, resolver, host); len(bimi) > 0 {
+		data["BIMI"] = bimi
+	}
+}
+
+func dkimSelectorList() []string {
+	seen := make(map[string]struct{})
+	var selectors []string
+	add := func(name string) {
+		name = strings.TrimSpace(strings.ToLower(name))
+		if name == "" {
+			return
+		}
+		if _, ok := seen[name]; ok {
+			return
+		}
+		seen[name] = struct{}{}
+		selectors = append(selectors, name)
+	}
+
+	for _, selector := range defaultDKIMSelectors {
+		add(selector)
+	}
+	settings := config.GetSettings()
+	for _, part := range strings.Split(settings.DKIMSelectors, ",") {
+		add(part)
+	}
+	return selectors
+}
+
+func lookupBIMIRecord(ctx context.Context, resolver *net.Resolver, host string) map[string]any {
+	txts, err := resolver.LookupTXT(ctx, "default._bimi."+host)
+	if err != nil || len(txts) == 0 {
+		return nil
+	}
+	for _, txt := range txts {
+		record := strings.TrimSpace(txt)
+		if !strings.HasPrefix(strings.ToLower(record), "v=bimi1") {
+			continue
+		}
+		result := map[string]any{"record": record}
+		for _, part := range strings.Split(record, ";") {
+			part = strings.TrimSpace(part)
+			key, value, ok := strings.Cut(part, "=")
+			if !ok {
+				continue
+			}
+			switch strings.ToLower(strings.TrimSpace(key)) {
+			case "l":
+				result["logo_url"] = strings.TrimSpace(value)
+			case "a":
+				result["authority"] = strings.TrimSpace(value)
+			}
+		}
+		return result
+	}
+	return nil
 }
 
 func enrichMailTransport(ctx context.Context, host string, data map[string]any) {
@@ -180,7 +243,7 @@ func lookupDKIMRecords(ctx context.Context, resolver *net.Resolver, host string)
 	var records []map[string]any
 	seen := make(map[string]struct{})
 
-	for _, selector := range dkimSelectors {
+	for _, selector := range dkimSelectorList() {
 		name := selector + "._domainkey." + host
 		txts, err := resolver.LookupTXT(ctx, name)
 		if err != nil {

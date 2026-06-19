@@ -90,6 +90,13 @@ func computeMailPosture(data map[string]any) map[string]any {
 		findings = append(findings, "TLS-RPT reporting configured")
 	}
 
+	if _, hasBIMI := data["BIMI"].(map[string]any); !hasBIMI {
+		score -= 3
+		findings = append(findings, "No BIMI record at default._bimi")
+	} else {
+		findings = append(findings, "BIMI record published")
+	}
+
 	if score < 0 {
 		score = 0
 	}
