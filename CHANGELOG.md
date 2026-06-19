@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.40] - 2026-06-19
+
 ### Added
 
 - **PWA icons** — Dedicated maskable launcher icons (192/512) and refreshed Apple touch icon; `scripts/generate-pwa-icons.py` regenerates from `assets/logo.png`.
