@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/auth"
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
@@ -39,6 +40,7 @@ type Handler struct {
 	reportWorker *reports.Worker
 	scanWorker   *scans.Worker
 	auth         *auth.Service
+	audit        *audit.Service
 }
 
 // Register wires routes into the Gin router and returns background workers.
@@ -61,6 +63,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	}
 
 	h.auth = auth.NewService(database, cfg.FrontendURL)
+	h.audit = audit.New(database)
 	h.scanWorker = scans.New(database, h.scanner, h, config.GetSettings().ScanConcurrency)
 
 	requireScanner := middleware.RequireAuthRole(h.auth, auth.RoleScanner)
@@ -117,6 +120,8 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.GET("/export", requireAdmin, h.exportData)
 	api.POST("/import", requireAdmin, h.importData)
 
+	api.GET("/audit", requireAdmin, h.listAuditEvents)
+
 	api.GET("/graph", requireScanner, h.getGraph)
 
 	api.GET("/collections", requireScanner, h.listCollections)
@@ -153,9 +158,10 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.PUT("/users/:id/credentials/:credId", requireScanner, h.renameUserCredential)
 
 	return &Workers{
-		Reports:   h.reportWorker,
-		Scans:     h.scanWorker,
-		Scheduler: scheduler.New(database, h.scanWorker),
+		Reports:     h.reportWorker,
+		Scans:       h.scanWorker,
+		Scheduler:   scheduler.New(database, h.scanWorker),
+		AuditPurger: audit.NewPurger(database),
 	}
 }
 
@@ -265,6 +271,9 @@ func (h *Handler) cancelScan(c *gin.Context) {
 		return
 	}
 
+	h.recordAudit(c, audit.ActionScanCancel, "scan", jobID.String(), map[string]any{
+		"host": job.Host,
+	})
 	c.JSON(http.StatusOK, job)
 }
 

@@ -308,14 +308,20 @@ export function SettingsSystemPanel() {
                   Retention
                   <HelpTip id="settings.retention" />
                 </CardTitle>
-                <CardDescription>Keep only the newest N snapshots per target (0 = unlimited).</CardDescription>
+                <CardDescription>Snapshot keep-N per target and audit log retention (0 = unlimited).</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-w-xs">
+              <CardContent className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+                <div className="space-y-2">
                   <Label htmlFor="retention_max_snapshots">
                     <LabelWithHelp label="Max snapshots per target" helpId="settings.retention" />
                   </Label>
                   <Input id="retention_max_snapshots" type="number" min="0" value={sysSettings.retention_max_snapshots || 0} onChange={(e) => setSysSettings({ ...sysSettings, retention_max_snapshots: Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="audit_retention_days">
+                    <LabelWithHelp label="Audit log retention (days)" helpId="settings.audit_retention" />
+                  </Label>
+                  <Input id="audit_retention_days" type="number" min="0" value={sysSettings.audit_retention_days ?? 90} onChange={(e) => setSysSettings({ ...sysSettings, audit_retention_days: Number(e.target.value) })} />
                 </div>
               </CardContent>
             </Card>

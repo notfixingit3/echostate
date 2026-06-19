@@ -158,17 +158,20 @@ export function TargetsTable() {
         </Alert>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm" data-testid="targets-table-container">
-        <Table>
+      <div
+        className="overflow-hidden rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm [&_[data-slot=table-container]]:overflow-x-hidden"
+        data-testid="targets-table-container"
+      >
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead>Host</TableHead>
-              <TableHead>ASN</TableHead>
-              <TableHead>Web title</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Snapshots</TableHead>
-              <TableHead>Latest snapshot</TableHead>
-              {canDelete ? <TableHead className="w-12" /> : null}
+              <TableHead className="w-[24%]">Host</TableHead>
+              <TableHead className="w-[18%]">ASN</TableHead>
+              <TableHead className="w-[16%]">Web title</TableHead>
+              <TableHead className="w-[14%]">Created</TableHead>
+              <TableHead className="w-[8%]">Snapshots</TableHead>
+              <TableHead className="w-[14%]">Latest snapshot</TableHead>
+              {canDelete ? <TableHead className="w-12 px-1" /> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,42 +200,66 @@ export function TargetsTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              data.data.map((target) => (
+              data.data.map((target) => {
+                const asnLabel = target.latest_asn
+                  ? `AS${target.latest_asn}${target.latest_as_name ? ` · ${target.latest_as_name}` : ""}`
+                  : "—"
+                const createdLabel = new Date(target.created_at).toLocaleString()
+                const latestSnapshotLabel = target.latest_snapshot_at
+                  ? new Date(target.latest_snapshot_at).toLocaleString()
+                  : null
+
+                return (
                 <TableRow
                   key={target.id}
                   className="cursor-pointer"
                   onClick={() => router.push(`/target?id=${target.id}`)}
                   data-testid={`target-row-${target.id}`}
                 >
-                  <TableCell>
-                    <div className="font-medium">{target.host}</div>
+                  <TableCell className="max-w-0 whitespace-normal">
+                    <div className="truncate font-medium" title={target.host}>
+                      {target.host}
+                    </div>
                     {target.tags && target.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <div className="mt-1 flex flex-wrap gap-1">
                         {target.tags.map((t) => (
                           <span key={t} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{t}</span>
                         ))}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {target.latest_asn
-                      ? `AS${target.latest_asn}${target.latest_as_name ? ` · ${target.latest_as_name}` : ""}`
-                      : "—"}
+                  <TableCell className="max-w-0 font-mono text-xs text-muted-foreground">
+                    <div className="truncate" title={asnLabel}>
+                      {asnLabel}
+                    </div>
                   </TableCell>
-                  <TableCell className="max-w-[12rem] truncate text-muted-foreground">
-                    {target.latest_web_title || "—"}
+                  <TableCell className="max-w-0 text-muted-foreground">
+                    <div
+                      className="truncate"
+                      title={target.latest_web_title || undefined}
+                    >
+                      {target.latest_web_title || "—"}
+                    </div>
                   </TableCell>
-                  <TableCell>
-                    {new Date(target.created_at).toLocaleString()}
+                  <TableCell className="max-w-0 text-xs">
+                    <div className="truncate" title={createdLabel}>
+                      {createdLabel}
+                    </div>
                   </TableCell>
-                  <TableCell>{target.snapshot_count}</TableCell>
-                  <TableCell>
-                    {target.latest_snapshot_at
-                      ? new Date(target.latest_snapshot_at).toLocaleString()
-                      : "—"}
+                  <TableCell className="text-center tabular-nums">
+                    {target.snapshot_count}
+                  </TableCell>
+                  <TableCell className="max-w-0 text-xs">
+                    {latestSnapshotLabel ? (
+                      <div className="truncate" title={latestSnapshotLabel}>
+                        {latestSnapshotLabel}
+                      </div>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   {canDelete ? (
-                    <TableCell>
+                    <TableCell className="w-12 px-1">
                       <Button
                         type="button"
                         variant="ghost"
@@ -247,7 +274,8 @@ export function TargetsTable() {
                     </TableCell>
                   ) : null}
                 </TableRow>
-              ))
+                )
+              })
             )}
           </TableBody>
         </Table>

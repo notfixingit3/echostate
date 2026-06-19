@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/export"
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/version"
@@ -33,6 +34,10 @@ func (h *Handler) exportData(c *gin.Context) {
 	filename := fmt.Sprintf("echostate-export-%s.json", time.Now().UTC().Format("20060102-150405"))
 	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	c.Header("X-EchoState-Version", version.Version)
+	h.recordAudit(c, audit.ActionDataExport, "export", filename, map[string]any{
+		"include_blobs":  includeBlobs,
+		"include_config": includeConfig,
+	})
 	c.JSON(http.StatusOK, bundle)
 }
 
@@ -64,6 +69,14 @@ func (h *Handler) importData(c *gin.Context) {
 		return
 	}
 
+	h.recordAudit(c, audit.ActionDataImport, "import", "bundle", map[string]any{
+		"conflict":      req.Conflict,
+		"rebuild_graph": req.RebuildGraph,
+		"targets_imported":   result.TargetsImported,
+		"snapshots_imported": result.SnapshotsImported,
+		"targets_skipped":    result.TargetsSkipped,
+		"snapshots_skipped":  result.SnapshotsSkipped,
+	})
 	c.JSON(http.StatusOK, result)
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/models"
 )
 
@@ -185,6 +186,12 @@ func (h *Handler) deleteTarget(c *gin.Context) {
 		return
 	}
 
+	var host string
+	if err := h.db.Pool.QueryRow(ctx, `SELECT host FROM targets WHERE id = $1`, targetID).Scan(&host); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load target"})
+		return
+	}
+
 	if _, err := h.db.Pool.Exec(ctx, `DELETE FROM scan_jobs WHERE target_id = $1`, targetID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete scan jobs"})
 		return
@@ -206,6 +213,9 @@ func (h *Handler) deleteTarget(c *gin.Context) {
 		}()
 	}
 
+	h.recordAudit(c, audit.ActionTargetDelete, "target", targetID.String(), map[string]any{
+		"host": host,
+	})
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
@@ -555,6 +565,9 @@ func (h *Handler) updateTargetTags(c *gin.Context) {
 		return
 	}
 
+	h.recordAudit(c, audit.ActionTargetTagsUpdate, "target", targetID.String(), map[string]any{
+		"tags": req.Tags,
+	})
 	c.Status(http.StatusNoContent)
 }
 
@@ -717,6 +730,7 @@ func (h *Handler) deleteSnapshot(c *gin.Context) {
 		return
 	}
 
+	h.recordAudit(c, audit.ActionSnapshotDelete, "snapshot", snapshotID.String(), nil)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
@@ -738,6 +752,7 @@ func (h *Handler) deleteReport(c *gin.Context) {
 		return
 	}
 
+	h.recordAudit(c, audit.ActionReportDelete, "report", reportID.String(), nil)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 

@@ -22,7 +22,7 @@ test.describe("Smoke", () => {
     }
 
     await expect(page.getByTestId("footer")).toBeVisible()
-    await expect(page.getByTestId("footer-version")).toHaveText(/v0\.0\.1-beta\.\d+/)
+    await expect(page.getByTestId("footer-version")).toHaveText(/v0\.0\.1(-beta\.\d+)?/)
     await expect(page.getByTestId("scan-submit-button")).toBeVisible()
     await expect(page.getByTestId("scan-and-report-button")).toBeVisible()
   })

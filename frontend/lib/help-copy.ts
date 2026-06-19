@@ -21,6 +21,8 @@ export const HELP_COPY: Record<string, string> = {
   "settings.nav.system": "DNS, scan workers, scheduler, retention, enrichment API keys, and alert rules.",
   "settings.nav.authentication": "Passkey enrollment defaults, session lifetime, and WebAuthn relying party settings.",
   "settings.nav.users": "Create users and issue enrollment or recovery codes.",
+  "settings.nav.audit":
+    "Read-only trail of sign-ins, deletes, settings changes, imports/exports, and user management.",
   "settings.profile": "Your display name and role in EchoState.",
   "settings.preferences": "Default theme and timezone for your account across devices.",
   "settings.passkeys": "Issue device codes, register passkeys, rename, or remove credentials.",
@@ -145,6 +147,8 @@ export const HELP_COPY: Record<string, string> = {
     "Additional local hops to hide after the automatic scanner-prefix redaction (0 = none).",
   "settings.retention":
     "Per-target snapshot keep-N policy. Older snapshots are pruned after each scan.",
+  "settings.audit_retention":
+    "Delete audit log entries older than this many days. 0 keeps all events. Purge runs hourly and when settings are saved.",
   "settings.scheduler":
     "Background job that rescans stale targets on a configurable interval.",
   "settings.schedule_tags":

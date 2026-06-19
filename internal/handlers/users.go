@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/auth"
 	"github.com/notfixingit3/echostate/internal/middleware"
 )
@@ -39,6 +40,10 @@ func (h *Handler) createUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 		return
 	}
+	h.recordAudit(c, audit.ActionUserCreate, "user", user.ID.String(), map[string]any{
+		"display_name": user.DisplayName,
+		"role":         user.Role,
+	})
 	c.JSON(http.StatusCreated, user)
 }
 
@@ -74,6 +79,10 @@ func (h *Handler) issueUserCode(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue code"})
 		return
 	}
+	h.recordAudit(c, audit.ActionEnrollmentCodeIssued, "user", userID.String(), map[string]any{
+		"purpose":  purpose,
+		"recovery": req.Recovery,
+	})
 	c.JSON(http.StatusOK, result)
 }
 
@@ -120,6 +129,9 @@ func (h *Handler) deleteUserCredential(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete credential"})
 		return
 	}
+	h.recordAudit(c, audit.ActionCredentialDelete, "credential", credID.String(), map[string]any{
+		"user_id": userID.String(),
+	})
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 

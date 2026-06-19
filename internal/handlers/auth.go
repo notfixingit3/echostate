@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/auth"
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/middleware"
@@ -149,6 +151,19 @@ func (h *Handler) webauthnRegisterFinish(c *gin.Context) {
 	setSessionCookie(c, sessionToken, expires, h.config.Env == "production")
 
 	user, _ := h.auth.GetUser(c.Request.Context(), userID)
+	if user != nil {
+		h.recordAuditActor(
+			audit.ActionPasskeyRegister,
+			"user",
+			user.ID.String(),
+			user.ID,
+			user.DisplayName,
+			user.Role,
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			map[string]any{"credential_id": hex.EncodeToString(cred.ID)},
+		)
+	}
 	c.JSON(http.StatusOK, gin.H{"user": user, "registered": true})
 }
 
@@ -223,6 +238,19 @@ func (h *Handler) webauthnLoginFinish(c *gin.Context) {
 	setSessionCookie(c, sessionToken, expires, h.config.Env == "production")
 
 	user, _ := h.auth.GetUser(c.Request.Context(), req.UserID)
+	if user != nil {
+		h.recordAuditActor(
+			audit.ActionLogin,
+			"user",
+			user.ID.String(),
+			user.ID,
+			user.DisplayName,
+			user.Role,
+			c.ClientIP(),
+			c.Request.UserAgent(),
+			nil,
+		)
+	}
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
@@ -263,10 +291,14 @@ func (h *Handler) authUpdateProfile(c *gin.Context) {
 }
 
 func (h *Handler) authLogout(c *gin.Context) {
+	user := middleware.GetUser(c)
 	if token, err := c.Cookie(auth.SessionCookieName); err == nil {
 		_ = h.auth.DeleteSession(c.Request.Context(), token)
 	}
 	clearSessionCookie(c, h.config.Env == "production")
+	if user != nil {
+		h.recordAudit(c, audit.ActionLogout, "user", user.ID.String(), nil)
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -281,6 +313,9 @@ func (h *Handler) issueDeviceCode(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue code"})
 		return
 	}
+	h.recordAudit(c, audit.ActionDeviceCodeIssued, "user", user.ID.String(), map[string]any{
+		"purpose": auth.PurposeDevice,
+	})
 	c.JSON(http.StatusOK, result)
 }
 

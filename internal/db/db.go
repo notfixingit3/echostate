@@ -303,6 +303,27 @@ func Migrate(db *DB) error {
 		ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'UTC';
 		ALTER TABLE users ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'system';
 		ALTER TABLE enrollment_sessions ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'initial';
+
+		CREATE TABLE IF NOT EXISTS audit_events (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+			actor_name TEXT NOT NULL DEFAULT '',
+			actor_role TEXT NOT NULL DEFAULT '',
+			action TEXT NOT NULL,
+			resource_type TEXT NOT NULL DEFAULT '',
+			resource_id TEXT NOT NULL DEFAULT '',
+			detail JSONB NOT NULL DEFAULT '{}',
+			ip TEXT NOT NULL DEFAULT '',
+			user_agent TEXT NOT NULL DEFAULT ''
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_audit_events_created_at
+			ON audit_events(created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_audit_events_action
+			ON audit_events(action);
+		CREATE INDEX IF NOT EXISTS idx_audit_events_user_id
+			ON audit_events(user_id);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

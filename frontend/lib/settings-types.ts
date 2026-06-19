@@ -74,6 +74,7 @@ export type SystemSettings = {
   traceroute_redact_local_extra_hops?: number
   screenshot_timeout_sec?: number
   retention_max_snapshots?: number
+  audit_retention_days?: number
   schedule_enabled?: boolean
   schedule_interval_minutes?: number
   schedule_stale_hours?: number
@@ -103,6 +104,7 @@ export const defaultSystemSettings = (): SystemSettings => ({
   traceroute_redact_local_extra_hops: 0,
   screenshot_timeout_sec: 25,
   retention_max_snapshots: 0,
+  audit_retention_days: 90,
   schedule_enabled: false,
   schedule_interval_minutes: 60,
   schedule_stale_hours: 24,

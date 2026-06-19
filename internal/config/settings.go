@@ -35,6 +35,7 @@ type SystemSettings struct {
 	TracerouteRedactLocalExtraHops int  `json:"traceroute_redact_local_extra_hops,omitempty"`
 	ScreenshotTimeoutSec      int         `json:"screenshot_timeout_sec"`
 	RetentionMaxSnapshots     int         `json:"retention_max_snapshots"`
+	AuditRetentionDays        int         `json:"audit_retention_days"`
 	ScheduleEnabled           bool        `json:"schedule_enabled"`
 	ScheduleIntervalMinutes   int         `json:"schedule_interval_minutes"`
 	ScheduleStaleHours        int         `json:"schedule_stale_hours"`
@@ -63,6 +64,7 @@ var (
 		TracerouteTimeoutSec:      40,
 		ScreenshotTimeoutSec:        25,
 		RetentionMaxSnapshots:     0,
+		AuditRetentionDays:        90,
 		ScheduleEnabled:           false,
 		ScheduleIntervalMinutes:   60,
 		ScheduleStaleHours:        24,
@@ -159,6 +161,9 @@ func normalizeSettings(s SystemSettings) SystemSettings {
 	}
 	if s.ScheduleStaleHours <= 0 {
 		s.ScheduleStaleHours = defaultSettings.ScheduleStaleHours
+	}
+	if s.AuditRetentionDays < 0 {
+		s.AuditRetentionDays = 0
 	}
 	if len(s.AlertRules) == 0 {
 		s.AlertRules = defaultAlertRules()

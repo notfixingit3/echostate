@@ -428,6 +428,20 @@ export interface ExportBundle {
   settings?: Record<string, unknown>
 }
 
+export interface AuditEvent {
+  id: string
+  created_at: string
+  user_id?: string | null
+  actor_name: string
+  actor_role: string
+  action: string
+  resource_type: string
+  resource_id: string
+  detail: Record<string, unknown>
+  ip: string
+  user_agent: string
+}
+
 export interface ImportResult {
   targets_imported: number
   targets_skipped: number

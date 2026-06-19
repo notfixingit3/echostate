@@ -87,6 +87,7 @@ func main() {
 		log.Fatalf("failed to start scan worker: %v", err)
 	}
 	workers.Scheduler.Start(workerCtx)
+	workers.AuditPurger.Start(workerCtx)
 
 	srv := newServer(cfg, router)
 
@@ -104,6 +105,7 @@ func main() {
 	log.Println("shutting down EchoState API")
 
 	workers.Scheduler.Stop()
+	workers.AuditPurger.Stop()
 	workers.Scans.Stop()
 	workers.Reports.Stop()
 

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.44] - 2026-06-19
+
+### Added
+
+- **Audit log** — `audit_events` table, admin `GET /api/audit`, and **Admin → Audit log** UI for sign-ins, deletes, settings, import/export, and user management.
+- **Audit retention** — `audit_retention_days` in System Settings (0 = keep forever; default 90). Hourly purge plus immediate purge on settings save.
+
+### Fixed
+
+- **Targets table** — Fixed layout prevents horizontal scrolling; long host, ASN, and date values truncate with hover titles.
+- **E2E smoke** — Footer version assertion accepts stable `v0.0.1` and prerelease `v0.0.1-beta.N`.
+
 ## [0.0.1-beta.43] - 2026-06-19
 
 ### Fixed

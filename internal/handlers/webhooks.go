@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/webhooks"
 )
@@ -120,6 +122,10 @@ func (h *Handler) createWebhook(c *gin.Context) {
 		return
 	}
 
+	h.recordAudit(c, audit.ActionWebhookCreate, "webhook", req.ID.String(), map[string]any{
+		"name": req.Name,
+		"type": req.Type,
+	})
 	c.JSON(http.StatusCreated, req)
 }
 
@@ -161,6 +167,11 @@ func (h *Handler) updateWebhook(c *gin.Context) {
 
 	req.ID = id
 	req.UpdatedAt = now
+	h.recordAudit(c, audit.ActionWebhookUpdate, "webhook", id.String(), map[string]any{
+		"name":    req.Name,
+		"type":    req.Type,
+		"enabled": req.Enabled,
+	})
 	c.JSON(http.StatusOK, req)
 }
 
@@ -178,5 +189,6 @@ func (h *Handler) deleteWebhook(c *gin.Context) {
 		return
 	}
 
+	h.recordAudit(c, audit.ActionWebhookDelete, "webhook", id.String(), nil)
 	c.Status(http.StatusNoContent)
 }

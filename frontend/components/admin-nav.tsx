@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BellIcon, DatabaseIcon, SettingsIcon, ShieldIcon, UsersIcon } from "lucide-react"
+import { BellIcon, DatabaseIcon, ScrollTextIcon, SettingsIcon, ShieldIcon, UsersIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -12,6 +12,7 @@ const adminItems = [
   { href: "/admin/system", label: "System", icon: SettingsIcon },
   { href: "/admin/authentication", label: "Authentication", icon: ShieldIcon },
   { href: "/admin/users", label: "User management", icon: UsersIcon },
+  { href: "/admin/audit", label: "Audit log", icon: ScrollTextIcon },
 ]
 
 export function AdminNav() {

@@ -1,0 +1,72 @@
+package handlers
+
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+
+	"github.com/notfixingit3/echostate/internal/audit"
+	"github.com/notfixingit3/echostate/internal/middleware"
+)
+
+func (h *Handler) recordAudit(c *gin.Context, action, resourceType, resourceID string, detail map[string]any) {
+	if h.audit == nil {
+		return
+	}
+
+	entry := audit.Entry{
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		Detail:       detail,
+		IP:           c.ClientIP(),
+		UserAgent:    c.Request.UserAgent(),
+	}
+	if user := middleware.GetUser(c); user != nil {
+		entry.UserID = &user.ID
+		entry.ActorName = user.DisplayName
+		entry.ActorRole = user.Role
+	}
+
+	go func(entry audit.Entry) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := h.audit.Record(ctx, entry); err != nil {
+			log.Printf("audit record failed action=%s: %v", entry.Action, err)
+		}
+	}(entry)
+}
+
+func (h *Handler) recordAuditActor(
+	action, resourceType, resourceID string,
+	userID uuid.UUID,
+	actorName, actorRole, ip, userAgent string,
+	detail map[string]any,
+) {
+	if h.audit == nil {
+		return
+	}
+
+	entry := audit.Entry{
+		UserID:       &userID,
+		ActorName:    actorName,
+		ActorRole:    actorRole,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		Detail:       detail,
+		IP:           ip,
+		UserAgent:    userAgent,
+	}
+
+	go func(entry audit.Entry) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := h.audit.Record(ctx, entry); err != nil {
+			log.Printf("audit record failed action=%s: %v", entry.Action, err)
+		}
+	}(entry)
+}

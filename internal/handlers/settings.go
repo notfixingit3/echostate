@@ -1,13 +1,32 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/config"
 )
+
+func (h *Handler) purgeAuditEvents() {
+	if h.audit == nil {
+		return
+	}
+	days := config.GetSettings().AuditRetentionDays
+	if days <= 0 {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_, _ = audit.PurgeExpired(ctx, h.db, days)
+	}()
+}
 
 func (h *Handler) getSettings(c *gin.Context) {
 	var valBytes []byte
@@ -50,6 +69,10 @@ func (h *Handler) updateSettings(c *gin.Context) {
 	}
 
 	config.UpdateSettings(req)
+	h.recordAudit(c, audit.ActionSettingsUpdate, "settings", "app_settings", map[string]any{
+		"audit_retention_days": req.AuditRetentionDays,
+	})
+	h.purgeAuditEvents()
 	c.JSON(http.StatusOK, config.PublicSettings(req))
 }
 
