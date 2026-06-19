@@ -62,16 +62,30 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=,suffix=,format=short
 
+      # Cross-compile on the native runner — Go builds under QEMU arm64 are slow.
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache-dependency-path: go.sum
+
+      - name: Build Linux binaries
+        run: |
+          mkdir -p bin
+          VERSION="${{ steps.version.outputs.value }}"
+          LDFLAGS="-w -s -X github.com/notfixingit3/echostate/internal/version.Version=${VERSION}"
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o bin/echostate-linux-amd64 ./main.go
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o bin/echostate-linux-arm64 ./main.go
+
       - name: Build and push
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
+          target: production-prebuilt
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VERSION=${{ steps.version.outputs.value }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
           platforms: linux/amd64,linux/arm64

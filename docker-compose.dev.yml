@@ -10,6 +10,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
       args:
         VERSION: ${ECHOSTATE_VERSION:-dev}
 

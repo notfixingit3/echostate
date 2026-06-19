@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- **API multi-arch Docker** — CI cross-compiles linux/amd64 and linux/arm64 on the native runner, then packages per-arch binaries (avoids slow QEMU Go builds).
+
 ## [0.0.1-beta.38] - 2026-06-18
 
 ### Changed
