@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **PDF reports** — Table of contents page, cleaner cover logo, GitHub project URL (replaces echostate.io). Raw WHOIS dump omitted (structured WHOIS/RDAP fields retained).
 - **Report downloads** — Filename uses target host and date (`echostate-example.com-2026-06-18.pdf`) instead of the report UUID.
+- **Snapshot intel layout** — Overview/summary grids no longer stretch short cards to row height; ASN/BGP uses structured routing/PeeringDB sections instead of a tall JSON block.
 
 ### Fixed
 

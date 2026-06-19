@@ -20,7 +20,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import {
-  ASN_FIELDS,
+  ASN_CORE_FIELDS,
+  ASN_ROUTING_FIELDS,
+  PEERINGDB_FIELDS,
   WEB_FIELDS,
   WHOIS_FIELDS,
   PWHOIS_FIELDS,
@@ -290,7 +292,9 @@ function DataGrid({
             key === "TXT" ||
             key === "DMARC" ||
             key === "tech_stack" ||
-            key === "sitemap_urls" ? (
+            key === "sitemap_urls" ||
+            key === "visible_origins" ||
+            key === "notes" ? (
               <div className="flex flex-wrap gap-1.5">
                 {(Array.isArray(value) ? value : [value]).map((item) => (
                   <Badge
@@ -302,10 +306,8 @@ function DataGrid({
                   </Badge>
                 ))}
               </div>
-            ) : key === "routing" && value && typeof value === "object" ? (
-              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/50 bg-background/60 p-3 font-mono text-xs leading-relaxed">
-                {formatValue(value)}
-              </pre>
+            ) : key === "path_profile" && value && typeof value === "object" ? (
+              <DataGrid data={value as Record<string, unknown>} />
             ) : key === "robots" && value && typeof value === "object" ? (
               <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/50 bg-background/60 p-3 font-mono text-xs leading-relaxed">
                 {formatValue(value)}
@@ -383,6 +385,35 @@ function DataGrid({
         </div>
       ))}
     </dl>
+  )
+}
+
+function AsnIntelSections({ asn }: { asn?: Record<string, unknown> | null }) {
+  const routing =
+    asn?.routing && typeof asn.routing === "object"
+      ? (asn.routing as Record<string, unknown>)
+      : null
+  const peeringdb =
+    asn?.peeringdb && typeof asn.peeringdb === "object"
+      ? (asn.peeringdb as Record<string, unknown>)
+      : null
+
+  return (
+    <div className="flex flex-col gap-4">
+      <DataGrid data={asn} fields={ASN_CORE_FIELDS} />
+      {routing ? (
+        <div className="border-t border-border/50 pt-4">
+          <h3 className="mb-3 text-sm font-semibold">BGP routing</h3>
+          <DataGrid data={routing} fields={ASN_ROUTING_FIELDS} />
+        </div>
+      ) : null}
+      {peeringdb ? (
+        <div className="border-t border-border/50 pt-4">
+          <h3 className="mb-3 text-sm font-semibold">PeeringDB</h3>
+          <DataGrid data={peeringdb} fields={PEERINGDB_FIELDS} />
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -516,7 +547,7 @@ export function IntelPanels({
       </TabsList>
 
       <TabsContent value="overview" className="mt-4">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid items-start gap-4 md:grid-cols-2">
           <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -536,7 +567,7 @@ export function IntelPanels({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <DataGrid data={raw?.asn} fields={ASN_FIELDS} />
+              <AsnIntelSections asn={raw?.asn} />
             </CardContent>
           </Card>
           <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
@@ -596,7 +627,7 @@ export function IntelPanels({
       <TabsContent value="asn" className="mt-4">
         <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
-            <DataGrid data={raw?.asn} fields={ASN_FIELDS} />
+            <AsnIntelSections asn={raw?.asn} />
           </CardContent>
         </Card>
       </TabsContent>

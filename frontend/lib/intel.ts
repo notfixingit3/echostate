@@ -399,7 +399,7 @@ export const WHOIS_FIELDS = [
   "rdap",
 ] as const
 
-export const ASN_FIELDS = [
+export const ASN_CORE_FIELDS = [
   "asn",
   "as_name",
   "ip",
@@ -407,6 +407,27 @@ export const ASN_FIELDS = [
   "country",
   "registry",
   "allocated",
+] as const
+
+export const ASN_ROUTING_FIELDS = [
+  "hijack_risk",
+  "visible_origins",
+  "first_seen",
+  "last_seen",
+  "path_profile",
+  "notes",
+] as const
+
+export const PEERINGDB_FIELDS = [
+  "name",
+  "website",
+  "ix_count",
+  "fac_count",
+] as const
+
+/** @deprecated Use ASN_CORE_FIELDS plus routing/peering sections. */
+export const ASN_FIELDS = [
+  ...ASN_CORE_FIELDS,
   "routing",
   "peeringdb",
 ] as const

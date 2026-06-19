@@ -82,7 +82,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         : intel.asName
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <StatCard label="Host" value={intel.host} icon={GlobeIcon} mono />
       <StatCard
         label="Resolved IP"
