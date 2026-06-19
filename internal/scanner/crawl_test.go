@@ -35,6 +35,15 @@ func TestClassifySitemap_IndexReturnsChildSitemaps(t *testing.T) {
 	}
 }
 
+func TestParsePlainTextSitemap(t *testing.T) {
+	t.Parallel()
+
+	urls := parsePlainTextSitemap("https://example.com/\nhttps://example.com/about\n\n# comment\n")
+	if len(urls) != 2 {
+		t.Fatalf("urls = %#v", urls)
+	}
+}
+
 func TestClassifySitemap_URLSetReturnsPages(t *testing.T) {
 	t.Parallel()
 

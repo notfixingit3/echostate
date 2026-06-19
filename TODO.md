@@ -123,20 +123,20 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 
 ## Collection & reporting backlog
 
-Passive recon gaps, wiring fixes, and follow-on UI/PDF/graph work. Grouped by priority; all **🔲 Next** unless noted.
+Passive recon gaps, wiring fixes, and follow-on UI/PDF/graph work.
 
-### P1 — Quick wins (easy, high signal)
+### P1 — Quick wins (easy, high signal) ✅
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| C1 | `security.txt` gatherer | 🔲 Next | `/.well-known/security.txt` + `security.txt` redirect; contacts, policy, `Canonical`, `Expires` |
-| C2 | Plain-text sitemaps | 🔲 Next | `/sitemap.txt` and one-URL-per-line formats (complements XML crawl) |
-| C3 | MTA-STS + TLS-RPT | 🔲 Next | `/.well-known/mta-sts.txt`; `_smtp._tls` TXT for TLS-RPT; extend DNS/mail posture |
-| C4 | Fix HIBP email extraction | 🔲 Next | Bug: `extractEmails` reads `crawl.robots_txt` (string) but crawl stores `robots` (map) — HIBP rarely runs |
-| C5 | Emails from web page text | 🔲 Next | Scrape visible text / contact patterns for HIBP input (cap per snapshot) |
-| C6 | CAA DNS records | 🔲 Next | Certificate Authority Authorization; mail/DNS tab + diff on policy change |
-| C7 | Redirect chain | 🔲 Next | http→https, apex↔www, final URL; store hop list from Chrome or HEAD follow |
-| C8 | Extra security headers | 🔲 Next | `Permissions-Policy`, `Referrer-Policy`, `Cross-Origin-*` alongside existing four |
+| C1 | `security.txt` gatherer | ✅ Done | beta.32 — `/.well-known/security.txt` + `/security.txt`; parsed contacts, policy, canonical, expires |
+| C2 | Plain-text sitemaps | ✅ Done | beta.32 — `/sitemap.txt` path + one-URL-per-line parser |
+| C3 | MTA-STS + TLS-RPT | ✅ Done | beta.32 — `MTA_STS`, `TLS_RPT` DNS fields; mail posture scoring updated |
+| C4 | Fix HIBP email extraction | ✅ Done | beta.32 — reads `security_txt.contacts` and `web.contact_emails` |
+| C5 | Emails from web page text | ✅ Done | beta.32 — `web.contact_emails` from visible page text |
+| C6 | CAA DNS records | ✅ Done | beta.32 — CAA type 257 lookup with zone walk |
+| C7 | Redirect chain | ✅ Done | beta.32 — `web.redirect_chain` via HEAD/GET follow (http + https) |
+| C8 | Extra security headers | ✅ Done | beta.32 — Permissions-Policy, Referrer-Policy, Cross-Origin-* |
 
 ### P2 — Depth (medium effort)
 
@@ -180,15 +180,15 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| R1 | Crawl intel tab fields | 🔲 Next | Add UI/PDF fields for C1–C2, C9 when implemented (`security.txt`, `mta_sts`, `sitemap_txt`, etc.) |
+| R1 | Crawl/DNS intel tab fields | ✅ Done | beta.32 — P1 fields in `intel.ts`, intel tabs, and PDF renderer |
 | R2 | PDF enrichment formatting | 🔲 Next | Human-readable Shodan/Censys match summaries (not truncated map dumps) |
 | R3 | PDF “pending enrichment” note | 🔲 Next | Footnote when report generated before async enrichment completes |
-| R4 | Intel highlights parity | 🔲 Next | Summary cards for new signals (security.txt contact, MTA-STS mode, CAA, redirect count) |
+| R4 | Intel highlights parity | ✅ Done | beta.32 — summary cards for security contact, MTA-STS, CAA, redirect hops |
 | R5 | `change_details` for new fields | 🔲 Next | Diff rules for CAA, security.txt, MTA-STS, redirect chain, BIMI, etc. |
 | R6 | Webhook payloads | 🔲 Next | Include new change types in structured webhook entries + alert-rule filters |
 | R7 | Neo4j sync | 🔲 Next | Graph nodes/edges for security.txt contacts, MTA-STS, CAA, Wayback URLs as needed |
 | R8 | README + help copy | 🔲 Next | Document new gatherers in README features list and Settings `help-copy.ts` |
-| R9 | Gatherer unit + integration tests | 🔲 Next | Each new gatherer: parser tests + `scanner_integration_test` smoke where network allows |
+| R9 | Gatherer unit + integration tests | ✅ Done | beta.32 — parser tests for security.txt, MTA-STS, TLS-RPT, CAA, plain sitemaps, emails |
 | R10 | E2E report coverage | 🔲 Next | Extend Playwright report spec when new PDF sections ship |
 
 ### Explicitly out of scope (unchanged)
@@ -206,9 +206,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 55 items (core + graph + platform batch through beta.31) |
-| **Next** | 32 (collection C1–C23, enrichment E1–E6, reporting R1–R10) |
+| **Done** | 66 items (core + graph + platform + P1 batch through beta.32) |
+| **Next** | 22 (P2–P5 backlog: C9–C23, E1–E6, R2–R3, R5–R8, R10) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 2 (distributed agents, OIDC/RBAC) |
 
-**Suggested next picks:** C1 `security.txt` → C4 HIBP email fix → C3 MTA-STS → C2 plain-text sitemaps → C13 storage from Chrome HTML → E3 enrichment/report UX
+**Suggested next picks:** C9 `humans.txt`/`ads.txt` → C13 storage from Chrome HTML → C15 RDAP fallback → E1 Shodan IP lookup → E3 enrichment/report UX

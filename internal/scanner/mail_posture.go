@@ -64,6 +64,32 @@ func computeMailPosture(data map[string]any) map[string]any {
 		findings = append(findings, fmt.Sprintf("DKIM keys found (%d selector(s))", len(dkimRecords)))
 	}
 
+	mtaSts, hasMTASTS := data["MTA_STS"].(map[string]any)
+	switch {
+	case !hasMTASTS:
+		score -= 10
+		findings = append(findings, "No MTA-STS policy published")
+	default:
+		mode := strings.ToLower(stringValMap(mtaSts, "mode"))
+		switch mode {
+		case "enforce":
+			findings = append(findings, "MTA-STS mode is enforce")
+		case "testing":
+			score -= 5
+			findings = append(findings, "MTA-STS mode is testing")
+		default:
+			score -= 8
+			findings = append(findings, "MTA-STS policy present but mode is not enforce")
+		}
+	}
+
+	if _, hasTLSRPT := data["TLS_RPT"].(map[string]any); !hasTLSRPT {
+		score -= 5
+		findings = append(findings, "No TLS-RPT record at _smtp._tls")
+	} else {
+		findings = append(findings, "TLS-RPT reporting configured")
+	}
+
 	if score < 0 {
 		score = 0
 	}

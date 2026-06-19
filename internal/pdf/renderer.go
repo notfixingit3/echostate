@@ -191,6 +191,10 @@ func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhois
 	addKeyValueRow(m, "BGP Path Stability", stringVal(nestedMap(nestedMap(result.ASN, "routing"), "path_profile"), "stability"))
 	addKeyValueRow(m, "CT Subdomains", ctCount(result.CT))
 	addKeyValueRow(m, "Sitemap Paths", crawlPathSummary(result.Crawl))
+	addKeyValueRow(m, "Security.txt", securityTxtSummary(result.Crawl))
+	addKeyValueRow(m, "MTA-STS", stringVal(nestedMap(result.DNS, "MTA_STS"), "mode"))
+	addKeyValueRow(m, "CAA Records", caaCount(result.DNS))
+	addKeyValueRow(m, "Redirects", redirectSummaryFromWeb(result.Web))
 	addKeyValueRow(m, "Storage Buckets", storageBucketSummary(result.Storage))
 }
 
@@ -223,6 +227,36 @@ func storageBucketSummary(data map[string]any) string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%d", len(buckets))
+}
+
+func securityTxtSummary(data map[string]any) string {
+	securityTxt := nestedMap(data, "security_txt")
+	if len(securityTxt) == 0 {
+		return "N/A"
+	}
+	if contacts := stringSlice(securityTxt, "contacts"); len(contacts) > 0 {
+		return contacts[0]
+	}
+	if expires := stringVal(securityTxt, "expires"); expires != "N/A" {
+		return "expires " + expires
+	}
+	return "present"
+}
+
+func caaCount(data map[string]any) string {
+	records := mapSlice(data, "CAA")
+	if len(records) == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", len(records))
+}
+
+func redirectSummaryFromWeb(data map[string]any) string {
+	chain := mapSlice(data, "redirect_chain")
+	if len(chain) <= 1 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d hops", len(chain)-1)
 }
 
 func addPWhoisSection(m core.Maroto, info *PWhoisInfo, data map[string]any) {
@@ -420,6 +454,34 @@ func addDNS(m core.Maroto, data map[string]any) {
 		addKeyValueRow(m, "SPF", stringVal(data, "SPF", "spf"))
 	}
 
+	if caaRecords := mapSlice(data, "CAA"); len(caaRecords) > 0 {
+		addSubheader(m, "CAA")
+		for i, record := range caaRecords {
+			if i >= 10 {
+				m.AddRows(text.NewRow(5, fmt.Sprintf("... and %d more CAA record(s)", len(caaRecords)-10), props.Text{
+					Size:  9,
+					Style: fontstyle.Italic,
+				}))
+				break
+			}
+			addKeyValueRow(m, fmt.Sprintf("Record %d", i+1), stringVal(record, "record"))
+		}
+	}
+
+	if mtaSts := nestedMap(data, "MTA_STS"); len(mtaSts) > 0 {
+		addSubheader(m, "MTA-STS")
+		addKeyValueRow(m, "Mode", stringVal(mtaSts, "mode"))
+		addKeyValueRow(m, "Version", stringVal(mtaSts, "version"))
+		addKeyValueRow(m, "Max Age", stringVal(mtaSts, "max_age"))
+		addKeyValueRow(m, "MX Hosts", stringVal(mtaSts, "mx"))
+	}
+
+	if tlsRpt := nestedMap(data, "TLS_RPT"); len(tlsRpt) > 0 {
+		addSubheader(m, "TLS-RPT")
+		addKeyValueRow(m, "Record", stringVal(tlsRpt, "record"))
+		addKeyValueRow(m, "RUA", stringVal(tlsRpt, "rua"))
+	}
+
 	if dkimRecords := mapSlice(data, "DKIM"); len(dkimRecords) > 0 {
 		addSubheader(m, "DKIM")
 		for i, record := range dkimRecords {
@@ -484,6 +546,26 @@ func addWeb(m core.Maroto, data map[string]any) {
 	addKeyValueRow(m, "Title", stringVal(data, "title"))
 	addKeyValueRow(m, "URL", stringVal(data, "url"))
 	addKeyValueRow(m, "Header URL", stringVal(data, "header_url"))
+
+	if chain := mapSlice(data, "redirect_chain"); len(chain) > 0 {
+		addSubheader(m, "Redirect Chain")
+		var lines []string
+		for _, hop := range chain {
+			url := stringVal(hop, "url")
+			status := stringVal(hop, "status")
+			if status != "N/A" {
+				lines = append(lines, fmt.Sprintf("%s (%s)", url, status))
+			} else {
+				lines = append(lines, url)
+			}
+		}
+		addBulletItems(m, lines, maxCrawlPaths)
+	}
+
+	if emails := stringSlice(data, "contact_emails"); len(emails) > 0 {
+		addSubheader(m, "Contact Emails")
+		addBulletItems(m, emails, maxErrorsShown)
+	}
 
 	if headers := nestedMap(data, "headers"); len(headers) > 0 {
 		addSubheader(m, "Response Headers")
@@ -555,6 +637,19 @@ func addCrawl(m core.Maroto, data map[string]any) {
 	if len(data) == 0 {
 		m.AddRows(text.NewRow(6, "No crawl data available.", props.Text{Size: 10}))
 		return
+	}
+
+	if securityTxt := nestedMap(data, "security_txt"); len(securityTxt) > 0 {
+		addSubheader(m, "security.txt")
+		addKeyValueRow(m, "Source", stringVal(securityTxt, "source"))
+		if contacts := stringSlice(securityTxt, "contacts"); len(contacts) > 0 {
+			addKeyValueRow(m, "Contacts", strings.Join(contacts, ", "))
+		}
+		addKeyValueRow(m, "Expires", stringVal(securityTxt, "expires"))
+		addKeyValueRow(m, "Canonical", stringVal(securityTxt, "canonical"))
+		if policies := stringSlice(securityTxt, "policies"); len(policies) > 0 {
+			addKeyValueRow(m, "Policies", strings.Join(policies, ", "))
+		}
 	}
 
 	if robots := nestedMap(data, "robots"); len(robots) > 0 {

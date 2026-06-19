@@ -189,6 +189,36 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
           icon={NetworkIcon}
         />
       ) : null}
+      {intel.securityTxtContact ? (
+        <StatCard
+          label="Security contact"
+          value={intel.securityTxtContact}
+          icon={ShieldIcon}
+          mono
+        />
+      ) : null}
+      {intel.mtaStsMode ? (
+        <StatCard
+          label="MTA-STS"
+          value={intel.mtaStsMode}
+          icon={ShieldIcon}
+          badge={intel.mtaStsMode === "enforce" ? "Strict" : undefined}
+        />
+      ) : null}
+      {intel.caaRecordCount ? (
+        <StatCard
+          label="CAA records"
+          value={String(intel.caaRecordCount)}
+          icon={ShieldIcon}
+        />
+      ) : null}
+      {intel.redirectHopCount ? (
+        <StatCard
+          label="HTTP redirects"
+          value={`${intel.redirectHopCount} hop${intel.redirectHopCount === 1 ? "" : "s"}`}
+          icon={GlobeIcon}
+        />
+      ) : null}
       {intel.mailPostureGrade ? (
         <StatCard
           helpId="intel.mail_posture"

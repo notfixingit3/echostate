@@ -8,10 +8,16 @@ import (
 )
 
 var securityHeaderKeys = map[string]struct{}{
-	"strict-transport-security": {},
-	"content-security-policy":     {},
-	"x-frame-options":             {},
-	"x-content-type-options":      {},
+	"strict-transport-security":        {},
+	"content-security-policy":            {},
+	"content-security-policy-report-only": {},
+	"x-frame-options":                    {},
+	"x-content-type-options":             {},
+	"permissions-policy":                 {},
+	"referrer-policy":                    {},
+	"cross-origin-opener-policy":         {},
+	"cross-origin-embedder-policy":       {},
+	"cross-origin-resource-policy":       {},
 }
 
 // techHeaderKeys lists response headers promoted into tech_stack fingerprints.

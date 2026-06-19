@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.32] - 2026-06-18
+
+### Added
+
+- **security.txt** — Crawl gatherer fetches and parses `/.well-known/security.txt` (contacts, expires, canonical, policies).
+- **Plain-text sitemaps** — `/sitemap.txt` and one-URL-per-line sitemap formats.
+- **MTA-STS + TLS-RPT** — DNS/mail intel for `/.well-known/mta-sts.txt` and `_smtp._tls` TXT; included in mail posture grade.
+- **CAA records** — DNS gatherer queries CAA (type 257) with zone walk.
+- **Redirect chain** — Web gatherer records HTTP/HTTPS redirect hops with status codes.
+- **Web contact emails** — Visible page emails stored on `web.contact_emails` for HIBP enrichment.
+- **Security headers** — Permissions-Policy, Referrer-Policy, and Cross-Origin-* headers in web intel.
+
+### Fixed
+
+- **HIBP email extraction** — Enrichment worker now reads `security_txt` contacts and `web.contact_emails` (was looking for nonexistent `crawl.robots_txt`).
+
+### Changed
+
+- **Intel UI + PDF** — New fields in DNS/Crawl/Web tabs, summary cards, and PDF sections for P1 signals.
+
 ## [0.0.1-beta.31] - 2026-06-18
 
 ### Added

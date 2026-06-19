@@ -82,14 +82,26 @@ func newWebGatherer(browserWSURL string) Gatherer {
 			capture.jsHints,
 		)
 
+		redirectChain, redirectFinal := captureRedirectChain(ctx, host)
+		finalURL := capture.location
+		if finalURL == "" {
+			finalURL = redirectFinal
+		}
+
 		webData := map[string]any{
 			"title":            capture.title,
-			"url":              capture.location,
+			"url":              finalURL,
 			"header_url":       headerURL,
 			"copyrights":       extractCopyrights(capture.text),
 			"headers":          headers,
 			"security_headers": securityHeaders,
 			"tech_stack":       techStack,
+		}
+		if len(redirectChain) > 0 {
+			webData["redirect_chain"] = redirectChain
+		}
+		if emails := extractEmailsFromText(capture.text); len(emails) > 0 {
+			webData["contact_emails"] = emails
 		}
 		if plugins := capture.wordpressPlugins; len(plugins) > 0 {
 			webData["wordpress_plugins"] = plugins

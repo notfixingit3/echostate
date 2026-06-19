@@ -51,6 +51,10 @@ export interface IntelHighlights {
   bgpPathStability?: string
   mailPostureGrade?: string
   mailPostureScore?: number
+  securityTxtContact?: string
+  mtaStsMode?: string
+  caaRecordCount?: number
+  redirectHopCount?: number
   jsAssetCount?: number
   jsLibHints?: string[]
   bucketCount?: number
@@ -201,6 +205,10 @@ export function extractIntel(
   const sitemapURLs = Array.isArray(crawl?.sitemap_urls) ? crawl.sitemap_urls : []
   const robots = crawl?.robots as Record<string, unknown> | undefined
   const disallow = Array.isArray(robots?.disallow) ? robots.disallow : []
+  const securityTxt = crawl?.security_txt as Record<string, unknown> | undefined
+  const mtaSts = dns?.MTA_STS as Record<string, unknown> | undefined
+  const caaRecords = Array.isArray(dns?.CAA) ? dns.CAA : []
+  const redirectChain = Array.isArray(web?.redirect_chain) ? web.redirect_chain : []
 
   return {
     host: asString(raw?.host) || "Unknown host",
@@ -243,6 +251,11 @@ export function extractIntel(
     mailPostureGrade: asString(mailPosture?.grade),
     mailPostureScore:
       typeof mailPosture?.score === "number" ? mailPosture.score : undefined,
+    securityTxtContact: asStringArray(securityTxt?.contacts)?.[0],
+    mtaStsMode: asString(mtaSts?.mode),
+    caaRecordCount: caaRecords.length > 0 ? caaRecords.length : undefined,
+    redirectHopCount:
+      redirectChain.length > 1 ? redirectChain.length - 1 : undefined,
     jsAssetCount: jsAssets.length > 0 ? jsAssets.length : undefined,
     jsLibHints: jsHints.length > 0 ? jsHints : undefined,
     bucketCount: buckets.length > 0 ? buckets.length : undefined,
@@ -310,6 +323,8 @@ export const WEB_FIELDS = [
   "title",
   "url",
   "header_url",
+  "redirect_chain",
+  "contact_emails",
   "copyrights",
   "tech_stack",
   "js_assets",
@@ -349,6 +364,7 @@ export const FAVICON_FIELDS = ["url", "mmh3", "shodan", "sha256", "size"] as con
 
 export const CRAWL_FIELDS = [
   "robots",
+  "security_txt",
   "sitemap_urls",
   "sitemap_url_count",
   "errors",
@@ -393,9 +409,12 @@ export const DNS_FIELDS = [
   "TXT",
   "CNAME",
   "SOA",
+  "CAA",
   "DMARC",
   "SPF",
   "DKIM",
   "DMARC_PARSED",
+  "MTA_STS",
+  "TLS_RPT",
   "MAIL_POSTURE",
 ] as const

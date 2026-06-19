@@ -11,6 +11,8 @@ func TestComputeMailPosture(t *testing.T) {
 		"DKIM": []any{
 			map[string]any{"selector": "google"},
 		},
+		"MTA_STS": map[string]any{"mode": "enforce"},
+		"TLS_RPT": map[string]any{"rua": "mailto:reports@example.com"},
 	})
 
 	if posture["grade"] != "A" {

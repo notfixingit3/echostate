@@ -24,10 +24,101 @@ func enrichMailSecurity(ctx context.Context, resolver *net.Resolver, host string
 	if dkim := lookupDKIMRecords(ctx, resolver, host); len(dkim) > 0 {
 		data["DKIM"] = dkim
 	}
+}
 
+func enrichMailTransport(ctx context.Context, host string, data map[string]any) {
+	if mtaSts, err := fetchMTASTS(ctx, host); err == nil && len(mtaSts) > 0 {
+		data["MTA_STS"] = mtaSts
+	}
+	if tlsRpt := lookupTLSRPT(ctx, host); len(tlsRpt) > 0 {
+		data["TLS_RPT"] = tlsRpt
+	}
 	if posture := computeMailPosture(data); posture != nil {
 		data["MAIL_POSTURE"] = posture
 	}
+}
+
+func fetchMTASTS(ctx context.Context, host string) (map[string]any, error) {
+	body, err := fetchHostResource(ctx, host, "/.well-known/mta-sts.txt", 32*1024)
+	if err != nil || len(body) == 0 {
+		return nil, err
+	}
+	parsed := parseMTASTS(string(body))
+	if len(parsed) == 0 {
+		return nil, nil
+	}
+	parsed["source"] = "/.well-known/mta-sts.txt"
+	return parsed, nil
+}
+
+func parseMTASTS(content string) map[string]any {
+	result := map[string]any{}
+	var mxHosts []string
+
+	for _, line := range strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		key = strings.ToLower(strings.TrimSpace(key))
+		value = strings.TrimSpace(value)
+		switch key {
+		case "version":
+			result["version"] = value
+		case "mode":
+			result["mode"] = strings.ToLower(value)
+		case "max_age":
+			result["max_age"] = value
+		case "mx":
+			if value != "" {
+				mxHosts = append(mxHosts, value)
+			}
+		}
+	}
+
+	if len(mxHosts) > 0 {
+		result["mx"] = mxHosts
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func lookupTLSRPT(ctx context.Context, host string) map[string]any {
+	resolver := getResolver()
+	txts, err := resolver.LookupTXT(ctx, "_smtp._tls."+host)
+	if err != nil || len(txts) == 0 {
+		return nil
+	}
+	return parseTLSRPT(txts)
+}
+
+func parseTLSRPT(txts []string) map[string]any {
+	for _, txt := range txts {
+		record := strings.TrimSpace(txt)
+		if !strings.HasPrefix(strings.ToLower(record), "v=tlsrptv1") {
+			continue
+		}
+		result := map[string]any{"record": record}
+		for _, part := range strings.Split(record, ";") {
+			part = strings.TrimSpace(part)
+			key, value, ok := strings.Cut(part, "=")
+			if !ok {
+				continue
+			}
+			switch strings.ToLower(strings.TrimSpace(key)) {
+			case "rua":
+				result["rua"] = strings.TrimSpace(value)
+			}
+		}
+		return result
+	}
+	return nil
 }
 
 func parseSPFRecord(txts []string) map[string]any {

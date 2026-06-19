@@ -18,6 +18,7 @@ var (
 	sitemapLocPattern = regexp.MustCompile(`(?i)<loc>\s*([^<\s]+)\s*</loc>`)
 	defaultSitemapPaths = []string{
 		"/sitemap.xml",
+		"/sitemap.txt",
 		"/sitemap_index.xml",
 		"/sitemap-index.xml",
 	}
@@ -36,6 +37,12 @@ func gatherCrawl(ctx context.Context, host string) (string, map[string]any, erro
 		result["robots"] = parseRobotsTxt(string(robots))
 	} else {
 		errors = append(errors, "robots.txt: "+err.Error())
+	}
+
+	if securityTxt, err := fetchSecurityTxt(ctx, host); err == nil && len(securityTxt) > 0 {
+		result["security_txt"] = securityTxt
+	} else if err != nil {
+		errors = append(errors, "security.txt: "+err.Error())
 	}
 
 	queue := append([]string{}, defaultSitemapPaths...)
@@ -151,6 +158,9 @@ func classifySitemap(content string) (pageURLs []string, childSitemaps []string)
 	case strings.Contains(lower, "<urlset"):
 		return parseSitemapURLSet(content), nil
 	default:
+		if urls := parsePlainTextSitemap(content); len(urls) > 0 {
+			return urls, nil
+		}
 		var urls []string
 		for _, match := range sitemapLocPattern.FindAllStringSubmatch(content, -1) {
 			if len(match) > 1 {
@@ -159,6 +169,24 @@ func classifySitemap(content string) (pageURLs []string, childSitemaps []string)
 		}
 		return uniqueStrings(urls), nil
 	}
+}
+
+func parsePlainTextSitemap(content string) []string {
+	var urls []string
+	for _, line := range strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		lower := strings.ToLower(line)
+		if strings.HasPrefix(lower, "<") {
+			continue
+		}
+		if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(line, "/") {
+			urls = append(urls, line)
+		}
+	}
+	return uniqueStrings(urls)
 }
 
 func parseSitemap(content string) []string {

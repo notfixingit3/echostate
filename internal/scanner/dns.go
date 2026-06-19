@@ -107,9 +107,21 @@ func gatherDNS(ctx context.Context, host string) (string, map[string]any, error)
 		}
 	}()
 
+	// CAA (certificate authority authorization)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if records, err := lookupCAAFunc(ctx, host); err == nil && len(records) > 0 {
+			mu.Lock()
+			data["CAA"] = records
+			mu.Unlock()
+		}
+	}()
+
 	wg.Wait()
 
 	enrichMailSecurity(ctx, resolver, host, data)
+	enrichMailTransport(ctx, host, data)
 
 	if len(data) == 0 {
 		return "dns", nil, fmt.Errorf("no dns records found for %s", host)

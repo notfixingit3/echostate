@@ -39,9 +39,34 @@ func extractEmails(payload map[string]any) []string {
 			add(raw)
 		}
 	}
+
+	if web, ok := payload["web"].(map[string]any); ok {
+		if contactEmails, ok := web["contact_emails"].([]any); ok {
+			for _, item := range contactEmails {
+				add(fmt.Sprint(item))
+			}
+		}
+		if text, ok := web["copyrights"].([]any); ok {
+			for _, item := range text {
+				add(fmt.Sprint(item))
+			}
+		}
+	}
+
 	if crawl, ok := payload["crawl"].(map[string]any); ok {
-		if robots, ok := crawl["robots_txt"].(string); ok {
-			add(robots)
+		if securityTxt, ok := crawl["security_txt"].(map[string]any); ok {
+			if contacts, ok := securityTxt["contacts"].([]any); ok {
+				for _, item := range contacts {
+					add(fmt.Sprint(item))
+				}
+			}
+			for _, key := range []string{"contacts", "hiring"} {
+				if values, ok := securityTxt[key].([]string); ok {
+					for _, item := range values {
+						add(item)
+					}
+				}
+			}
 		}
 	}
 
