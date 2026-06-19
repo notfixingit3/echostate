@@ -185,6 +185,12 @@ func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhois
 	addKeyValueRow(m, "Favicon MMH3", firstNonNA(stringVal(result.Favicon, "mmh3"), stringVal(result.Favicon, "shodan")))
 	addKeyValueRow(m, "Cert Expires", stringVal(result.TLS, "not_after"))
 	addKeyValueRow(m, "Cert Issuer", stringVal(result.TLS, "issuer"))
+	addKeyValueRow(m, "TLS Version", stringVal(result.TLS, "tls_version"))
+	addKeyValueRow(m, "OCSP Stapled", stringVal(result.TLS, "ocsp_stapled"))
+	addKeyValueRow(m, "DNSSEC", stringVal(nestedMap(result.DNS, "DNSSEC"), "status"))
+	addKeyValueRow(m, "CT Certificates", ctCertificateSummary(result.CT))
+	addKeyValueRow(m, "HSTS Preload", hstsPreloadSummary(result.Web))
+	addKeyValueRow(m, "Cookie Names", cookieNameSummary(result.Web))
 	addKeyValueRow(m, "DNS A", stringVal(result.DNS, "A"))
 	addKeyValueRow(m, "DNS AAAA", stringVal(result.DNS, "AAAA"))
 	addKeyValueRow(m, "PTR", stringVal(result.DNS, "PTR"))
@@ -275,6 +281,36 @@ func bimiSummary(data map[string]any) string {
 		return "published"
 	}
 	return "present"
+}
+
+func ctCertificateSummary(data map[string]any) string {
+	if count := stringVal(data, "certificate_count"); count != "N/A" {
+		return count
+	}
+	certs := mapSlice(data, "certificates")
+	if len(certs) == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", len(certs))
+}
+
+func hstsPreloadSummary(data map[string]any) string {
+	preload := nestedMap(data, "hsts_preload")
+	if len(preload) == 0 {
+		return "N/A"
+	}
+	if preload["preloaded"] == true {
+		return "preloaded"
+	}
+	return stringVal(preload, "preload_status")
+}
+
+func cookieNameSummary(data map[string]any) string {
+	names := stringSlice(data, "cookie_names")
+	if len(names) == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", len(names))
 }
 
 func providerHintSummary(data map[string]any) string {
@@ -551,6 +587,16 @@ func addDNS(m core.Maroto, data map[string]any) {
 		}
 	}
 
+	if dnssec := nestedMap(data, "DNSSEC"); len(dnssec) > 0 {
+		addSubheader(m, "DNSSEC")
+		addKeyValueRow(m, "Status", stringVal(dnssec, "status"))
+		addKeyValueRow(m, "Signed", stringVal(dnssec, "signed"))
+		addKeyValueRow(m, "Zone", stringVal(dnssec, "zone"))
+		addKeyValueRow(m, "DNSKEY Count", stringVal(dnssec, "dnskey_count"))
+		addKeyValueRow(m, "DS Count", stringVal(dnssec, "ds_count"))
+		addKeyValueRow(m, "Authentic Data", stringVal(dnssec, "authentic_data"))
+	}
+
 	if posture := nestedMap(data, "MAIL_POSTURE"); len(posture) > 0 {
 		addSubheader(m, "Mail Posture")
 		addKeyValueRow(m, "Grade", stringVal(posture, "grade"))
@@ -576,7 +622,12 @@ func addTLS(m core.Maroto, data map[string]any) {
 	addKeyValueRow(m, "Days Remaining", stringVal(data, "days_remaining"))
 	addKeyValueRow(m, "Expired", stringVal(data, "expired"))
 	addKeyValueRow(m, "Chain Length", stringVal(data, "chain_length"))
-	addKeyValueRow(m, "Version", stringVal(data, "version"))
+	addKeyValueRow(m, "Serial", stringVal(data, "serial"))
+	addKeyValueRow(m, "TLS Version", stringVal(data, "tls_version"))
+	addKeyValueRow(m, "Negotiated Cipher", stringVal(data, "negotiated_cipher"))
+	addKeyValueRow(m, "OCSP Stapled", stringVal(data, "ocsp_stapled"))
+	addKeyValueRow(m, "OCSP Response Bytes", stringVal(data, "ocsp_response_bytes"))
+	addKeyValueRow(m, "Cert Version", stringVal(data, "version"))
 	addKeyValueRow(m, "Signature Algorithm", stringVal(data, "signature_algorithm"))
 	addKeyValueRow(m, "Cipher Suite", stringVal(data, "cipher_suite"))
 	addKeyValueRow(m, "JARM", stringVal(data, "jarm"))
@@ -663,6 +714,18 @@ func addWeb(m core.Maroto, data map[string]any) {
 	if themes := mapSlice(data, "wordpress_themes"); len(themes) > 0 {
 		addSubheader(m, "WordPress Themes")
 		addBulletItems(m, formatWordPressItems(themes), maxTechStackItems)
+	}
+
+	if preload := nestedMap(data, "hsts_preload"); len(preload) > 0 {
+		addSubheader(m, "HSTS Preload")
+		addKeyValueRow(m, "Status", stringVal(preload, "status"))
+		addKeyValueRow(m, "Preload Status", stringVal(preload, "preload_status"))
+		addKeyValueRow(m, "Preloaded", stringVal(preload, "preloaded"))
+	}
+
+	if names := stringSlice(data, "cookie_names"); len(names) > 0 {
+		addSubheader(m, "Cookie Names")
+		addBulletItems(m, names, maxErrorsShown)
 	}
 
 	if meta := nestedMap(data, "meta"); len(meta) > 0 {
@@ -991,6 +1054,21 @@ func addCT(m core.Maroto, data map[string]any) {
 	if subdomains := stringSlice(data, "subdomains"); len(subdomains) > 0 {
 		addSubheader(m, "Subdomains")
 		addBulletItems(m, subdomains, maxCtSubdomainsShown)
+	}
+
+	if certs := mapSlice(data, "certificates"); len(certs) > 0 {
+		addSubheader(m, "Certificate Metadata")
+		for i, cert := range certs {
+			if i >= 10 {
+				m.AddRows(text.NewRow(5, fmt.Sprintf("... and %d more certificate(s)", len(certs)-10), props.Text{
+					Size:  9,
+					Style: fontstyle.Italic,
+				}))
+				break
+			}
+			line := fmt.Sprintf("%s · %s → %s", stringVal(cert, "common_name"), stringVal(cert, "issuer"), stringVal(cert, "not_after"))
+			addKeyValueRow(m, fmt.Sprintf("Cert %d", i+1), line)
+		}
 	}
 }
 

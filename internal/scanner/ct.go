@@ -24,10 +24,6 @@ const (
 
 var ctAPIBaseURL = "https://crt.sh/"
 
-type ctCertRecord struct {
-	NameValue string `json:"name_value"`
-}
-
 // gatherCT queries crt.sh certificate transparency logs for subdomains of the
 // target's registrable domain.
 func gatherCT(ctx context.Context, host string) (string, map[string]any, error) {
@@ -50,41 +46,50 @@ func gatherCT(ctx context.Context, host string) (string, map[string]any, error) 
 	gatherCtx, cancel := context.WithTimeout(ctx, ctGatherTimeoutFromSettings())
 	defer cancel()
 
-	subdomains, source, err := fetchCTSubdomains(gatherCtx, domain)
+	subdomains, certs, source, err := fetchCTIntel(gatherCtx, domain)
 	if err != nil {
 		return "ct", nil, err
 	}
 
-	return "ct", map[string]any{
+	result := map[string]any{
 		"domain":     domain,
 		"source":     source,
 		"subdomains": subdomains,
 		"count":      len(subdomains),
-	}, nil
+	}
+	if len(certs) > 0 {
+		result["certificates"] = certs
+		result["certificate_count"] = len(certs)
+	}
+	return "ct", result, nil
 }
 
-func fetchCTSubdomains(ctx context.Context, domain string) ([]string, string, error) {
+func fetchCTIntel(ctx context.Context, domain string) ([]string, []map[string]any, string, error) {
 	queryURL := fmt.Sprintf("%s?q=%s&output=json", ctAPIBaseURL, url.QueryEscape("%."+domain))
 	body, err := fetchCRTSh(ctx, queryURL)
 	if err == nil {
 		subdomains, parseErr := parseCTResponse(body, domain)
+		certs, certErr := parseCTCertificates(body)
 		if parseErr == nil {
-			return subdomains, "crt.sh", nil
+			if certErr != nil {
+				certs = nil
+			}
+			return subdomains, certs, "crt.sh", nil
 		}
 		err = parseErr
 	}
 
 	subdomains, fallbackErr := fetchCertSpotter(ctx, domain)
 	if fallbackErr == nil && len(subdomains) > 0 {
-		return subdomains, "certspotter", nil
+		return subdomains, nil, "certspotter", nil
 	}
 	if err != nil {
-		return nil, "", fmt.Errorf("crt.sh request: %w", err)
+		return nil, nil, "", fmt.Errorf("crt.sh request: %w", err)
 	}
 	if fallbackErr != nil {
-		return nil, "", fmt.Errorf("certspotter request: %w", fallbackErr)
+		return nil, nil, "", fmt.Errorf("certspotter request: %w", fallbackErr)
 	}
-	return subdomains, "certspotter", nil
+	return subdomains, nil, "certspotter", nil
 }
 
 func fetchCRTSh(ctx context.Context, queryURL string) ([]byte, error) {

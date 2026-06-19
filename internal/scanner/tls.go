@@ -37,6 +37,8 @@ func gatherTLS(ctx context.Context, host string) (string, map[string]any, error)
 		return "tls", nil, fmt.Errorf("no peer certificates found")
 	}
 
+	leafSerial := state.PeerCertificates[0].SerialNumber.String()
+
 	cert := state.PeerCertificates[0]
 	now := time.Now().UTC()
 
@@ -68,8 +70,13 @@ func gatherTLS(ctx context.Context, host string) (string, map[string]any, error)
 		"dns_names":           cert.DNSNames,
 		"ip_sans":             ipSans,
 		"version":             cert.Version,
+		"serial":              leafSerial,
+		"tls_version":         tlsVersionName(state.Version),
+		"negotiated_cipher":   tls.CipherSuiteName(state.CipherSuite),
 		"signature_algorithm": cert.SignatureAlgorithm.String(),
 		"cipher_suite":        tls.CipherSuiteName(state.CipherSuite),
+		"ocsp_stapled":        len(state.OCSPResponse) > 0,
+		"ocsp_response_bytes": len(state.OCSPResponse),
 		"chain":               chain,
 		"chain_length":        len(chain),
 	}
@@ -82,4 +89,19 @@ func gatherTLS(ctx context.Context, host string) (string, map[string]any, error)
 	}
 
 	return "tls", data, nil
+}
+
+func tlsVersionName(version uint16) string {
+	switch version {
+	case tls.VersionTLS13:
+		return "TLS 1.3"
+	case tls.VersionTLS12:
+		return "TLS 1.2"
+	case tls.VersionTLS11:
+		return "TLS 1.1"
+	case tls.VersionTLS10:
+		return "TLS 1.0"
+	default:
+		return fmt.Sprintf("0x%04x", version)
+	}
 }

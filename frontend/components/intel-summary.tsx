@@ -275,6 +275,47 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
           mono
         />
       ) : null}
+      {intel.tlsVersion ? (
+        <StatCard
+          helpId="intel.tls_version"
+          label="TLS version"
+          value={intel.tlsVersion}
+          icon={ShieldIcon}
+          badge={intel.ocspStapled ? "OCSP stapled" : undefined}
+        />
+      ) : null}
+      {intel.dnssecStatus ? (
+        <StatCard
+          helpId="intel.dnssec"
+          label="DNSSEC"
+          value={intel.dnssecStatus}
+          icon={DatabaseIcon}
+          badge={intel.dnssecStatus === "signed" ? "Signed" : undefined}
+        />
+      ) : null}
+      {intel.ctCertCount ? (
+        <StatCard
+          helpId="intel.ct_certs"
+          label="CT certificates"
+          value={String(intel.ctCertCount)}
+          icon={ScrollTextIcon}
+        />
+      ) : null}
+      {intel.hstsPreloaded ? (
+        <StatCard
+          label="HSTS preload"
+          value="Preloaded"
+          icon={ShieldIcon}
+        />
+      ) : null}
+      {intel.cookieNameCount ? (
+        <StatCard
+          label="Cookie names"
+          value={`${intel.cookieNameCount} detected`}
+          icon={PuzzleIcon}
+          mono
+        />
+      ) : null}
       {intel.dnsSoaZone ? (
         <StatCard
           helpId="intel.dns_soa"

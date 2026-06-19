@@ -72,6 +72,12 @@ export interface IntelHighlights {
   hibpBreachedEmails?: number
   waybackUrlCount?: number
   virustotalRecordCount?: number
+  tlsVersion?: string
+  ocspStapled?: boolean
+  dnssecStatus?: string
+  ctCertCount?: number
+  hstsPreloaded?: boolean
+  cookieNameCount?: number
   jsAssetCount?: number
   jsLibHints?: string[]
   bucketCount?: number
@@ -253,6 +259,10 @@ export function extractIntel(
   const censysServices = Array.isArray(censysHost?.services)
     ? censysHost.services
     : []
+  const dnssec = dns?.DNSSEC as Record<string, unknown> | undefined
+  const hstsPreload = web?.hsts_preload as Record<string, unknown> | undefined
+  const cookieNames = Array.isArray(web?.cookie_names) ? web.cookie_names : []
+  const ctCerts = Array.isArray(ct?.certificates) ? ct.certificates : []
 
   return {
     host: asString(raw?.host) || "Unknown host",
@@ -304,6 +314,17 @@ export function extractIntel(
       typeof wayback?.total === "number" ? wayback.total : undefined,
     virustotalRecordCount:
       typeof virustotal?.total === "number" ? virustotal.total : undefined,
+    tlsVersion: asString(tls?.tls_version),
+    ocspStapled: tls?.ocsp_stapled === true ? true : undefined,
+    dnssecStatus: asString(dnssec?.status),
+    ctCertCount:
+      typeof ct?.certificate_count === "number"
+        ? ct.certificate_count
+        : ctCerts.length > 0
+          ? ctCerts.length
+          : undefined,
+    hstsPreloaded: hstsPreload?.preloaded === true ? true : undefined,
+    cookieNameCount: cookieNames.length > 0 ? cookieNames.length : undefined,
     dnsSoaZone: asString((dns?.SOA as Record<string, unknown> | undefined)?.zone),
     dnsSoaMname: asString((dns?.SOA as Record<string, unknown> | undefined)?.mname),
     dnsSoaSerial:
@@ -406,6 +427,8 @@ export const WEB_FIELDS = [
   "headers",
   "detected_buckets",
   "provider_hints",
+  "cookie_names",
+  "hsts_preload",
 ] as const
 
 export const PWHOIS_FIELDS = [
@@ -425,6 +448,11 @@ export const TLS_FIELDS = [
   "not_after",
   "days_remaining",
   "expired",
+  "serial",
+  "tls_version",
+  "negotiated_cipher",
+  "ocsp_stapled",
+  "ocsp_response_bytes",
   "chain_length",
   "chain",
   "version",
@@ -449,7 +477,14 @@ export const CRAWL_FIELDS = [
 
 export const STORAGE_FIELDS = ["buckets", "provider_hints"] as const
 
-export const CT_FIELDS = ["domain", "source", "count", "subdomains"] as const
+export const CT_FIELDS = [
+  "domain",
+  "source",
+  "count",
+  "subdomains",
+  "certificate_count",
+  "certificates",
+] as const
 
 export const TRACEROUTE_FIELDS = [
   "destination",
@@ -503,5 +538,6 @@ export const DNS_FIELDS = [
   "MTA_STS",
   "TLS_RPT",
   "INFRA_LABELS",
+  "DNSSEC",
   "MAIL_POSTURE",
 ] as const

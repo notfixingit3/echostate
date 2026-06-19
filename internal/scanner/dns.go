@@ -160,6 +160,12 @@ func gatherDNS(ctx context.Context, host string) (string, map[string]any, error)
 	enrichMailTransport(ctx, host, data)
 	enrichInfraLabels(data)
 
+	if net.ParseIP(host) == nil {
+		if dnssec, err := lookupDNSSECFunc(ctx, host); err == nil && len(dnssec) > 0 {
+			data["DNSSEC"] = dnssec
+		}
+	}
+
 	if len(data) == 0 {
 		return "dns", nil, fmt.Errorf("no dns records found for %s", host)
 	}

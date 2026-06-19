@@ -164,15 +164,15 @@ Passive recon gaps, wiring fixes, and follow-on UI/PDF/graph work.
 | E5 | Wayback/CDX URLs | ✅ Done | beta.34 — Internet Archive CDX passive URL list |
 | E6 | Optional VT passive DNS | ✅ Done | beta.34 — `virustotal_api_key` in Settings |
 
-### P4 — TLS, CT, DNS hardening
+### P4 — TLS, CT, DNS hardening ✅
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| C19 | CT cert metadata | 🔲 Next | Issuer, serial, not-before/not-after per cert from crt.sh (not just subdomain names) |
-| C20 | DNSSEC status | 🔲 Next | DO bit / chain validation summary on DNS tab |
-| C21 | OCSP stapling + TLS version | 🔲 Next | Prominent negotiated version/cipher; staple status on TLS gatherer |
-| C22 | HSTS preload check | 🔲 Next | Chromium preload list lookup when HSTS header present |
-| C23 | Cookie name fingerprint | 🔲 Next | Names only (no values) from document load — session stack hints |
+| C19 | CT cert metadata | ✅ Done | beta.35 — issuer, serial, validity per cert from crt.sh (`ct.certificates`) |
+| C20 | DNSSEC status | ✅ Done | beta.35 — DNSKEY/DS lookup with DO bit → `dns.DNSSEC` |
+| C21 | OCSP stapling + TLS version | ✅ Done | beta.35 — `tls_version`, `negotiated_cipher`, `ocsp_stapled` on TLS gatherer |
+| C22 | HSTS preload check | ✅ Done | beta.35 — hstspreload.org API when HSTS header present |
+| C23 | Cookie name fingerprint | ✅ Done | beta.35 — `web.cookie_names` from Set-Cookie + document (no values) |
 
 ### P5 — Reporting, UI & platform wiring
 
@@ -206,9 +206,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 82 items (core + graph + platform + P1/P2/P3 batches through beta.34) |
-| **Next** | 6 (P4–P5 backlog: C19–C23, R2–R3, R5–R8, R10) |
+| **Done** | 87 items (core + graph + platform + P1–P4 batches through beta.35) |
+| **Next** | 1 (P5 wiring backlog: R2–R3, R5–R8, R10) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 2 (distributed agents, OIDC/RBAC) |
 
-**Suggested next picks:** C19 CT cert metadata → C20 DNSSEC → R2 PDF enrichment formatting → R5 enrichment diffs in Changes tab
+**Suggested next picks:** R5 `change_details` for new fields → R2/R3 PDF polish → R7 Neo4j sync for new intel

@@ -25,6 +25,7 @@ type pageCapture struct {
 	headers          map[string]string
 	htmlHints        []string
 	meta             map[string]any
+	cookieNames      []string
 	jsAssets         []map[string]any
 	jsHints          []string
 	wordpressPlugins []map[string]any
@@ -108,6 +109,14 @@ func newWebGatherer(browserWSURL string) Gatherer {
 		if len(capture.meta) > 0 {
 			webData["meta"] = capture.meta
 		}
+		if names := capture.cookieNames; len(names) > 0 {
+			webData["cookie_names"] = names
+		}
+		if hstsHeader := securityHeaders["strict-transport-security"]; strings.TrimSpace(hstsHeader) != "" {
+			if preload, err := lookupHSTSPreloadFunc(ctx, host); err == nil && len(preload) > 0 {
+				webData["hsts_preload"] = preload
+			}
+		}
 		if capture.html != "" {
 			if buckets := detectBuckets(capture.html); len(buckets) > 0 {
 				webData["detected_buckets"] = buckets
@@ -174,6 +183,11 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 					url:     docURL,
 					headers: headersFromNetwork(e.Headers),
 				}
+				for key, value := range e.Headers {
+					if strings.EqualFold(key, "set-cookie") {
+						capture.cookieNames = mergeCookieNames(capture.cookieNames, parseSetCookieNames(value))
+					}
+				}
 			}
 			mu.Unlock()
 		}
@@ -182,6 +196,7 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 	var wpIntel wordpressIntel
 	var jsIntel jsAssetIntel
 	var metaIntel map[string]any
+	var documentCookies []string
 	err := chromedp.Run(ctx,
 		network.Enable(),
 		chromedp.Navigate(url),
@@ -194,6 +209,7 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 		chromedp.Evaluate(metaIntelJS, &metaIntel),
 		chromedp.Evaluate(jsAssetIntelJS, &jsIntel),
 		chromedp.Evaluate(wordpressIntelJS, &wpIntel),
+		chromedp.Evaluate(cookieIntelJS, &documentCookies),
 	)
 	if err != nil {
 		return err
@@ -205,6 +221,7 @@ func scrapePage(parent context.Context, url string, capture *pageCapture) error 
 	if len(metaIntel) > 0 {
 		capture.meta = metaIntel
 	}
+	capture.cookieNames = mergeCookieNames(capture.cookieNames, documentCookies)
 	if len(capture.html) > 1024*1024 {
 		capture.html = capture.html[:1024*1024]
 	}

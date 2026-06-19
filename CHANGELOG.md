@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.35] - 2026-06-18
+
+### Added
+
+- **CT certificate metadata** — crt.sh issuances parsed into `ct.certificates` (issuer, serial, validity, SANs).
+- **DNSSEC status** — DNSKEY/DS lookups with EDNS0 DO bit; `dns.DNSSEC` summary on DNS tab.
+- **TLS hardening** — Negotiated `tls_version`, `negotiated_cipher`, leaf `serial`, and `ocsp_stapled` on TLS gatherer.
+- **HSTS preload check** — hstspreload.org lookup when `Strict-Transport-Security` is present.
+- **Cookie name fingerprint** — `web.cookie_names` from document load and Set-Cookie headers (names only).
+
+### Changed
+
+- **Intel UI + PDF** — Summary cards and report sections for TLS version, DNSSEC, CT certs, HSTS preload, and cookies.
+
 ## [0.0.1-beta.34] - 2026-06-18
 
 ### Added
