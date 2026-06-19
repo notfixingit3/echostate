@@ -118,8 +118,9 @@ func (s ReportStatus) IsValid() bool {
 
 // CreateReportRequest is the payload accepted by POST /api/reports.
 type CreateReportRequest struct {
-	SnapshotID *uuid.UUID `json:"snapshot_id,omitempty"`
-	Host       *string    `json:"host,omitempty"`
+	SnapshotID          *uuid.UUID `json:"snapshot_id,omitempty"`
+	Host                *string    `json:"host,omitempty"`
+	WaitForEnrichment   bool       `json:"wait_for_enrichment,omitempty"`
 }
 
 // ReportResponse is the JSON envelope returned by report endpoints.
@@ -136,13 +137,14 @@ type ReportResponse struct {
 
 // Report is the internal model mapping to the reports database table.
 type Report struct {
-	ID           uuid.UUID    `json:"id"`
-	SnapshotID   uuid.UUID    `json:"snapshot_id"`
-	Status       ReportStatus `json:"status"`
-	ErrorMessage string       `json:"error_message,omitempty"`
-	PDF          []byte       `json:"-"`
-	CreatedAt    time.Time    `json:"created_at"`
-	CompletedAt  *time.Time   `json:"completed_at,omitempty"`
+	ID                  uuid.UUID    `json:"id"`
+	SnapshotID          uuid.UUID    `json:"snapshot_id"`
+	Status              ReportStatus `json:"status"`
+	ErrorMessage        string       `json:"error_message,omitempty"`
+	PDF                 []byte       `json:"-"`
+	CreatedAt           time.Time    `json:"created_at"`
+	CompletedAt         *time.Time   `json:"completed_at,omitempty"`
+	WaitForEnrichment   bool         `json:"wait_for_enrichment,omitempty"`
 }
 
 type PaginatedResponse[T any] struct {

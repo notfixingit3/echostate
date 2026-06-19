@@ -762,12 +762,19 @@ export function IntelPanels({
           <CardHeader>
             <CardTitle className="text-base">Third-party enrichment</CardTitle>
             <CardDescription>
-              Async Shodan, Censys, HIBP, and RiskIQ correlation (when API keys are configured).
+              Async Shodan, Censys, HIBP, RiskIQ, Wayback, and VirusTotal correlation.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {raw?.enrichment && Object.keys(raw.enrichment).length > 0 ? (
+            {raw?.enrichment &&
+            Object.keys(raw.enrichment).length > 0 &&
+            (raw.enrichment as Record<string, unknown>).status !== "pending" ? (
               <DataGrid data={raw.enrichment} fields={ENRICHMENT_FIELDS} />
+            ) : (raw?.enrichment as Record<string, unknown> | undefined)?.status ===
+              "pending" ? (
+              <p className="text-sm text-muted-foreground">
+                Enrichment is running asynchronously. This page refreshes automatically when complete.
+              </p>
             ) : (
               <p className="text-sm text-muted-foreground">
                 No enrichment data yet. Configure API keys in Settings and rescan.

@@ -142,10 +142,16 @@ export async function scanHost(
   }
 }
 
-export async function createReport(snapshot_id: string): Promise<Report> {
+export async function createReport(
+  snapshot_id: string,
+  wait_for_enrichment = false
+): Promise<Report> {
   return fetchApi<Report>("/api/reports", {
     method: "POST",
-    body: JSON.stringify({ snapshot_id } satisfies CreateReportRequest),
+    body: JSON.stringify({
+      snapshot_id,
+      wait_for_enrichment,
+    } satisfies CreateReportRequest),
   })
 }
 

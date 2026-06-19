@@ -63,7 +63,7 @@ func (h *Handler) createReport(c *gin.Context) {
 		snapshotID = id
 	}
 
-	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID)
+	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID, req.WaitForEnrichment)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})
 		return
@@ -162,7 +162,7 @@ func (h *Handler) snapshotReport(c *gin.Context) {
 		}
 	}
 
-	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID)
+	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})
 		return

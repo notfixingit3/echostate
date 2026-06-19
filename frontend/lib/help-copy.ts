@@ -151,6 +151,18 @@ export const HELP_COPY: Record<string, string> = {
   "settings.hibp_key": "Have I Been Pwned API key for breach checks on WHOIS contact emails.",
   "settings.riskiq_keys":
     "RiskIQ / PassiveTotal credentials for passive DNS enrichment on scanned hosts.",
+  "settings.virustotal_key":
+    "VirusTotal API key for passive DNS resolution history on scanned domains.",
+  "intel.enrichment_status":
+    "Async third-party enrichment status: pending while Shodan/Censys/HIBP/Wayback run after the scan.",
+  "intel.shodan_host": "Shodan host profile for the resolved scan IP (ports, org, vulns).",
+  "intel.wayback_urls": "Historical URLs from the Internet Archive CDX index (passive, no crawl).",
+  "settings.virustotal_key":
+    "VirusTotal API key for passive DNS resolution history on scanned domains.",
+  "intel.enrichment_status":
+    "Async third-party enrichment status: pending while Shodan/Censys/HIBP/Wayback run after the scan.",
+  "intel.shodan_host": "Shodan host profile for the resolved scan IP (ports, org, vulns).",
+  "intel.wayback_urls": "Historical URLs from the Internet Archive CDX index (passive, no crawl).",
   "settings.alert_rules":
     "Filter which change_details events trigger webhook notifications.",
   "settings.alert_match_types":

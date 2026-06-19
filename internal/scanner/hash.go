@@ -19,6 +19,7 @@ func HashForDedup(result *models.ScanResult) (string, error) {
 
 	copy := *result
 	copy.ScannedAt = time.Time{}
+	copy.Enrichment = nil
 	copy.Screenshot = sanitizeScreenshotForHash(copy.Screenshot)
 	copy.Traceroute = sanitizeTracerouteForHash(copy.Traceroute)
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -14,23 +13,59 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
+	"github.com/notfixingit3/echostate/internal/diff"
+	"github.com/notfixingit3/echostate/internal/models"
+	"github.com/notfixingit3/echostate/internal/webhooks"
 )
 
 const httpTimeout = 12 * time.Second
 
+// PendingPayload is stored on new snapshots while async enrichment runs.
+func PendingPayload() map[string]any {
+	return map[string]any{
+		"status":     "pending",
+		"started_at": time.Now().UTC().Format(time.RFC3339),
+	}
+}
+
+// ShouldEnqueueEnrichment reports whether async enrichment should run for a host.
+func ShouldEnqueueEnrichment(settings config.SystemSettings, host string) bool {
+	if hasEnrichmentKeys(settings) {
+		return true
+	}
+	return resolveHost(map[string]any{"host": host}) != ""
+}
+
+func hasEnrichmentKeys(settings config.SystemSettings) bool {
+	return settings.ShodanAPIKey != "" ||
+		(settings.CensysAPIID != "" && settings.CensysAPISecret != "") ||
+		settings.HIBPAPIKey != "" ||
+		(settings.RiskIQAPIUser != "" && settings.RiskIQAPIKey != "") ||
+		settings.VirusTotalAPIKey != ""
+}
+
+// EnrichmentComplete reports whether enrichment finished (success or partial).
+func EnrichmentComplete(enrichment map[string]any) bool {
+	if len(enrichment) == 0 {
+		return false
+	}
+	status := strings.TrimSpace(fmt.Sprint(enrichment["status"]))
+	return status == "completed" || status == "partial"
+}
+
 // EnrichSnapshot augments snapshot raw_data with passive third-party correlation.
 func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient, snapshotID uuid.UUID) error {
 	settings := config.GetSettings()
-	if !hasEnrichmentKeys(settings) {
-		return nil
-	}
 
 	var targetID uuid.UUID
 	var scannedAt time.Time
 	var raw []byte
+	var changes []string
+	var changeDetailsRaw []byte
 	err := database.Pool.QueryRow(ctx, `
-		SELECT target_id, scanned_at, raw_data FROM snapshots WHERE id = $1
-	`, snapshotID).Scan(&targetID, &scannedAt, &raw)
+		SELECT target_id, scanned_at, raw_data, COALESCE(changes, '{}'), COALESCE(change_details, '[]')
+		FROM snapshots WHERE id = $1
+	`, snapshotID).Scan(&targetID, &scannedAt, &raw, &changes, &changeDetailsRaw)
 	if err != nil {
 		return fmt.Errorf("load snapshot: %w", err)
 	}
@@ -39,13 +74,21 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return fmt.Errorf("decode snapshot: %w", err)
 	}
+	if !ShouldEnqueueEnrichment(settings, stringField(payload, "host")) {
+		return nil
+	}
+
+	prevEnrichment, _ := loadPreviousEnrichment(ctx, database, targetID, snapshotID)
 
 	enrichment := map[string]any{}
+	var hadError bool
+
 	if settings.ShodanAPIKey != "" {
 		if shodan, err := queryShodan(ctx, settings.ShodanAPIKey, payload); err == nil && len(shodan) > 0 {
 			enrichment["shodan"] = shodan
 		} else if err != nil {
 			enrichment["shodan_error"] = err.Error()
+			hadError = true
 		}
 	}
 	if settings.CensysAPIID != "" && settings.CensysAPISecret != "" {
@@ -53,6 +96,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 			enrichment["censys"] = censys
 		} else if err != nil {
 			enrichment["censys_error"] = err.Error()
+			hadError = true
 		}
 	}
 	if settings.HIBPAPIKey != "" {
@@ -60,6 +104,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 			enrichment["hibp"] = hibp
 		} else if err != nil {
 			enrichment["hibp_error"] = err.Error()
+			hadError = true
 		}
 	}
 	if settings.RiskIQAPIUser != "" && settings.RiskIQAPIKey != "" {
@@ -67,12 +112,36 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 			enrichment["riskiq"] = riskiq
 		} else if err != nil {
 			enrichment["riskiq_error"] = err.Error()
+			hadError = true
+		}
+	}
+	if wayback, err := queryWayback(ctx, payload); err == nil && len(wayback) > 0 {
+		enrichment["wayback"] = wayback
+	} else if err != nil {
+		enrichment["wayback_error"] = err.Error()
+		hadError = true
+	}
+	if settings.VirusTotalAPIKey != "" {
+		if vt, err := queryVirusTotal(ctx, settings.VirusTotalAPIKey, payload); err == nil && len(vt) > 0 {
+			enrichment["virustotal"] = vt
+		} else if err != nil {
+			enrichment["virustotal_error"] = err.Error()
+			hadError = true
 		}
 	}
 
-	if len(enrichment) == 0 {
-		return nil
+	status := "completed"
+	if hadError && len(enrichment) <= 2 {
+		status = "partial"
+	} else if hadError {
+		status = "partial"
 	}
+	if len(enrichment) == 0 {
+		status = "completed"
+	}
+
+	enrichment["status"] = status
+	enrichment["completed_at"] = time.Now().UTC().Format(time.RFC3339)
 
 	payload["enrichment"] = enrichment
 	updated, err := json.Marshal(payload)
@@ -80,11 +149,46 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 		return err
 	}
 
-	_, err = database.Pool.Exec(ctx, `UPDATE snapshots SET raw_data = $1 WHERE id = $2`, updated, snapshotID)
+	diffEntries := DiffEnrichment(prevEnrichment, enrichment)
+	var changeDetails []models.ChangeDetail
+	if len(changeDetailsRaw) > 0 {
+		_ = json.Unmarshal(changeDetailsRaw, &changeDetails)
+	}
+	for _, entry := range diffEntries {
+		changeDetails = append(changeDetails, models.ChangeDetail{
+			Type:     entry.Type,
+			Severity: entry.Severity,
+			Summary:  entry.Summary,
+			Field:    entry.Field,
+			Detail:   entry.Detail,
+		})
+		changes = append(changes, diff.FormatSummary(entry))
+	}
+
+	detailsJSON, err := json.Marshal(changeDetails)
+	if err != nil {
+		return err
+	}
+
+	_, err = database.Pool.Exec(ctx, `
+		UPDATE snapshots
+		SET raw_data = $1, changes = $2, change_details = $3
+		WHERE id = $4
+	`, updated, changes, detailsJSON, snapshotID)
 	if err != nil {
 		return fmt.Errorf("store enrichment: %w", err)
 	}
-	log.Printf("enrichment: updated snapshot %s", snapshotID)
+	log.Printf("enrichment: updated snapshot %s (%s)", snapshotID, status)
+
+	if len(diffEntries) > 0 {
+		snapshot := &models.Snapshot{
+			ID:            snapshotID,
+			TargetID:      targetID,
+			Changes:       changes,
+			ChangeDetails: changeDetails,
+		}
+		go webhooks.Dispatch(context.Background(), database, stringField(payload, "host"), snapshot, "")
+	}
 
 	if neo4j != nil {
 		go func() {
@@ -100,96 +204,23 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 	return nil
 }
 
-func hasEnrichmentKeys(settings config.SystemSettings) bool {
-	return settings.ShodanAPIKey != "" ||
-		(settings.CensysAPIID != "" && settings.CensysAPISecret != "") ||
-		settings.HIBPAPIKey != "" ||
-		(settings.RiskIQAPIUser != "" && settings.RiskIQAPIKey != "")
-}
-
-func queryShodan(ctx context.Context, apiKey string, payload map[string]any) (map[string]any, error) {
-	favicon, _ := payload["favicon"].(map[string]any)
-	query := strings.TrimSpace(fmt.Sprint(favicon["mmh3"]))
-	if query == "" {
-		query = strings.TrimSpace(fmt.Sprint(favicon["shodan"]))
-	}
-	if query == "" {
-		return nil, nil
-	}
-
-	endpoint := fmt.Sprintf("https://api.shodan.io/shodan/host/search?key=%s&query=http.favicon.hash:%s",
-		url.QueryEscape(apiKey), url.QueryEscape(query))
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
+func loadPreviousEnrichment(ctx context.Context, database *db.DB, targetID, snapshotID uuid.UUID) (map[string]any, error) {
+	var raw []byte
+	err := database.Pool.QueryRow(ctx, `
+		SELECT raw_data->'enrichment'
+		FROM snapshots
+		WHERE target_id = $1 AND id <> $2
+		ORDER BY scanned_at DESC
+		LIMIT 1
+	`, targetID, snapshotID).Scan(&raw)
+	if err != nil || len(raw) == 0 || string(raw) == "null" {
 		return nil, err
 	}
-	resp, err := httpClient().Do(req)
-	if err != nil {
+	var enrichment map[string]any
+	if err := json.Unmarshal(raw, &enrichment); err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("shodan HTTP %d", resp.StatusCode)
-	}
-
-	var body map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"query":   query,
-		"total":   body["total"],
-		"matches": truncateMatches(body["matches"]),
-	}, nil
-}
-
-func queryCensys(ctx context.Context, apiID, apiSecret string, payload map[string]any) (map[string]any, error) {
-	tlsMap, _ := payload["tls"].(map[string]any)
-	jarm := strings.TrimSpace(fmt.Sprint(tlsMap["jarm"]))
-	if jarm == "" {
-		return nil, nil
-	}
-
-	endpoint := "https://search.censys.io/api/v2/hosts/search"
-	body := map[string]any{
-		"q":        fmt.Sprintf("services.jarm.fingerprint: %s", jarm),
-		"per_page": 5,
-	}
-	encoded, _ := json.Marshal(body)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(encoded)))
-	if err != nil {
-		return nil, err
-	}
-	req.SetBasicAuth(apiID, apiSecret)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := httpClient().Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("censys HTTP %d", resp.StatusCode)
-	}
-
-	var parsed map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"query":  jarm,
-		"result": parsed["result"],
-	}, nil
-}
-
-func truncateMatches(raw any) any {
-	items, ok := raw.([]any)
-	if !ok || len(items) <= 5 {
-		return raw
-	}
-	return items[:5]
+	return enrichment, nil
 }
 
 func httpClient() *http.Client {

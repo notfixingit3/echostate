@@ -25,6 +25,7 @@ type SystemSettings struct {
 	HIBPAPIKey                string      `json:"hibp_api_key,omitempty"`
 	RiskIQAPIUser             string      `json:"riskiq_api_user,omitempty"`
 	RiskIQAPIKey              string      `json:"riskiq_api_key,omitempty"`
+	VirusTotalAPIKey          string      `json:"virustotal_api_key,omitempty"`
 	ScanConcurrency           int         `json:"scan_concurrency"`
 	ScanJobTimeoutSec         int         `json:"scan_job_timeout_sec"`
 	DefaultGathererTimeoutSec int         `json:"default_gatherer_timeout_sec"`
@@ -170,6 +171,7 @@ func PublicSettings(s SystemSettings) SystemSettings {
 	out.CensysAPISecret = maskSecret(out.CensysAPISecret)
 	out.HIBPAPIKey = maskSecret(out.HIBPAPIKey)
 	out.RiskIQAPIKey = maskSecret(out.RiskIQAPIKey)
+	out.VirusTotalAPIKey = maskSecret(out.VirusTotalAPIKey)
 	return out
 }
 

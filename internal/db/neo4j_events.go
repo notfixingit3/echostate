@@ -213,11 +213,29 @@ func enrichmentSummary(provider string, raw any) string {
 	switch provider {
 	case "shodan":
 		if m, ok := raw.(map[string]any); ok {
-			return fmt.Sprintf("Shodan: %v matches for favicon hash", m["total"])
+			if host, ok := m["host"].(map[string]any); ok {
+				return fmt.Sprintf("Shodan host %s (%s)", truncateLabel(fmt.Sprint(host["ip"]), 24), truncateLabel(fmt.Sprint(host["org"]), 24))
+			}
+			if search, ok := m["favicon_search"].(map[string]any); ok {
+				return fmt.Sprintf("Shodan: %v favicon matches", search["total"])
+			}
 		}
 	case "censys":
 		if m, ok := raw.(map[string]any); ok {
-			return fmt.Sprintf("Censys: JARM %v", truncateLabel(fmt.Sprint(m["query"]), 24))
+			if host, ok := m["host"].(map[string]any); ok {
+				return fmt.Sprintf("Censys host %s", truncateLabel(fmt.Sprint(host["ip"]), 24))
+			}
+			if search, ok := m["jarm_search"].(map[string]any); ok {
+				return fmt.Sprintf("Censys JARM %v", truncateLabel(fmt.Sprint(search["query"]), 24))
+			}
+		}
+	case "wayback":
+		if m, ok := raw.(map[string]any); ok {
+			return fmt.Sprintf("Wayback: %v archived URLs", m["total"])
+		}
+	case "virustotal":
+		if m, ok := raw.(map[string]any); ok {
+			return fmt.Sprintf("VirusTotal: %v passive DNS records", m["total"])
 		}
 	case "hibp":
 		if items, ok := raw.([]any); ok {

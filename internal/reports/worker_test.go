@@ -124,7 +124,7 @@ func TestWorkerCompletes(t *testing.T) {
 	require.NoError(t, w.Start(ctx))
 	defer w.Stop()
 
-	reportID, err := w.CreateReport(ctx, snapshotID)
+	reportID, err := w.CreateReport(ctx, snapshotID, false)
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, reportID)
 
@@ -211,7 +211,7 @@ func TestWorkerFailsOversizedPDF(t *testing.T) {
 	require.NoError(t, w.Start(ctx))
 	defer w.Stop()
 
-	reportID, err := w.CreateReport(ctx, snapshotID)
+	reportID, err := w.CreateReport(ctx, snapshotID, false)
 	require.NoError(t, err)
 
 	var report *models.Report
@@ -242,7 +242,7 @@ func TestWorkerRendererError(t *testing.T) {
 	require.NoError(t, w.Start(ctx))
 	defer w.Stop()
 
-	reportID, err := w.CreateReport(ctx, snapshotID)
+	reportID, err := w.CreateReport(ctx, snapshotID, false)
 	require.NoError(t, err)
 
 	var report *models.Report
@@ -300,7 +300,7 @@ func TestWorkerConcurrencyLimit(t *testing.T) {
 
 	reportIDs := make([]uuid.UUID, jobCount)
 	for i := 0; i < jobCount; i++ {
-		id, err := w.CreateReport(ctx, snapshotIDs[i])
+		id, err := w.CreateReport(ctx, snapshotIDs[i], false)
 		require.NoError(t, err)
 		reportIDs[i] = id
 	}
@@ -383,7 +383,7 @@ func TestCreateReportWakesWorker(t *testing.T) {
 	require.NoError(t, w.Start(ctx))
 	defer w.Stop()
 
-	_, err := w.CreateReport(ctx, snapshotID)
+	_, err := w.CreateReport(ctx, snapshotID, false)
 	require.NoError(t, err)
 
 	select {

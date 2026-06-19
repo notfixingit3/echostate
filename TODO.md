@@ -153,16 +153,16 @@ Passive recon gaps, wiring fixes, and follow-on UI/PDF/graph work.
 | C17 | Provider hints in HTML | ✅ Done | beta.33 — Firebase, Supabase, CDN URL patterns in storage/web |
 | C18 | Split A vs AAAA in DNS | ✅ Done | beta.33 — separate `A` (v4) and `AAAA` (v6) records |
 
-### P3 — Enrichment & async intel
+### P3 — Enrichment & async intel ✅
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| E1 | Shodan host/IP lookup | 🔲 Next | Enrich resolved IP, not only favicon-hash search |
-| E2 | Censys host/cert by IP | 🔲 Next | Complement JARM-only search |
-| E3 | Enrichment-before-report UX | 🔲 Next | Snapshot UI: “enrichment pending” badge; optional wait/re-queue report after enrichment worker |
-| E4 | Enrichment diff + alerts | 🔲 Next | `change_details` when Shodan/Censys/HIBP/RiskIQ results change between snapshots |
-| E5 | Wayback/CDX URLs | 🔲 Next | Passive historical URL list for domain (no crawl) |
-| E6 | Optional VT passive DNS | 🔲 Next | Third-party key in Settings (lower priority than E1–E2) |
+| E1 | Shodan host/IP lookup | ✅ Done | beta.34 — `shodan.host` IP profile + favicon hash search |
+| E2 | Censys host/cert by IP | ✅ Done | beta.34 — `censys.host` by IP + JARM search |
+| E3 | Enrichment-before-report UX | ✅ Done | beta.34 — pending badge, snapshot poll, `wait_for_enrichment` report option |
+| E4 | Enrichment diff + alerts | ✅ Done | beta.34 — `change_details` + webhooks when enrichment changes |
+| E5 | Wayback/CDX URLs | ✅ Done | beta.34 — Internet Archive CDX passive URL list |
+| E6 | Optional VT passive DNS | ✅ Done | beta.34 — `virustotal_api_key` in Settings |
 
 ### P4 — TLS, CT, DNS hardening
 
@@ -206,9 +206,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 76 items (core + graph + platform + P1/P2 batches through beta.33) |
-| **Next** | 12 (P3–P5 backlog: C19–C23, E1–E6, R2–R3, R5–R8, R10) |
+| **Done** | 82 items (core + graph + platform + P1/P2/P3 batches through beta.34) |
+| **Next** | 6 (P4–P5 backlog: C19–C23, R2–R3, R5–R8, R10) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 2 (distributed agents, OIDC/RBAC) |
 
-**Suggested next picks:** E1 Shodan IP lookup → E3 enrichment/report UX → C19 DNSSEC → C20 DANE
+**Suggested next picks:** C19 CT cert metadata → C20 DNSSEC → R2 PDF enrichment formatting → R5 enrichment diffs in Changes tab

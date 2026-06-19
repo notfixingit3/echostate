@@ -40,6 +40,7 @@ export type SystemSettings = {
   hibp_api_key?: string
   riskiq_api_user?: string
   riskiq_api_key?: string
+  virustotal_api_key?: string
   censys_api_id?: string
   censys_api_secret?: string
   scan_concurrency?: number

@@ -86,8 +86,11 @@ func Migrate(db *DB) error {
 			pdf BYTEA,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			completed_at TIMESTAMPTZ
+			completed_at TIMESTAMPTZ,
+			wait_for_enrichment BOOLEAN NOT NULL DEFAULT FALSE
 		);
+
+		ALTER TABLE reports ADD COLUMN IF NOT EXISTS wait_for_enrichment BOOLEAN NOT NULL DEFAULT FALSE;
 
 		CREATE INDEX IF NOT EXISTS idx_reports_snapshot_id_status
 			ON reports(snapshot_id, status);

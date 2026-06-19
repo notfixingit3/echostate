@@ -122,7 +122,7 @@ export function SettingsSystemPanel() {
                   <HelpTip id="settings.api_key" />
                 </CardTitle>
                 <CardDescription>
-                  Write-endpoint API key plus passive Shodan, Censys, HIBP, and RiskIQ (PassiveTotal) correlation.
+                  Write-endpoint API key plus passive Shodan, Censys, HIBP, RiskIQ, and VirusTotal correlation.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -163,6 +163,22 @@ export function SettingsSystemPanel() {
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="riskiq_api_key">RiskIQ / PassiveTotal API key</Label>
                   <Input id="riskiq_api_key" value={sysSettings.riskiq_api_key || ""} onChange={(e) => setSysSettings({ ...sysSettings, riskiq_api_key: e.target.value })} placeholder="Passive DNS for scanned host" />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="virustotal_api_key">
+                    <LabelWithHelp label="VirusTotal API key" helpId="settings.virustotal_key" />
+                  </Label>
+                  <Input
+                    id="virustotal_api_key"
+                    value={sysSettings.virustotal_api_key || ""}
+                    onChange={(e) =>
+                      setSysSettings({
+                        ...sysSettings,
+                        virustotal_api_key: e.target.value,
+                      })
+                    }
+                    placeholder="Optional passive DNS resolutions"
+                  />
                 </div>
               </CardContent>
             </Card>

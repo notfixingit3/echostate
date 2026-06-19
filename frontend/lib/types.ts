@@ -200,7 +200,9 @@ export interface ScanResponse {
 }
 
 export interface CreateReportRequest {
-  snapshot_id: string
+  snapshot_id?: string
+  host?: string
+  wait_for_enrichment?: boolean
 }
 
 export interface ApiErrorResponse {

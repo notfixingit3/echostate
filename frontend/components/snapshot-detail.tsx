@@ -4,6 +4,8 @@ import * as React from "react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -20,6 +22,7 @@ import { IntelPanels } from "@/components/intel-panels"
 import { CountryFlag } from "@/components/country-flag"
 import {
   createReport,
+  fetchApi,
   getReport,
   getLatestReportForSnapshot,
   downloadReport,
@@ -38,12 +41,40 @@ import {
   DownloadIcon,
 } from "lucide-react"
 
-export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
+export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapshot }) {
+  const [snapshot, setSnapshot] = React.useState(initialSnapshot)
   const [isCreatingReport, setIsCreatingReport] = React.useState(false)
   const [reportError, setReportError] = React.useState<string | null>(null)
   const [report, setReport] = React.useState<Report | null>(null)
+  const [waitForEnrichment, setWaitForEnrichment] = React.useState(false)
+
+  React.useEffect(() => {
+    setSnapshot(initialSnapshot)
+  }, [initialSnapshot])
 
   const intel = extractIntel(snapshot.raw_data, snapshot)
+
+  React.useEffect(() => {
+    if (intel.enrichmentStatus !== "pending") {
+      return
+    }
+
+    let cancelled = false
+    const intervalId = setInterval(() => {
+      void fetchApi<Snapshot>(`/api/snapshots/${snapshot.id}`)
+        .then((updated) => {
+          if (!cancelled) setSnapshot(updated)
+        })
+        .catch(() => {
+          // Keep polling; transient API errors should not stop enrichment refresh.
+        })
+    }, 2000)
+
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [snapshot.id, intel.enrichmentStatus])
 
   React.useEffect(() => {
     let cancelled = false
@@ -73,7 +104,7 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
     setReport(null)
 
     try {
-      const created = await createReport(snapshot.id)
+      const created = await createReport(snapshot.id, waitForEnrichment)
       setReport(created)
     } catch (err) {
       if (err instanceof ApiError) {
@@ -186,6 +217,15 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
                   {intel.changeCount} change{intel.changeCount === 1 ? "" : "s"}
                 </Badge>
               ) : null}
+              {intel.enrichmentStatus === "pending" ? (
+                <Badge variant="secondary" className="gap-1">
+                  <Loader2Icon className="size-3 animate-spin" />
+                  Enrichment pending
+                </Badge>
+              ) : null}
+              {intel.enrichmentStatus === "partial" ? (
+                <Badge variant="outline">Enrichment partial</Badge>
+              ) : null}
             </div>
           </div>
         </CardHeader>
@@ -234,6 +274,18 @@ export function SnapshotDetail({ snapshot }: { snapshot: Snapshot }) {
         </CardContent>
         <Separator />
         <CardFooter className="flex flex-col items-start gap-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="wait-for-enrichment"
+              checked={waitForEnrichment}
+              onCheckedChange={(checked) =>
+                setWaitForEnrichment(checked === true)
+              }
+            />
+            <Label htmlFor="wait-for-enrichment" className="text-sm font-normal">
+              Wait for enrichment before generating PDF
+            </Label>
+          </div>
           <div className="flex w-full flex-wrap justify-between gap-3">
             <div className="flex flex-wrap gap-2">
               {!report || report.status === "failed" ? (

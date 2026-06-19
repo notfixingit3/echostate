@@ -791,7 +791,26 @@ func addEnrichment(m core.Maroto, data map[string]any) {
 
 	addSectionHeader(m, "Third-Party Enrichment")
 
+	status := stringVal(data, "status")
+	if status == "pending" {
+		m.AddRows(text.NewRow(6, "Enrichment was still running when this report was generated. Re-generate the report after enrichment completes for full Shodan/Censys/HIBP data.", props.Text{
+			Size:  9,
+			Style: fontstyle.Italic,
+		}))
+		return
+	}
+
+	if completed := stringVal(data, "completed_at"); completed != "N/A" {
+		addKeyValueRow(m, "Completed At", completed)
+	}
+	if status != "N/A" {
+		addKeyValueRow(m, "Status", status)
+	}
+
 	for _, key := range sortedMapKeys(data) {
+		if key == "status" || key == "completed_at" || key == "started_at" {
+			continue
+		}
 		if strings.HasSuffix(key, "_error") {
 			addKeyValueRow(m, formatFieldLabel(strings.TrimSuffix(key, "_error"))+" Error", formatScalar(data[key]))
 			continue
@@ -804,6 +823,92 @@ func addEnrichment(m core.Maroto, data map[string]any) {
 		}
 
 		addSubheader(m, formatFieldLabel(key))
+		addEnrichmentProvider(m, key, block)
+	}
+}
+
+func addEnrichmentProvider(m core.Maroto, provider string, block map[string]any) {
+	switch provider {
+	case "shodan":
+		if host, ok := block["host"].(map[string]any); ok {
+			addKeyValueRow(m, "Resolved IP", stringVal(host, "ip"))
+			addKeyValueRow(m, "Organization", stringVal(host, "org"))
+			addKeyValueRow(m, "ISP", stringVal(host, "isp"))
+			addKeyValueRow(m, "ASN", stringVal(host, "asn"))
+			addKeyValueRow(m, "Open Ports", stringVal(host, "ports"))
+			if count := stringVal(host, "vuln_count"); count != "N/A" {
+				addKeyValueRow(m, "Known Vulns", count)
+			}
+		}
+		if search, ok := block["favicon_search"].(map[string]any); ok {
+			addKeyValueRow(m, "Favicon Matches", stringVal(search, "total"))
+		}
+	case "censys":
+		if host, ok := block["host"].(map[string]any); ok {
+			addKeyValueRow(m, "Resolved IP", stringVal(host, "ip"))
+			addKeyValueRow(m, "ASN", stringVal(host, "asn"))
+			addKeyValueRow(m, "AS Name", stringVal(host, "as_name"))
+			if services := mapSlice(host, "services"); len(services) > 0 {
+				var lines []string
+				for i, service := range services {
+					if i >= 6 {
+						lines = append(lines, fmt.Sprintf("... and %d more service(s)", len(services)-6))
+						break
+					}
+					lines = append(lines, fmt.Sprintf("%s:%s %s", stringVal(service, "transport"), stringVal(service, "port"), stringVal(service, "service_name")))
+				}
+				addBulletItems(m, lines, 0)
+			}
+		}
+		if search, ok := block["jarm_search"].(map[string]any); ok {
+			addKeyValueRow(m, "JARM Query", stringVal(search, "query"))
+		}
+	case "hibp":
+		addKeyValueRow(m, "Emails Checked", stringVal(block, "checked"))
+		if results := mapSlice(block, "results"); len(results) > 0 {
+			var lines []string
+			for _, item := range results {
+				email := stringVal(item, "email")
+				if stringVal(item, "pwned") == "true" {
+					lines = append(lines, email+" (breached)")
+				} else {
+					lines = append(lines, email+" (clean)")
+				}
+			}
+			addBulletItems(m, lines, maxErrorsShown)
+		}
+	case "riskiq":
+		addKeyValueRow(m, "Query", stringVal(block, "query"))
+		addKeyValueRow(m, "Total Records", stringVal(block, "total"))
+	case "wayback":
+		addKeyValueRow(m, "Domain", stringVal(block, "query"))
+		addKeyValueRow(m, "Archived URLs", stringVal(block, "total"))
+		if urls := mapSlice(block, "urls"); len(urls) > 0 {
+			var lines []string
+			for i, item := range urls {
+				if i >= maxCrawlPaths {
+					lines = append(lines, fmt.Sprintf("... and %d more URL(s)", len(urls)-maxCrawlPaths))
+					break
+				}
+				lines = append(lines, fmt.Sprintf("%s %s", stringVal(item, "timestamp"), stringVal(item, "url")))
+			}
+			addBulletItems(m, lines, 0)
+		}
+	case "virustotal":
+		addKeyValueRow(m, "Domain", stringVal(block, "query"))
+		addKeyValueRow(m, "Passive DNS Records", stringVal(block, "total"))
+		if records := mapSlice(block, "records"); len(records) > 0 {
+			var lines []string
+			for i, item := range records {
+				if i >= maxErrorsShown {
+					lines = append(lines, fmt.Sprintf("... and %d more record(s)", len(records)-maxErrorsShown))
+					break
+				}
+				lines = append(lines, fmt.Sprintf("%s → %s", stringVal(item, "date"), stringVal(item, "ip")))
+			}
+			addBulletItems(m, lines, 0)
+		}
+	default:
 		for _, field := range sortedMapKeys(block) {
 			addKeyValueRow(m, formatFieldLabel(field), formatScalar(block[field]))
 		}

@@ -487,7 +487,7 @@ func wordpressVersionSuffix(version string) string {
 }
 
 func diffGeneric(previous, current map[string]any) []Entry {
-	tracked := map[string]bool{"tls": true, "asn": true, "ct": true, "dns": true, "web": true, "screenshot": true, "scanned_at": true, "host": true, "errors": true}
+	tracked := map[string]bool{"tls": true, "asn": true, "ct": true, "dns": true, "web": true, "screenshot": true, "scanned_at": true, "host": true, "errors": true, "enrichment": true}
 	var entries []Entry
 	for key, curVal := range current {
 		if tracked[key] {

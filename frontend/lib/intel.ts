@@ -65,6 +65,13 @@ export interface IntelHighlights {
   humansTxtLines?: number
   adsTxtLines?: number
   rdapSource?: string
+  enrichmentStatus?: string
+  shodanHostOrg?: string
+  shodanOpenPorts?: number
+  censysServiceCount?: number
+  hibpBreachedEmails?: number
+  waybackUrlCount?: number
+  virustotalRecordCount?: number
   jsAssetCount?: number
   jsLibHints?: string[]
   bucketCount?: number
@@ -227,6 +234,25 @@ export function extractIntel(
   const providerHints = Array.isArray(storage?.provider_hints)
     ? storage.provider_hints
     : []
+  const enrichment = raw?.enrichment as Record<string, unknown> | undefined
+  const shodan = enrichment?.shodan as Record<string, unknown> | undefined
+  const shodanHost = shodan?.host as Record<string, unknown> | undefined
+  const censys = enrichment?.censys as Record<string, unknown> | undefined
+  const censysHost = censys?.host as Record<string, unknown> | undefined
+  const hibp = enrichment?.hibp as Record<string, unknown> | undefined
+  const wayback = enrichment?.wayback as Record<string, unknown> | undefined
+  const virustotal = enrichment?.virustotal as Record<string, unknown> | undefined
+  const hibpResults = Array.isArray(hibp?.results) ? hibp.results : []
+  const hibpBreached = hibpResults.filter(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      (item as Record<string, unknown>).pwned === true
+  ).length
+  const shodanPorts = Array.isArray(shodanHost?.ports) ? shodanHost.ports : []
+  const censysServices = Array.isArray(censysHost?.services)
+    ? censysHost.services
+    : []
 
   return {
     host: asString(raw?.host) || "Unknown host",
@@ -268,6 +294,16 @@ export function extractIntel(
       : undefined,
     adsTxtLines: Array.isArray(adsTxt?.lines) ? adsTxt.lines.length : undefined,
     rdapSource: asString(whois?.rdap_source),
+    enrichmentStatus: asString(enrichment?.status),
+    shodanHostOrg: asString(shodanHost?.org),
+    shodanOpenPorts: shodanPorts.length > 0 ? shodanPorts.length : undefined,
+    censysServiceCount:
+      censysServices.length > 0 ? censysServices.length : undefined,
+    hibpBreachedEmails: hibpBreached > 0 ? hibpBreached : undefined,
+    waybackUrlCount:
+      typeof wayback?.total === "number" ? wayback.total : undefined,
+    virustotalRecordCount:
+      typeof virustotal?.total === "number" ? virustotal.total : undefined,
     dnsSoaZone: asString((dns?.SOA as Record<string, unknown> | undefined)?.zone),
     dnsSoaMname: asString((dns?.SOA as Record<string, unknown> | undefined)?.mname),
     dnsSoaSerial:
@@ -433,14 +469,20 @@ export const SCREENSHOT_FIELDS = [
 ] as const
 
 export const ENRICHMENT_FIELDS = [
+  "status",
+  "completed_at",
   "shodan",
   "censys",
   "hibp",
   "riskiq",
+  "wayback",
+  "virustotal",
   "shodan_error",
   "censys_error",
   "hibp_error",
   "riskiq_error",
+  "wayback_error",
+  "virustotal_error",
 ] as const
 
 export const DNS_FIELDS = [

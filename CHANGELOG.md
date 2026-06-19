@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.34] - 2026-06-18
+
+### Added
+
+- **Shodan host lookup** — Enrichment worker queries resolved IP host profile (ports, org, vulns) in addition to favicon-hash search.
+- **Censys host lookup** — IP host profile via Censys API v2, plus existing JARM correlation.
+- **Wayback/CDX URLs** — Passive Internet Archive URL history for domain targets (no API key).
+- **VirusTotal passive DNS** — Optional `virustotal_api_key` in Settings for domain resolution history.
+- **Enrichment status** — Snapshots mark `enrichment.status: pending` until async worker completes.
+- **Enrichment diffs** — `change_details` and webhooks when Shodan/Censys/HIBP/RiskIQ/Wayback/VT results change.
+- **Report wait option** — `wait_for_enrichment` on report creation; PDF footnote when enrichment still pending.
+
+### Changed
+
+- **Intel UI + PDF** — Enrichment summary cards, pending badge with auto-refresh, human-readable PDF enrichment sections.
+
 ## [0.0.1-beta.33] - 2026-06-18
 
 ### Added

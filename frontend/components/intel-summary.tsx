@@ -228,6 +228,53 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
           mono
         />
       ) : null}
+      {intel.enrichmentStatus === "pending" ? (
+        <StatCard
+          helpId="intel.enrichment_status"
+          label="Enrichment"
+          value="Pending"
+          icon={CloudIcon}
+          badge="Async"
+        />
+      ) : null}
+      {intel.shodanHostOrg ? (
+        <StatCard
+          helpId="intel.shodan_host"
+          label="Shodan org"
+          value={intel.shodanHostOrg}
+          icon={CloudIcon}
+          badge={
+            intel.shodanOpenPorts
+              ? `${intel.shodanOpenPorts} ports`
+              : undefined
+          }
+        />
+      ) : null}
+      {intel.hibpBreachedEmails ? (
+        <StatCard
+          label="HIBP breaches"
+          value={`${intel.hibpBreachedEmails} email${intel.hibpBreachedEmails === 1 ? "" : "s"}`}
+          icon={ShieldIcon}
+          badge="Breached"
+          className="border-destructive/40"
+        />
+      ) : null}
+      {intel.waybackUrlCount ? (
+        <StatCard
+          helpId="intel.wayback_urls"
+          label="Wayback URLs"
+          value={String(intel.waybackUrlCount)}
+          icon={ScrollTextIcon}
+        />
+      ) : null}
+      {intel.virustotalRecordCount ? (
+        <StatCard
+          label="VT passive DNS"
+          value={`${intel.virustotalRecordCount} records`}
+          icon={DatabaseIcon}
+          mono
+        />
+      ) : null}
       {intel.dnsSoaZone ? (
         <StatCard
           helpId="intel.dns_soa"

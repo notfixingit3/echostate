@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/diff"
 	"github.com/notfixingit3/echostate/internal/enrichment"
@@ -193,6 +194,14 @@ func (h *Handler) storeSnapshot(ctx context.Context, targetID uuid.UUID, dataHas
 
 	if err := json.Unmarshal(rawJSON, &snapshot.RawData); err != nil {
 		return nil, fmt.Errorf("unmarshal raw data: %w", err)
+	}
+
+	if enrichment.ShouldEnqueueEnrichment(config.GetSettings(), result.Host) {
+		snapshot.RawData["enrichment"] = enrichment.PendingPayload()
+		rawJSON, err = json.Marshal(snapshot.RawData)
+		if err != nil {
+			return nil, fmt.Errorf("marshal pending enrichment: %w", err)
+		}
 	}
 
 	detailsJSON, err := json.Marshal(changeDetails)

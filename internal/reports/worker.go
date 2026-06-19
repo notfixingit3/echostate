@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/notfixingit3/echostate/internal/db"
+	"github.com/notfixingit3/echostate/internal/enrichment"
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/pdf"
 )
@@ -22,7 +23,9 @@ const (
 	maxPDFSize            = 10 * 1024 * 1024
 	renderTimeout         = 30 * time.Second
 	wakeBufferSize        = 1
-	pollInterval          = 2 * time.Second
+	pollInterval             = 2 * time.Second
+	enrichmentWaitTimeout    = 45 * time.Second
+	enrichmentPollInterval   = 2 * time.Second
 )
 
 // Renderer renders snapshot report data into a PDF byte slice.
@@ -100,13 +103,13 @@ func (w *Worker) Stop() {
 
 // CreateReport inserts a pending report for the given snapshot and wakes the
 // worker. It does not wait for generation to finish.
-func (w *Worker) CreateReport(ctx context.Context, snapshotID uuid.UUID) (uuid.UUID, error) {
+func (w *Worker) CreateReport(ctx context.Context, snapshotID uuid.UUID, waitForEnrichment bool) (uuid.UUID, error) {
 	var reportID uuid.UUID
 	err := w.db.Pool.QueryRow(ctx, `
-		INSERT INTO reports (snapshot_id, status)
-		VALUES ($1, $2)
+		INSERT INTO reports (snapshot_id, status, wait_for_enrichment)
+		VALUES ($1, $2, $3)
 		RETURNING id
-	`, snapshotID, models.ReportPending).Scan(&reportID)
+	`, snapshotID, models.ReportPending, waitForEnrichment).Scan(&reportID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert report: %w", err)
 	}
@@ -252,6 +255,14 @@ func (w *Worker) claimNextPending(ctx context.Context) (reportID uuid.UUID, snap
 func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 	ctx, cancel := context.WithTimeout(w.ctx, renderTimeout)
 	defer cancel()
+
+	var waitForEnrichment bool
+	_ = w.db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(wait_for_enrichment, false) FROM reports WHERE id = $1
+	`, reportID).Scan(&waitForEnrichment)
+	if waitForEnrichment {
+		_ = w.waitForEnrichment(ctx, snapshotID)
+	}
 
 	var raw json.RawMessage
 	var changes []string
@@ -407,6 +418,31 @@ func buildPWhoisInfo(originAS, orgName, country, city, prefix *string, lookedUp 
 		return nil
 	}
 	return info
+}
+
+func (w *Worker) waitForEnrichment(ctx context.Context, snapshotID uuid.UUID) error {
+	deadline := time.Now().Add(enrichmentWaitTimeout)
+	for time.Now().Before(deadline) {
+		var raw []byte
+		err := w.db.Pool.QueryRow(ctx, `
+			SELECT raw_data->'enrichment' FROM snapshots WHERE id = $1
+		`, snapshotID).Scan(&raw)
+		if err != nil {
+			return err
+		}
+		if len(raw) > 0 && string(raw) != "null" {
+			var enrich map[string]any
+			if err := json.Unmarshal(raw, &enrich); err == nil && enrichment.EnrichmentComplete(enrich) {
+				return nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(enrichmentPollInterval):
+		}
+	}
+	return nil
 }
 
 func (w *Worker) loadScreenshotJPEG(ctx context.Context, snapshotID uuid.UUID, screenshot map[string]any) ([]byte, error) {

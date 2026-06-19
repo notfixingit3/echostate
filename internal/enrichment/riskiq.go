@@ -51,10 +51,3 @@ func queryRiskIQ(ctx context.Context, apiUser, apiKey string, payload map[string
 		"results": truncateAny(results, 10),
 	}, nil
 }
-
-func truncateAny(items []any, limit int) []any {
-	if len(items) <= limit {
-		return items
-	}
-	return items[:limit]
-}
