@@ -21,15 +21,20 @@ import (
 )
 
 const (
-	maxFieldLen        = 512
-	maxRawWHOISLen     = 1024
-	maxCopyrights      = 10
-	maxErrorsShown     = 20
-	maxChangesShown    = 25
-	maxChangeDetails   = 20
-	pdfDateFormat      = "2006-01-02 15:04:05 UTC"
-	coverLogoHeight    = 28.0
-	screenshotRowHeight = 55.0
+	maxCopyrights         = 10
+	maxErrorsShown        = 20
+	maxChangesShown       = 25
+	maxChangeDetails      = 20
+	maxCtSubdomainsShown  = 40
+	maxTracerouteHops     = 30
+	maxTechStackItems     = 20
+	maxJSAssets           = 15
+	maxBuckets            = 20
+	maxCrawlPaths         = 25
+	maxRawWHOISLines      = 500
+	pdfDateFormat         = "2006-01-02 15:04:05 UTC"
+	coverLogoHeight       = 28.0
+	screenshotRowHeight   = 55.0
 )
 
 // RenderReport renders snapshot reconnaissance data as a PDF using maroto v2.
@@ -53,10 +58,11 @@ func RenderReport(data ReportData) ([]byte, error) {
 	m := maroto.New(cfg)
 
 	addCoverPage(m, result)
-	addReportMetadata(m, result)
-	addIntelHighlights(m, result)
+	addReportMetadata(m, result, data.ClientIP)
+	addIntelHighlights(m, result, data.PWhois)
 	addChanges(m, data.Changes, data.ChangeDetails)
 	addScreenshot(m, data.ScreenshotJPEG, result.Screenshot)
+	addPWhois(m, data.PWhois)
 	addSectionHeader(m, "WHOIS")
 	addWHOIS(m, result.WHOIS)
 	addSectionHeader(m, "ASN / BGP")
@@ -65,8 +71,18 @@ func RenderReport(data ReportData) ([]byte, error) {
 	addDNS(m, result.DNS)
 	addSectionHeader(m, "TLS / Certificate")
 	addTLS(m, result.TLS)
-	addSectionHeader(m, "Web / Copyright")
+	addSectionHeader(m, "Web")
 	addWeb(m, result.Web)
+	addSectionHeader(m, "Favicon")
+	addFavicon(m, result.Favicon)
+	addSectionHeader(m, "Crawl")
+	addCrawl(m, result.Crawl)
+	addSectionHeader(m, "Storage")
+	addStorage(m, result.Storage)
+	addSectionHeader(m, "Certificate Transparency")
+	addCT(m, result.CT)
+	addSectionHeader(m, "Traceroute")
+	addTraceroute(m, result.Traceroute)
 
 	if len(result.Errors) > 0 {
 		addSectionHeader(m, "Errors")
@@ -136,7 +152,7 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 	)
 }
 
-func addReportMetadata(m core.Maroto, result *models.ScanResult) {
+func addReportMetadata(m core.Maroto, result *models.ScanResult, clientIP string) {
 	addSectionHeader(m, "Report Metadata")
 
 	addKeyValueRow(m, "Report Generated At", time.Now().UTC().Format(pdfDateFormat))
@@ -147,18 +163,49 @@ func addReportMetadata(m core.Maroto, result *models.ScanResult) {
 		scannedAt = "N/A"
 	}
 	addKeyValueRow(m, "Scanned At", scannedAt)
+
+	if strings.TrimSpace(clientIP) != "" && clientIP != "unknown" {
+		addKeyValueRow(m, "Client IP", clientIP)
+	}
 }
 
-func addIntelHighlights(m core.Maroto, result *models.ScanResult) {
+func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhoisInfo) {
 	addSectionHeader(m, "Intel Highlights")
 
+	addKeyValueRow(m, "Resolved IP", stringVal(result.ASN, "ip"))
+	addKeyValueRow(m, "ASN", stringVal(result.ASN, "asn"))
+	addKeyValueRow(m, "AS Name", stringVal(result.ASN, "as_name"))
+	addKeyValueRow(m, "Prefix", firstNonNA(stringVal(result.ASN, "prefix"), pwhoisPrefix(pwhois)))
+	addKeyValueRow(m, "Country", firstNonNA(stringVal(result.ASN, "country"), pwhoisCountry(pwhois)))
+	addKeyValueRow(m, "Registrar", stringVal(result.WHOIS, "registrar"))
+	addKeyValueRow(m, "Web Title", stringVal(result.Web, "title"))
 	addKeyValueRow(m, "JARM", stringVal(result.TLS, "jarm"))
 	addKeyValueRow(m, "JA3S", stringVal(result.TLS, "ja3s"))
-	addKeyValueRow(m, "Favicon MMH3", stringVal(result.Favicon, "mmh3"))
+	addKeyValueRow(m, "Favicon MMH3", firstNonNA(stringVal(result.Favicon, "mmh3"), stringVal(result.Favicon, "shodan")))
 	addKeyValueRow(m, "Cert Expires", stringVal(result.TLS, "not_after"))
 	addKeyValueRow(m, "Cert Issuer", stringVal(result.TLS, "issuer"))
 	addKeyValueRow(m, "DNS A/AAAA", joinDNSRecords(result.DNS))
-	addKeyValueRow(m, "CT Subdomains", stringVal(result.CT, "count"))
+	addKeyValueRow(m, "Mail Posture", mailPostureSummary(result.DNS))
+	addKeyValueRow(m, "Hijack Risk", stringVal(nestedMap(result.ASN, "routing"), "hijack_risk"))
+	addKeyValueRow(m, "BGP Path Stability", stringVal(nestedMap(nestedMap(result.ASN, "routing"), "path_profile"), "stability"))
+	addKeyValueRow(m, "CT Subdomains", ctCount(result.CT))
+}
+
+func addPWhois(m core.Maroto, info *PWhoisInfo) {
+	if info == nil || !info.HasData() {
+		return
+	}
+
+	addSectionHeader(m, "Passive WHOIS (pWhois)")
+
+	addKeyValueRow(m, "Origin AS", valueOrNA(info.OriginAS))
+	addKeyValueRow(m, "Organization", valueOrNA(info.OrgName))
+	addKeyValueRow(m, "Country", valueOrNA(info.CountryCode))
+	addKeyValueRow(m, "City", valueOrNA(info.City))
+	addKeyValueRow(m, "Prefix", valueOrNA(info.Prefix))
+	if info.LookedUpAt != nil && !info.LookedUpAt.IsZero() {
+		addKeyValueRow(m, "Looked Up At", info.LookedUpAt.UTC().Format(pdfDateFormat))
+	}
 }
 
 func addChanges(m core.Maroto, changes []string, details []models.ChangeDetail) {
@@ -169,37 +216,26 @@ func addChanges(m core.Maroto, changes []string, details []models.ChangeDetail) 
 	addSectionHeader(m, "Snapshot Changes")
 
 	if len(details) > 0 {
-		m.AddRows(
-			text.NewRow(6, "Structured changes:", props.Text{Size: 10, Style: fontstyle.Bold}),
-		)
+		addSubheader(m, "Structured changes")
 		for i, detail := range details {
 			if i >= maxChangeDetails {
-				m.AddRows(text.NewRow(6, fmt.Sprintf("... and %d more change(s)", len(details)-maxChangeDetails), props.Text{Size: 9, Style: fontstyle.Italic}))
+				m.AddRows(text.NewRow(5, fmt.Sprintf("... and %d more change(s)", len(details)-maxChangeDetails), props.Text{
+					Size:  9,
+					Style: fontstyle.Italic,
+				}))
 				break
 			}
 			line := fmt.Sprintf("[%s/%s] %s", strings.ToUpper(detail.Severity), detail.Type, detail.Summary)
 			if detail.Field != "" {
 				line = fmt.Sprintf("%s (%s)", line, detail.Field)
 			}
-			m.AddRows(
-				text.NewRow(5, "• "+truncate(line, maxFieldLen), props.Text{Size: 9}),
-			)
+			addBulletItems(m, []string{line}, 0)
 		}
 	}
 
 	if len(changes) > 0 {
-		m.AddRows(
-			text.NewRow(6, "Summary:", props.Text{Size: 10, Style: fontstyle.Bold}),
-		)
-		for i, change := range changes {
-			if i >= maxChangesShown {
-				m.AddRows(text.NewRow(6, fmt.Sprintf("... and %d more change(s)", len(changes)-maxChangesShown), props.Text{Size: 9, Style: fontstyle.Italic}))
-				break
-			}
-			m.AddRows(
-				text.NewRow(5, "• "+truncate(change, maxFieldLen), props.Text{Size: 9}),
-			)
-		}
+		addSubheader(m, "Summary")
+		addBulletItems(m, changes, maxChangesShown)
 	}
 }
 
@@ -221,7 +257,9 @@ func addScreenshot(m core.Maroto, jpeg []byte, meta map[string]any) {
 
 	if len(meta) > 0 {
 		addKeyValueRow(m, "URL", stringVal(meta, "url"))
+		addKeyValueRow(m, "Captured At", stringVal(meta, "captured_at"))
 		addKeyValueRow(m, "Dimensions", screenshotDimensions(meta))
+		addKeyValueRow(m, "Format", stringVal(meta, "format"))
 		if errMsg := stringVal(meta, "error"); errMsg != "N/A" {
 			addKeyValueRow(m, "Capture Error", errMsg)
 		}
@@ -252,8 +290,8 @@ func addWHOIS(m core.Maroto, data map[string]any) {
 	addKeyValueRow(m, "Name Servers", stringVal(data, "name_servers"))
 	addKeyValueRow(m, "Status", stringVal(data, "status"))
 
-	if raw, ok := data["raw"].(string); ok && raw != "" {
-		addKeyValueRow(m, "Raw Record", truncate(raw, maxRawWHOISLen))
+	if raw, ok := data["raw"].(string); ok && strings.TrimSpace(raw) != "" {
+		addMultilineBlock(m, "Raw WHOIS Record", raw, maxRawWHOISLines)
 	}
 }
 
@@ -264,12 +302,37 @@ func addASN(m core.Maroto, data map[string]any) {
 	}
 
 	addKeyValueRow(m, "ASN", stringVal(data, "asn"))
+	addKeyValueRow(m, "AS Name", stringVal(data, "as_name"))
+	addKeyValueRow(m, "IP", stringVal(data, "ip"))
 	addKeyValueRow(m, "Prefix", stringVal(data, "prefix"))
 	addKeyValueRow(m, "Country", stringVal(data, "country"))
 	addKeyValueRow(m, "Registry", stringVal(data, "registry"))
 	addKeyValueRow(m, "Allocated", stringVal(data, "allocated"))
-	addKeyValueRow(m, "AS Name", stringVal(data, "as_name"))
-	addKeyValueRow(m, "IP", stringVal(data, "ip"))
+
+	if routing := nestedMap(data, "routing"); len(routing) > 0 {
+		addSubheader(m, "BGP Routing")
+		addKeyValueRow(m, "Hijack Risk", stringVal(routing, "hijack_risk"))
+		addKeyValueRow(m, "Visible Origins", stringVal(routing, "visible_origins"))
+		addKeyValueRow(m, "First Seen", stringVal(routing, "first_seen"))
+		addKeyValueRow(m, "Last Seen", stringVal(routing, "last_seen"))
+		if profile := nestedMap(routing, "path_profile"); len(profile) > 0 {
+			addKeyValueRow(m, "Path Stability", stringVal(profile, "stability"))
+			addKeyValueRow(m, "Path Count", stringVal(profile, "path_count"))
+			addKeyValueRow(m, "Unique Paths", stringVal(profile, "unique_paths"))
+		}
+		if notes := stringSlice(routing, "notes"); len(notes) > 0 {
+			addSubheader(m, "Routing Notes")
+			addBulletItems(m, notes, maxErrorsShown)
+		}
+	}
+
+	if peering := nestedMap(data, "peeringdb"); len(peering) > 0 {
+		addSubheader(m, "PeeringDB")
+		addKeyValueRow(m, "Network Name", stringVal(peering, "name"))
+		addKeyValueRow(m, "Website", stringVal(peering, "website"))
+		addKeyValueRow(m, "IX Count", stringVal(peering, "ix_count"))
+		addKeyValueRow(m, "Facility Count", stringVal(peering, "fac_count"))
+	}
 }
 
 func addDNS(m core.Maroto, data map[string]any) {
@@ -279,12 +342,64 @@ func addDNS(m core.Maroto, data map[string]any) {
 	}
 
 	addKeyValueRow(m, "A / AAAA", joinDNSRecords(data))
-	addKeyValueRow(m, "MX", stringVal(data, "mx"))
-	addKeyValueRow(m, "NS", stringVal(data, "ns"))
-	addKeyValueRow(m, "TXT", stringVal(data, "txt"))
-	addKeyValueRow(m, "CNAME", stringVal(data, "cname"))
-	addKeyValueRow(m, "DMARC", stringVal(data, "dmarc"))
-	addKeyValueRow(m, "SPF", stringVal(data, "spf"))
+	addKeyValueRow(m, "MX", stringVal(data, "MX", "mx"))
+	addKeyValueRow(m, "NS", stringVal(data, "NS", "ns"))
+	addKeyValueRow(m, "TXT", stringVal(data, "TXT", "txt"))
+	addKeyValueRow(m, "CNAME", stringVal(data, "CNAME", "cname"))
+
+	if soa := nestedMap(data, "SOA"); len(soa) > 0 {
+		addSubheader(m, "SOA")
+		addKeyValueRow(m, "Zone", stringVal(soa, "zone"))
+		addKeyValueRow(m, "Mname", stringVal(soa, "mname"))
+		addKeyValueRow(m, "Rname", stringVal(soa, "rname"))
+		addKeyValueRow(m, "Serial", stringVal(soa, "serial"))
+		addKeyValueRow(m, "Refresh", stringVal(soa, "refresh"))
+		addKeyValueRow(m, "Retry", stringVal(soa, "retry"))
+		addKeyValueRow(m, "Expire", stringVal(soa, "expire"))
+		addKeyValueRow(m, "Minimum", stringVal(soa, "minimum"))
+	}
+
+	addKeyValueRow(m, "DMARC (TXT)", stringVal(data, "DMARC", "dmarc"))
+	if dmarc := nestedMap(data, "DMARC_PARSED"); len(dmarc) > 0 {
+		addSubheader(m, "DMARC Parsed")
+		addKeyValueRow(m, "Policy", stringVal(dmarc, "policy"))
+		addKeyValueRow(m, "Subdomain Policy", stringVal(dmarc, "subdomain_policy"))
+		addKeyValueRow(m, "Percentage", stringVal(dmarc, "percentage"))
+		addKeyValueRow(m, "Aggregate Report URI", stringVal(dmarc, "aggregate_report_uri"))
+		addKeyValueRow(m, "Record", stringVal(dmarc, "record"))
+	}
+
+	if spf := nestedMap(data, "SPF"); len(spf) > 0 {
+		addSubheader(m, "SPF")
+		addKeyValueRow(m, "Policy", stringVal(spf, "policy"))
+		addKeyValueRow(m, "Record", stringVal(spf, "record"))
+	} else {
+		addKeyValueRow(m, "SPF", stringVal(data, "SPF", "spf"))
+	}
+
+	if dkimRecords := mapSlice(data, "DKIM"); len(dkimRecords) > 0 {
+		addSubheader(m, "DKIM")
+		for i, record := range dkimRecords {
+			if i >= 5 {
+				m.AddRows(text.NewRow(5, fmt.Sprintf("... and %d more DKIM record(s)", len(dkimRecords)-5), props.Text{
+					Size:  9,
+					Style: fontstyle.Italic,
+				}))
+				break
+			}
+			label := fmt.Sprintf("Selector %d", i+1)
+			addKeyValueRow(m, label, formatMapLines(record, ""))
+		}
+	}
+
+	if posture := nestedMap(data, "MAIL_POSTURE"); len(posture) > 0 {
+		addSubheader(m, "Mail Posture")
+		addKeyValueRow(m, "Grade", stringVal(posture, "grade"))
+		addKeyValueRow(m, "Score", stringVal(posture, "score"))
+		if findings := stringSlice(posture, "findings"); len(findings) > 0 {
+			addBulletItems(m, findings, maxErrorsShown)
+		}
+	}
 }
 
 func addTLS(m core.Maroto, data map[string]any) {
@@ -295,11 +410,26 @@ func addTLS(m core.Maroto, data map[string]any) {
 
 	addKeyValueRow(m, "Subject", stringVal(data, "subject"))
 	addKeyValueRow(m, "Issuer", stringVal(data, "issuer"))
+	addKeyValueRow(m, "DNS Names", stringVal(data, "dns_names"))
+	addKeyValueRow(m, "IP SANs", stringVal(data, "ip_sans"))
 	addKeyValueRow(m, "Not Before", stringVal(data, "not_before"))
 	addKeyValueRow(m, "Not After", stringVal(data, "not_after"))
 	addKeyValueRow(m, "Days Remaining", stringVal(data, "days_remaining"))
+	addKeyValueRow(m, "Expired", stringVal(data, "expired"))
+	addKeyValueRow(m, "Chain Length", stringVal(data, "chain_length"))
+	addKeyValueRow(m, "Version", stringVal(data, "version"))
+	addKeyValueRow(m, "Signature Algorithm", stringVal(data, "signature_algorithm"))
+	addKeyValueRow(m, "Cipher Suite", stringVal(data, "cipher_suite"))
 	addKeyValueRow(m, "JARM", stringVal(data, "jarm"))
 	addKeyValueRow(m, "JA3S", stringVal(data, "ja3s"))
+
+	if chain := mapSlice(data, "chain"); len(chain) > 0 {
+		addSubheader(m, "Certificate Chain")
+		for i, cert := range chain {
+			addKeyValueRow(m, fmt.Sprintf("Cert %d Subject", i+1), stringVal(cert, "subject"))
+			addKeyValueRow(m, fmt.Sprintf("Cert %d Issuer", i+1), stringVal(cert, "issuer"))
+		}
+	}
 }
 
 func addWeb(m core.Maroto, data map[string]any) {
@@ -310,50 +440,223 @@ func addWeb(m core.Maroto, data map[string]any) {
 
 	addKeyValueRow(m, "Title", stringVal(data, "title"))
 	addKeyValueRow(m, "URL", stringVal(data, "url"))
+	addKeyValueRow(m, "Header URL", stringVal(data, "header_url"))
+
+	if headers := nestedMap(data, "headers"); len(headers) > 0 {
+		addSubheader(m, "Response Headers")
+		addKeyValueRow(m, "Headers", formatMapLines(headers, ""))
+	}
+
+	if security := nestedMap(data, "security_headers"); len(security) > 0 {
+		addSubheader(m, "Security Headers")
+		addKeyValueRow(m, "Security Headers", formatMapLines(security, ""))
+	}
+
+	if tech := stringSlice(data, "tech_stack"); len(tech) > 0 {
+		addSubheader(m, "Tech Stack")
+		addBulletItems(m, tech, maxTechStackItems)
+	}
+
+	if assets := mapSlice(data, "js_assets"); len(assets) > 0 {
+		addSubheader(m, "JavaScript Assets")
+		var lines []string
+		for i, asset := range assets {
+			if i >= maxJSAssets {
+				lines = append(lines, fmt.Sprintf("... and %d more asset(s)", len(assets)-maxJSAssets))
+				break
+			}
+			url := stringVal(asset, "url")
+			hint := stringVal(asset, "hint")
+			if hint != "N/A" {
+				lines = append(lines, fmt.Sprintf("%s (%s)", url, hint))
+			} else {
+				lines = append(lines, url)
+			}
+		}
+		addBulletItems(m, lines, 0)
+	}
+
+	if plugins := mapSlice(data, "wordpress_plugins"); len(plugins) > 0 {
+		addSubheader(m, "WordPress Plugins")
+		addBulletItems(m, formatWordPressItems(plugins), maxTechStackItems)
+	}
+
+	if themes := mapSlice(data, "wordpress_themes"); len(themes) > 0 {
+		addSubheader(m, "WordPress Themes")
+		addBulletItems(m, formatWordPressItems(themes), maxTechStackItems)
+	}
 
 	copyrights := extractCopyrights(data)
 	if len(copyrights) == 0 {
 		addKeyValueRow(m, "Copyrights", "None detected")
+	} else {
+		addSubheader(m, "Copyrights")
+		addBulletItems(m, copyrights, maxCopyrights)
+	}
+}
+
+func addFavicon(m core.Maroto, data map[string]any) {
+	if len(data) == 0 {
+		m.AddRows(text.NewRow(6, "No favicon data available.", props.Text{Size: 10}))
 		return
 	}
 
-	m.AddRows(
-		text.NewRow(6, "Copyrights:", props.Text{Size: 10, Style: fontstyle.Bold}),
-	)
-	for _, c := range copyrights {
-		m.AddRows(
-			text.NewRow(5, "• "+truncate(c, maxFieldLen), props.Text{Size: 9}),
-		)
+	addKeyValueRow(m, "URL", stringVal(data, "url"))
+	addKeyValueRow(m, "MMH3", stringVal(data, "mmh3"))
+	addKeyValueRow(m, "Shodan Hash", stringVal(data, "shodan"))
+	addKeyValueRow(m, "SHA256", stringVal(data, "sha256"))
+	addKeyValueRow(m, "Size", stringVal(data, "size"))
+}
+
+func addCrawl(m core.Maroto, data map[string]any) {
+	if len(data) == 0 {
+		m.AddRows(text.NewRow(6, "No crawl data available.", props.Text{Size: 10}))
+		return
+	}
+
+	if robots := nestedMap(data, "robots"); len(robots) > 0 {
+		addSubheader(m, "robots.txt")
+		if disallow := stringSlice(robots, "disallow"); len(disallow) > 0 {
+			addKeyValueRow(m, "Disallow", strings.Join(disallow, ", "))
+		}
+		if allow := stringSlice(robots, "allow"); len(allow) > 0 {
+			addKeyValueRow(m, "Allow", strings.Join(allow, ", "))
+		}
+		if sitemaps := stringSlice(robots, "sitemaps"); len(sitemaps) > 0 {
+			addKeyValueRow(m, "Sitemaps", strings.Join(sitemaps, ", "))
+		}
+	}
+
+	if sitemapURLs := stringSlice(data, "sitemap_urls"); len(sitemapURLs) > 0 {
+		addSubheader(m, "Sitemap URLs")
+		addBulletItems(m, sitemapURLs, maxCrawlPaths)
+	}
+
+	addKeyValueRow(m, "Sitemap URL Count", stringVal(data, "sitemap_url_count"))
+
+	if crawlErrors := stringSlice(data, "errors"); len(crawlErrors) > 0 {
+		addSubheader(m, "Crawl Errors")
+		addBulletItems(m, crawlErrors, maxErrorsShown)
+	}
+}
+
+func addStorage(m core.Maroto, data map[string]any) {
+	if len(data) == 0 {
+		m.AddRows(text.NewRow(6, "No storage hints available.", props.Text{Size: 10}))
+		return
+	}
+
+	buckets := mapSlice(data, "buckets")
+	if len(buckets) == 0 {
+		m.AddRows(text.NewRow(6, "No cloud storage buckets detected.", props.Text{Size: 10}))
+		return
+	}
+
+	addSubheader(m, "Detected Buckets")
+	var lines []string
+	for i, bucket := range buckets {
+		if i >= maxBuckets {
+			lines = append(lines, fmt.Sprintf("... and %d more bucket(s)", len(buckets)-maxBuckets))
+			break
+		}
+		provider := stringVal(bucket, "provider")
+		name := stringVal(bucket, "name")
+		url := stringVal(bucket, "url")
+		switch {
+		case provider != "N/A" && name != "N/A":
+			lines = append(lines, fmt.Sprintf("%s: %s", provider, name))
+		case url != "N/A":
+			lines = append(lines, url)
+		default:
+			lines = append(lines, formatMapLines(bucket, ""))
+		}
+	}
+	addBulletItems(m, lines, 0)
+}
+
+func addCT(m core.Maroto, data map[string]any) {
+	if len(data) == 0 {
+		m.AddRows(text.NewRow(6, "No certificate transparency data available.", props.Text{Size: 10}))
+		return
+	}
+
+	if skipped, ok := data["skipped"].(string); ok && strings.TrimSpace(skipped) != "" {
+		addKeyValueRow(m, "Skipped", skipped)
+		return
+	}
+
+	addKeyValueRow(m, "Domain", stringVal(data, "domain"))
+	addKeyValueRow(m, "Source", stringVal(data, "source"))
+	addKeyValueRow(m, "Count", ctCount(data))
+
+	if subdomains := stringSlice(data, "subdomains"); len(subdomains) > 0 {
+		addSubheader(m, "Subdomains")
+		addBulletItems(m, subdomains, maxCtSubdomainsShown)
+	}
+}
+
+func addTraceroute(m core.Maroto, data map[string]any) {
+	if len(data) == 0 {
+		m.AddRows(text.NewRow(6, "No traceroute data available.", props.Text{Size: 10}))
+		return
+	}
+
+	if skipped, ok := data["skipped"].(string); ok && strings.TrimSpace(skipped) != "" {
+		addKeyValueRow(m, "Skipped", skipped)
+		return
+	}
+
+	addKeyValueRow(m, "Destination", stringVal(data, "destination"))
+	addKeyValueRow(m, "Hop Count", stringVal(data, "hop_count"))
+	if warning := stringVal(data, "warning"); warning != "N/A" {
+		addKeyValueRow(m, "Warning", warning)
+	}
+
+	if vantages := mapSlice(data, "vantages"); len(vantages) > 0 {
+		addSubheader(m, "Vantages")
+		for i, vantage := range vantages {
+			label := fmt.Sprintf("Vantage %d", i+1)
+			name := stringVal(vantage, "name")
+			if name != "N/A" {
+				label = name
+			}
+			addKeyValueRow(m, label, formatMapLines(vantage, ""))
+		}
+	} else if hops := mapSlice(data, "hops"); len(hops) > 0 {
+		addSubheader(m, "Hops")
+		var lines []string
+		for i, hop := range hops {
+			if i >= maxTracerouteHops {
+				lines = append(lines, fmt.Sprintf("... and %d more hop(s)", len(hops)-maxTracerouteHops))
+				break
+			}
+			num := stringVal(hop, "hop", "number", "ttl")
+			ip := stringVal(hop, "ip", "address")
+			host := stringVal(hop, "host", "hostname")
+			rtt := stringVal(hop, "rtt", "latency_ms")
+			line := fmt.Sprintf("%s %s", num, ip)
+			if host != "N/A" {
+				line += " (" + host + ")"
+			}
+			if rtt != "N/A" {
+				line += " rtt=" + rtt
+			}
+			lines = append(lines, line)
+		}
+		addBulletItems(m, lines, 0)
 	}
 }
 
 func addErrors(m core.Maroto, errors []string) {
-	for i, err := range errors {
-		if i >= maxErrorsShown {
-			m.AddRows(text.NewRow(6, fmt.Sprintf("... and %d more error(s)", len(errors)-maxErrorsShown), props.Text{Size: 9, Style: fontstyle.Italic}))
-			break
-		}
-		m.AddRows(
-			text.NewRow(5, "• "+truncate(err, maxFieldLen), props.Text{Size: 9}),
-		)
-	}
-}
-
-func addKeyValueRow(m core.Maroto, label, value string) {
-	m.AddRows(
-		row.New(6).Add(
-			text.NewCol(3, label+":", props.Text{Size: 10, Style: fontstyle.Bold}),
-			text.NewCol(9, value, props.Text{Size: 10}),
-		),
-	)
+	addBulletItems(m, errors, maxErrorsShown)
 }
 
 func joinDNSRecords(data map[string]any) string {
 	if len(data) == 0 {
 		return "N/A"
 	}
-	a := stringVal(data, "a")
-	aaaa := stringVal(data, "aaaa")
+	a := stringVal(data, "A", "a")
+	aaaa := stringVal(data, "AAAA", "aaaa")
 	if a == "N/A" && aaaa == "N/A" {
 		return "N/A"
 	}
@@ -373,53 +676,6 @@ func screenshotDimensions(meta map[string]any) string {
 		return "N/A"
 	}
 	return width + " × " + height
-}
-
-func stringVal(data map[string]any, key string) string {
-	if data == nil {
-		return "N/A"
-	}
-
-	v, ok := data[key]
-	if !ok || v == nil {
-		return "N/A"
-	}
-
-	switch s := v.(type) {
-	case string:
-		if strings.TrimSpace(s) == "" {
-			return "N/A"
-		}
-		return truncate(s, maxFieldLen)
-	case []string:
-		if len(s) == 0 {
-			return "N/A"
-		}
-		return truncate(strings.Join(s, ", "), maxFieldLen)
-	case []any:
-		if len(s) == 0 {
-			return "N/A"
-		}
-		var parts []string
-		for _, item := range s {
-			if item == nil {
-				continue
-			}
-			parts = append(parts, fmt.Sprintf("%v", item))
-		}
-		if len(parts) == 0 {
-			return "N/A"
-		}
-		return truncate(strings.Join(parts, ", "), maxFieldLen)
-	case time.Time:
-		return s.Format(pdfDateFormat)
-	default:
-		str := fmt.Sprintf("%v", v)
-		if strings.TrimSpace(str) == "" {
-			return "N/A"
-		}
-		return truncate(str, maxFieldLen)
-	}
 }
 
 func extractCopyrights(data map[string]any) []string {
@@ -465,11 +721,76 @@ func extractCopyrights(data map[string]any) []string {
 		add(s)
 	}
 
-	if len(out) > maxCopyrights {
-		out = out[:maxCopyrights]
-	}
-
 	return out
+}
+
+func formatWordPressItems(items []map[string]any) []string {
+	var lines []string
+	for _, item := range items {
+		slug := stringVal(item, "slug")
+		version := stringVal(item, "version")
+		switch {
+		case slug != "N/A" && version != "N/A":
+			lines = append(lines, fmt.Sprintf("%s (%s)", slug, version))
+		case slug != "N/A":
+			lines = append(lines, slug)
+		default:
+			lines = append(lines, formatMapLines(item, ""))
+		}
+	}
+	return lines
+}
+
+func mailPostureSummary(dns map[string]any) string {
+	posture := nestedMap(dns, "MAIL_POSTURE")
+	if len(posture) == 0 {
+		return "N/A"
+	}
+	grade := stringVal(posture, "grade")
+	score := stringVal(posture, "score")
+	if grade == "N/A" && score == "N/A" {
+		return "N/A"
+	}
+	if grade != "N/A" && score != "N/A" {
+		return grade + " (" + score + "/100)"
+	}
+	if grade != "N/A" {
+		return grade
+	}
+	return score
+}
+
+func ctCount(data map[string]any) string {
+	if count := stringVal(data, "count"); count != "N/A" {
+		return count
+	}
+	if subdomains := stringSlice(data, "subdomains"); len(subdomains) > 0 {
+		return fmt.Sprintf("%d", len(subdomains))
+	}
+	return "N/A"
+}
+
+func pwhoisPrefix(info *PWhoisInfo) string {
+	if info == nil {
+		return "N/A"
+	}
+	return valueOrNA(info.Prefix)
+}
+
+func pwhoisCountry(info *PWhoisInfo) string {
+	if info == nil {
+		return "N/A"
+	}
+	return valueOrNA(info.CountryCode)
+}
+
+func firstNonNA(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" && value != "N/A" {
+			return value
+		}
+	}
+	return "N/A"
 }
 
 func valueOrNA(s string) string {

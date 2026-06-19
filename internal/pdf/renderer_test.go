@@ -3,6 +3,7 @@ package pdf
 import (
 	"bytes"
 	"encoding/base64"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +23,7 @@ func TestRenderReport(t *testing.T) {
 			"expiration_date": "2030-01-01T00:00:00Z",
 			"name_servers":    []string{"a.iana-servers.net", "b.iana-servers.net"},
 			"status":          []string{"clientDeleteProhibited", "serverDeleteProhibited"},
+			"raw":             strings.Repeat("Registrar: EXAMPLE\n", 80),
 		},
 		ASN: map[string]any{
 			"asn":       "15169",
@@ -31,19 +33,64 @@ func TestRenderReport(t *testing.T) {
 			"allocated": "2000-03-30",
 			"as_name":   "GOOGLE, US",
 			"ip":        "142.250.80.46",
+			"routing": map[string]any{
+				"hijack_risk":     "low",
+				"visible_origins": []string{"AS15169"},
+				"path_profile": map[string]any{
+					"stability": "stable",
+				},
+				"notes": []string{"RPKI validation passed"},
+			},
 		},
 		DNS: map[string]any{
-			"a": []string{"93.184.216.34"},
+			"A":    []string{"93.184.216.34"},
+			"MX":   []string{"10 mail.example.com"},
+			"SPF":  map[string]any{"policy": "-all", "record": "v=spf1 -all"},
+			"MAIL_POSTURE": map[string]any{
+				"grade":    "A",
+				"score":    95,
+				"findings": []string{"SPF policy is strict (-all)"},
+			},
 		},
 		TLS: map[string]any{
-			"issuer":    "Example CA",
-			"not_after": "2030-01-01T00:00:00Z",
-			"jarm":      "abc123",
+			"issuer":         "Example CA",
+			"not_after":      "2030-01-01T00:00:00Z",
+			"days_remaining": 1200,
+			"jarm":           "abc123",
+			"ja3s":           "def456",
 		},
 		Web: map[string]any{
-			"title":      "Example Domain",
-			"url":        "https://example.com/",
-			"copyrights": []string{"© 2026 Example Inc.", "All rights reserved."},
+			"title":            "Example Domain",
+			"url":              "https://example.com/",
+			"copyrights":       []string{"© 2026 Example Inc.", "All rights reserved."},
+			"tech_stack":       []string{"framework:react", "cdn:cloudflare"},
+			"security_headers": map[string]any{"strict-transport-security": "max-age=31536000"},
+		},
+		Favicon: map[string]any{
+			"mmh3": "123456",
+			"url":  "https://example.com/favicon.ico",
+		},
+		Crawl: map[string]any{
+			"sitemap_urls":      []string{"https://example.com/sitemap.xml"},
+			"sitemap_url_count": 1,
+		},
+		Storage: map[string]any{
+			"buckets": []map[string]any{
+				{"provider": "s3", "name": "example-bucket"},
+			},
+		},
+		CT: map[string]any{
+			"domain":     "example.com",
+			"subdomains": []string{"www.example.com", "api.example.com"},
+			"count":      2,
+		},
+		Traceroute: map[string]any{
+			"destination": "93.184.216.34",
+			"hop_count":   2,
+			"hops": []map[string]any{
+				{"hop": 1, "ip": "10.0.0.1"},
+				{"hop": 2, "ip": "93.184.216.34"},
+			},
 		},
 		Screenshot: map[string]any{
 			"url":    "https://example.com/",
@@ -57,7 +104,7 @@ func TestRenderReport(t *testing.T) {
 		Result: result,
 		Changes: []string{
 			"Added tls",
-			"Changed dns.a",
+			"Changed dns.A",
 		},
 		ChangeDetails: []models.ChangeDetail{
 			{
@@ -68,6 +115,13 @@ func TestRenderReport(t *testing.T) {
 			},
 		},
 		ScreenshotJPEG: minimalJPEG(t),
+		ClientIP:       "203.0.113.10",
+		PWhois: &PWhoisInfo{
+			OriginAS:    "AS15169",
+			OrgName:     "Google LLC",
+			CountryCode: "US",
+			Prefix:      "142.250.0.0/15",
+		},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, pdfBytes)

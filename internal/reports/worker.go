@@ -256,11 +256,19 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 	var raw json.RawMessage
 	var changes []string
 	var changeDetailsRaw json.RawMessage
+	var clientIP string
+	var pwhoisOriginAS, pwhoisOrgName, pwhoisCountry, pwhoisCity, pwhoisPrefix *string
+	var pwhoisLookedUp *time.Time
 	err := w.db.Pool.QueryRow(ctx, `
-		SELECT raw_data, COALESCE(changes, '{}'), COALESCE(change_details, '[]')
+		SELECT raw_data, COALESCE(changes, '{}'), COALESCE(change_details, '[]'),
+		       COALESCE(client_ip, ''), pwhois_origin_as, pwhois_org_name,
+		       pwhois_country_code, pwhois_city, pwhois_prefix, pwhois_looked_up_at
 		FROM snapshots
 		WHERE id = $1
-	`, snapshotID).Scan(&raw, &changes, &changeDetailsRaw)
+	`, snapshotID).Scan(
+		&raw, &changes, &changeDetailsRaw,
+		&clientIP, &pwhoisOriginAS, &pwhoisOrgName, &pwhoisCountry, &pwhoisCity, &pwhoisPrefix, &pwhoisLookedUp,
+	)
 	if err != nil {
 		msg := fmt.Sprintf("snapshot not found: %v", err)
 		if err == pgx.ErrNoRows {
@@ -295,6 +303,8 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 		Changes:        changes,
 		ChangeDetails:  changeDetails,
 		ScreenshotJPEG: screenshotJPEG,
+		ClientIP:       clientIP,
+		PWhois:         buildPWhoisInfo(pwhoisOriginAS, pwhoisOrgName, pwhoisCountry, pwhoisCity, pwhoisPrefix, pwhoisLookedUp),
 	}
 
 	renderCtx, renderCancel := context.WithTimeout(ctx, renderTimeout)
@@ -362,6 +372,29 @@ func (w *Worker) failStaleRunning(ctx context.Context) error {
 		return fmt.Errorf("mark stale running reports failed: %w", err)
 	}
 	return nil
+}
+
+func buildPWhoisInfo(originAS, orgName, country, city, prefix *string, lookedUp *time.Time) *pdf.PWhoisInfo {
+	info := &pdf.PWhoisInfo{LookedUpAt: lookedUp}
+	if originAS != nil {
+		info.OriginAS = *originAS
+	}
+	if orgName != nil {
+		info.OrgName = *orgName
+	}
+	if country != nil {
+		info.CountryCode = *country
+	}
+	if city != nil {
+		info.City = *city
+	}
+	if prefix != nil {
+		info.Prefix = *prefix
+	}
+	if !info.HasData() {
+		return nil
+	}
+	return info
 }
 
 func (w *Worker) loadScreenshotJPEG(ctx context.Context, snapshotID uuid.UUID, screenshot map[string]any) ([]byte, error) {

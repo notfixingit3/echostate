@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.30] - 2026-06-18
+
+### Added
+
+- **PDF report overhaul** — Reports now mirror intel-tab coverage: wrapping key/value layout, paginated raw WHOIS, pWhois snapshot fields, full DNS (SOA, SPF/DKIM/DMARC, mail posture), BGP routing/hijack/path stability, TLS cert chain, web headers/tech stack/WordPress, favicon, crawl, storage buckets, CT subdomains, traceroute hops, and gatherer errors.
+
+### Fixed
+
+- **PDF DNS sections** — Renderer reads uppercase gatherer keys (`A`, `MX`, `NS`, etc.) so DNS/mail intel appears in reports.
+
 ## [0.0.1-beta.29] - 2026-06-18
 
 ### Fixed
