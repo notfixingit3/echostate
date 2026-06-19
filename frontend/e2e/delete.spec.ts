@@ -1,10 +1,8 @@
 import { test, expect } from "@playwright/test"
 
-test.describe("List delete", () => {
-  test.beforeEach(async ({ page }) => {
-    page.on("dialog", (dialog) => dialog.accept())
-  })
+import { acceptConfirmDialog } from "./helpers/confirm"
 
+test.describe("List delete", () => {
   test("admin deletes a snapshot from the list", async ({ page }) => {
     await page.goto("/")
     await page.getByTestId("scan-host-input").fill("delete-single.example.com")
@@ -12,9 +10,10 @@ test.describe("List delete", () => {
     await expect(page.getByTestId("scan-result-card")).toBeVisible({ timeout: 120_000 })
 
     await page.goto("/snapshots")
-    const row = page.locator('[data-testid^="snapshot-row-"]').filter({
-      hasText: "delete-single.example.com",
-    })
+    const row = page
+      .locator('[data-testid^="snapshot-row-"]')
+      .filter({ hasText: "delete-single.example.com" })
+      .first()
     await expect(row).toBeVisible({ timeout: 30_000 })
 
     const testId = await row.getAttribute("data-testid")
@@ -22,6 +21,7 @@ test.describe("List delete", () => {
     expect(snapshotId).toBeTruthy()
 
     await row.getByRole("button", { name: /delete snapshot/i }).click()
+    await acceptConfirmDialog(page)
     await expect(page.locator(`[data-testid="snapshot-row-${snapshotId}"]`)).toHaveCount(0)
   })
 
@@ -34,12 +34,14 @@ test.describe("List delete", () => {
     }
 
     await page.goto("/snapshots")
-    const rowA = page.locator('[data-testid^="snapshot-row-"]').filter({
-      hasText: "bulk-a.example.com",
-    })
-    const rowB = page.locator('[data-testid^="snapshot-row-"]').filter({
-      hasText: "bulk-b.example.com",
-    })
+    const rowA = page
+      .locator('[data-testid^="snapshot-row-"]')
+      .filter({ hasText: "bulk-a.example.com" })
+      .first()
+    const rowB = page
+      .locator('[data-testid^="snapshot-row-"]')
+      .filter({ hasText: "bulk-b.example.com" })
+      .first()
     await expect(rowA).toBeVisible({ timeout: 30_000 })
     await expect(rowB).toBeVisible({ timeout: 30_000 })
 
@@ -51,6 +53,7 @@ test.describe("List delete", () => {
 
     await expect(page.getByTestId("bulk-action-bar")).toBeVisible()
     await page.getByTestId("bulk-delete-button").click()
+    await acceptConfirmDialog(page)
 
     await expect(page.locator(`[data-testid="snapshot-row-${idA}"]`)).toHaveCount(0)
     await expect(page.locator(`[data-testid="snapshot-row-${idB}"]`)).toHaveCount(0)
@@ -79,6 +82,7 @@ test.describe("List delete", () => {
     expect(reportId).toBeTruthy()
 
     await row.getByRole("button", { name: /delete report/i }).click()
+    await acceptConfirmDialog(page)
     await expect(page.locator(`[data-testid="report-row-${reportId}"]`)).toHaveCount(0)
   })
 })

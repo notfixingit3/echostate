@@ -78,15 +78,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           if (!open) finish(false)
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent data-testid="confirm-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>{state.title}</AlertDialogTitle>
             <AlertDialogDescription>{state.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{state.cancelLabel}</AlertDialogCancel>
+            <AlertDialogCancel data-testid="confirm-dialog-cancel">
+              {state.cancelLabel}
+            </AlertDialogCancel>
             <AlertDialogAction
               variant={state.destructive ? "destructive" : "default"}
+              data-testid="confirm-dialog-confirm"
               onClick={() => finish(true)}
             >
               {state.confirmLabel}
