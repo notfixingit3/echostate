@@ -129,16 +129,30 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=,suffix=,format=short
 
+      # Build static export on the native runner — Node/npm under QEMU arm64 hits
+      # "Illegal instruction" during npm ci when buildx emulates linux/arm64.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build static export
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: ''
+          NEXT_PUBLIC_APP_VERSION: ${{ steps.version.outputs.value }}
+        run: npm ci && npm run build
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
+          target: production-prebuilt
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            NEXT_PUBLIC_API_URL=
-            NEXT_PUBLIC_APP_VERSION=${{ steps.version.outputs.value }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
           platforms: linux/amd64,linux/arm64

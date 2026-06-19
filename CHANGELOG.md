@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **Node.js 24** — CI, frontend Docker builds, and local dev require Node 24 LTS (replaces Node 22).
 
+### Fixed
+
+- **Frontend multi-arch Docker** — CI builds the static export on the native runner, then packages `dist/` into nginx (avoids QEMU `Illegal instruction` during `npm ci` on emulated linux/arm64).
+
 ## [0.0.1-beta.37] - 2026-06-18
 
 ### Added
