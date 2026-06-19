@@ -124,6 +124,8 @@
 
   body {
     @apply bg-background text-foreground;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.52 0.14 195 / 8%), transparent),
       radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.45 0.08 255 / 5%), transparent);

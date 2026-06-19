@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Navigation** — Profile and server Settings links in the top menu (Settings is admin-only, `/admin/system`).
 - **Snapshots & reports** — Delete actions on list pages (snapshots: admin; reports: authenticated scanner+).
 - **Traceroute privacy** — Local scanner paths redact private LAN hops and the first public ISP hop by default (admin setting under Scan Performance).
+- **PWA / mobile** — Web app manifest, installable standalone mode, service worker shell caching, safe-area layout, and 192/512 icons.
 
 ### Changed
 

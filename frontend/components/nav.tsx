@@ -49,7 +49,7 @@ export function Nav() {
   ]
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/70">
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl supports-backdrop-filter:bg-background/70">
       <div className="container flex h-16 items-center justify-between">
         <Link
           href="/"

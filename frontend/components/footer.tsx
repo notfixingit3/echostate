@@ -82,7 +82,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-border/40 pt-6 text-xs text-muted-foreground sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-border/40 pt-6 pb-[env(safe-area-inset-bottom)] text-xs text-muted-foreground sm:flex-row">
           <span>© {year} EchoState</span>
           <span>Look before you leap.</span>
         </div>

@@ -10,6 +10,11 @@ test.describe("Smoke", () => {
     await expect(page.getByTestId("nav-logo")).toBeVisible()
     await expect(page.getByTestId("theme-toggle")).toBeVisible()
 
+    const manifestHref = await page
+      .locator('link[rel="manifest"]')
+      .getAttribute("href")
+    expect(manifestHref).toMatch(/manifest/)
+
     for (const label of ["Home", "Targets", "Snapshots", "Graph", "Reports"]) {
       await expect(
         page.getByTestId(`nav-link-${label.toLowerCase()}`)
