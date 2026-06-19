@@ -7,6 +7,7 @@
 | v0.0.1         | Yes       |
 | main           | Yes       |
 | dev            | Preview   |
+| v0.0.2-dev.x   | Dev       |
 | v0.0.1-beta.x  | Beta      |
 
 ## Reporting a Vulnerability

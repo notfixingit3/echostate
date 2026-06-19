@@ -25,7 +25,7 @@ const composePath = path.join('$ROOT', 'docker-compose.yml');
 if (fs.existsSync(composePath)) {
   let compose = fs.readFileSync(composePath, 'utf8');
   compose = compose.replace(
-    /ECHOSTATE_VERSION:-0\\.0\\.1-beta\\.\\d+/g,
+    /ECHOSTATE_VERSION:-[0-9]+\\.[0-9]+\\.[0-9]+(-[a-z]+\\.[0-9]+)?/g,
     'ECHOSTATE_VERSION:-' + version
   );
   fs.writeFileSync(composePath, compose);

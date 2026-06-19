@@ -27,5 +27,6 @@ func TestCompare(t *testing.T) {
 
 func TestIsPrerelease(t *testing.T) {
 	require.True(t, IsPrerelease("0.0.1-beta.12"))
+	require.True(t, IsPrerelease("0.0.2-dev.0"))
 	require.False(t, IsPrerelease("0.0.1"))
 }
