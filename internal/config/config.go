@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds application configuration loaded from the environment.
@@ -34,7 +35,7 @@ func Load() (*Config, error) {
 		Port:               getEnv("ECHOSTATE_PORT", "8080"),
 		DatabaseURL:        os.Getenv("DATABASE_URL"),
 		BrowserWSURL:       getEnv("BROWSER_WS_URL", "ws://localhost:3000/"),
-		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:3001"),
 		PwhoisEnabled:      pwhoisEnabled,
 		PwhoisCacheTTLHours: pwhoisCacheTTL,
 		Neo4jURI:           getEnv("NEO4J_URI", "bolt://localhost:7687"),
@@ -57,6 +58,13 @@ func Load() (*Config, error) {
 
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL or PostgreSQL env vars are required")
+	}
+
+	if cfg.Env == "production" {
+		pepper := strings.TrimSpace(os.Getenv("ECHOSTATE_AUTH_PEPPER"))
+		if pepper == "" || pepper == "echostate-dev-pepper" {
+			return nil, fmt.Errorf("ECHOSTATE_AUTH_PEPPER must be set to a strong random value in production")
+		}
 	}
 
 	return cfg, nil

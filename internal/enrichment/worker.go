@@ -87,7 +87,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 		if shodan, err := queryShodan(ctx, settings.ShodanAPIKey, payload); err == nil && len(shodan) > 0 {
 			enrichment["shodan"] = shodan
 		} else if err != nil {
-			enrichment["shodan_error"] = err.Error()
+			enrichment["shodan_error"] = FriendlyError(err)
 			hadError = true
 		}
 	}
@@ -95,7 +95,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 		if censys, err := queryCensys(ctx, settings.CensysAPIID, settings.CensysAPISecret, payload); err == nil && len(censys) > 0 {
 			enrichment["censys"] = censys
 		} else if err != nil {
-			enrichment["censys_error"] = err.Error()
+			enrichment["censys_error"] = FriendlyError(err)
 			hadError = true
 		}
 	}
@@ -103,7 +103,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 		if hibp, err := queryHIBP(ctx, settings.HIBPAPIKey, payload); err == nil && len(hibp) > 0 {
 			enrichment["hibp"] = hibp
 		} else if err != nil {
-			enrichment["hibp_error"] = err.Error()
+			enrichment["hibp_error"] = FriendlyError(err)
 			hadError = true
 		}
 	}
@@ -111,7 +111,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 		if riskiq, err := queryRiskIQ(ctx, settings.RiskIQAPIUser, settings.RiskIQAPIKey, payload); err == nil && len(riskiq) > 0 {
 			enrichment["riskiq"] = riskiq
 		} else if err != nil {
-			enrichment["riskiq_error"] = err.Error()
+			enrichment["riskiq_error"] = FriendlyError(err)
 			hadError = true
 		}
 	}
@@ -125,7 +125,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 		if vt, err := queryVirusTotal(ctx, settings.VirusTotalAPIKey, payload); err == nil && len(vt) > 0 {
 			enrichment["virustotal"] = vt
 		} else if err != nil {
-			enrichment["virustotal_error"] = err.Error()
+			enrichment["virustotal_error"] = FriendlyError(err)
 			hadError = true
 		}
 	}

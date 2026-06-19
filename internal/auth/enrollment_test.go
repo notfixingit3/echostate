@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -79,5 +80,38 @@ func TestRecoveryRegistrationReplacesExistingCredentials(t *testing.T) {
 	}
 	if string(remaining) != string(newCredID) {
 		t.Fatalf("expected remaining credential %q, got %q", newCredID, remaining)
+	}
+}
+
+func TestVerifyEnrollmentCodeTracksIPFailures(t *testing.T) {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("DATABASE_URL not set")
+	}
+
+	database, err := db.Connect(databaseURL)
+	if err != nil {
+		t.Fatalf("connect db: %v", err)
+	}
+	defer database.Close()
+
+	if err := db.Migrate(database); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	ctx := context.Background()
+	svc := NewService(database, "http://localhost:3001")
+	clientIP := "203.0.113.50"
+
+	for i := 0; i < 5; i++ {
+		_, err := svc.VerifyEnrollmentCode(ctx, fmt.Sprintf("0000000%d", i), clientIP)
+		if err != ErrInvalidCode {
+			t.Fatalf("attempt %d: expected ErrInvalidCode, got %v", i+1, err)
+		}
+	}
+
+	_, err = svc.VerifyEnrollmentCode(ctx, "00000009", clientIP)
+	if err != ErrTooManyAttempts {
+		t.Fatalf("expected ErrTooManyAttempts after repeated failures, got %v", err)
 	}
 }

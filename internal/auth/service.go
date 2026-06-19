@@ -271,9 +271,13 @@ type EnrollmentVerifyResult struct {
 
 func (s *Service) VerifyEnrollmentCode(ctx context.Context, code, clientIP string) (*EnrollmentVerifyResult, error) {
 	settings := s.Settings()
+	if err := s.checkEnrollmentIPLimit(ctx, clientIP, settings); err != nil {
+		return nil, err
+	}
+
 	normalized := NormalizeEnrollmentInput(code)
 	if normalized == "" {
-		return nil, ErrInvalidCode
+		return nil, s.failEnrollmentVerify(ctx, nil, clientIP, settings, 0, time.Time{})
 	}
 	hash := HashCode(normalized)
 
@@ -295,13 +299,12 @@ func (s *Service) VerifyEnrollmentCode(ctx context.Context, code, clientIP strin
 	`, hash).Scan(&codeID, &userID, &purpose, &attempts, &firstTry, &expiresAt, &usedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			_ = s.recordFailedAttempt(ctx, nil, clientIP)
-			return nil, ErrInvalidCode
+			return nil, s.failEnrollmentVerify(ctx, nil, clientIP, settings, 0, time.Time{})
 		}
 		return nil, err
 	}
 	if usedAt != nil || time.Now().After(expiresAt) {
-		return nil, ErrInvalidCode
+		return nil, s.failEnrollmentVerify(ctx, &codeID, clientIP, settings, attempts, firstTry)
 	}
 	windowStart := time.Now().Add(-time.Duration(settings.CodeAttemptWindowMinutes) * time.Minute)
 	if attempts >= settings.MaxCodeAttempts && firstTry.After(windowStart) {
@@ -330,12 +333,77 @@ func (s *Service) VerifyEnrollmentCode(ctx context.Context, code, clientIP strin
 	return &EnrollmentVerifyResult{User: user, Purpose: purpose}, nil
 }
 
-func (s *Service) recordFailedAttempt(ctx context.Context, codeID *uuid.UUID, clientIP string) error {
-	if codeID != nil {
-		_, err := s.db.Pool.Exec(ctx, `UPDATE enrollment_codes SET attempts = attempts + 1 WHERE id = $1`, *codeID)
+func (s *Service) recordFailedAttempt(ctx context.Context, codeID *uuid.UUID) error {
+	if codeID == nil {
+		return nil
+	}
+	_, err := s.db.Pool.Exec(ctx, `UPDATE enrollment_codes SET attempts = attempts + 1 WHERE id = $1`, *codeID)
+	return err
+}
+
+func (s *Service) checkEnrollmentIPLimit(ctx context.Context, clientIP string, settings Settings) error {
+	ip := stringsTrim(clientIP)
+	if ip == "" {
+		return nil
+	}
+	windowStart := time.Now().Add(-time.Duration(settings.CodeAttemptWindowMinutes) * time.Minute)
+	var attempts int
+	var firstTry time.Time
+	err := s.db.Pool.QueryRow(ctx, `
+		SELECT attempts, window_start FROM enrollment_verify_attempts WHERE ip = $1
+	`, ip).Scan(&attempts, &firstTry)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil
+		}
 		return err
 	}
+	if attempts >= settings.MaxCodeAttempts && firstTry.After(windowStart) {
+		return ErrTooManyAttempts
+	}
 	return nil
+}
+
+func (s *Service) recordIPFailedAttempt(ctx context.Context, clientIP string, settings Settings) error {
+	ip := stringsTrim(clientIP)
+	if ip == "" {
+		return nil
+	}
+	windowStart := time.Now().Add(-time.Duration(settings.CodeAttemptWindowMinutes) * time.Minute)
+	_, err := s.db.Pool.Exec(ctx, `
+		INSERT INTO enrollment_verify_attempts (ip, attempts, window_start, updated_at)
+		VALUES ($1, 1, NOW(), NOW())
+		ON CONFLICT (ip) DO UPDATE SET
+			attempts = CASE
+				WHEN enrollment_verify_attempts.window_start < $2 THEN 1
+				ELSE enrollment_verify_attempts.attempts + 1
+			END,
+			window_start = CASE
+				WHEN enrollment_verify_attempts.window_start < $2 THEN NOW()
+				ELSE enrollment_verify_attempts.window_start
+			END,
+			updated_at = NOW()
+	`, ip, windowStart)
+	return err
+}
+
+func (s *Service) failEnrollmentVerify(ctx context.Context, codeID *uuid.UUID, clientIP string, settings Settings, priorAttempts int, firstTry time.Time) error {
+	if codeID != nil {
+		_ = s.recordFailedAttempt(ctx, codeID)
+		priorAttempts++
+		windowStart := time.Now().Add(-time.Duration(settings.CodeAttemptWindowMinutes) * time.Minute)
+		if priorAttempts >= settings.MaxCodeAttempts && firstTry.After(windowStart) {
+			_ = s.recordIPFailedAttempt(ctx, clientIP, settings)
+			return ErrTooManyAttempts
+		}
+	}
+	if err := s.recordIPFailedAttempt(ctx, clientIP, settings); err != nil {
+		return ErrInvalidCode
+	}
+	if err := s.checkEnrollmentIPLimit(ctx, clientIP, settings); err != nil {
+		return err
+	}
+	return ErrInvalidCode
 }
 
 func (s *Service) CreateEnrollmentSession(ctx context.Context, userID uuid.UUID, purpose string) (string, time.Time, error) {

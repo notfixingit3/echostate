@@ -10,7 +10,7 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 
 ## Features
 
-- **Passive recon** — WHOIS (with RDAP fallback), Team Cymru ASN/BGP (RIPEstat hijack-risk heuristics, AS-path enrichment, PeeringDB IX data), DNS (A/AAAA, MX, NS, TXT, CNAME, SOA, CAA, DNSSEC, PTR, DMARC, SPF/DKIM, MTA-STS, TLS-RPT, BIMI), TLS + JARM/JA3S (version, cipher, OCSP stapling), crt.sh subdomain + certificate metadata, multi-vantage traceroute (local + external), favicon MMH3, robots/security.txt/humans.txt/ads.txt/sitemap crawl (XML + plain-text), cloud bucket hints, HTTP redirect chains, HSTS preload check, cookie name fingerprint, security headers (HSTS, CSP, Permissions-Policy, Referrer-Policy, Cross-Origin-*), tech-stack fingerprinting, headless Chrome web scraping, and JPEG screenshot thumbnails.
+- **Passive recon** — WHOIS (with RDAP fallback), Team Cymru ASN/BGP (RIPEstat hijack-risk heuristics, AS-path enrichment, PeeringDB IX data), DNS (A/AAAA, MX, NS, TXT, CNAME, SOA, CAA, DNSSEC, PTR, DMARC, SPF/DKIM, MTA-STS, TLS-RPT, BIMI), TLS + JARM/JA3S (version, cipher, OCSP stapling), crt.sh subdomain + certificate metadata, local traceroute (optional LAN/ISP prefix redaction), favicon MMH3, robots/security.txt/humans.txt/ads.txt/sitemap crawl (XML + plain-text), cloud bucket hints, HTTP redirect chains, HSTS preload check, cookie name fingerprint, security headers (HSTS, CSP, Permissions-Policy, Referrer-Policy, Cross-Origin-*), tech-stack fingerprinting, headless Chrome web scraping, and JPEG screenshot thumbnails.
 - **Web UI** — Scan form (including **Scan & Report** with inline PDF download), target detail with tags and rescan, intel tabs (WHOIS, ASN, DNS, TLS, Web, Favicon, Crawl, Storage, CT, Traceroute, Screenshots, Submitter), snapshot detail with **Create report** (hydrates latest report on load, polls until PDF is ready), side-by-side raw diffs, and report downloads. Top nav includes **Profile** (all users) and **Settings** → `/admin/system` (admin). Snapshot and report list pages support single and bulk delete (admin / scanner+). Light mode default; version shown in footer.
 - **PWA / mobile** — Install as a standalone app (manifest + maskable icons + service worker shell cache); safe-area layout for notched phones; works best online (API calls are not offline-cached yet).
 - **Historical tracking** — Snapshots persist; identical rescans update `last_seen`. Field-level `change_details` (severity, type, summary) highlight TLS expiry, CAA/DNSSEC/MTA-STS shifts, security.txt contacts, redirect chains, new CT certs, enrichment hits, BGP drift, and more.
@@ -19,7 +19,7 @@ Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certifica
 - **PDF reports** — Async worker renders snapshot intel to PDF (maroto) with table of contents, branding, screenshot thumbnail, change summaries, and full intel sections; queue via **Create report** on a snapshot or `POST /api/reports`, then poll `GET /api/reports/:id` or download when `status` is `completed`. Downloads use `echostate-{host}-{date}.pdf` filenames.
 - **IP enrichment** — pWhois worker enriches submitter IPs (org, ASN, geo).
 - **Notifications** — Slack, Discord, MS Teams webhooks, and Pushover mobile alerts with structured change payloads and alert-rule filtering.
-- **Settings** — DNS resolvers, DKIM selectors, pWhois server, rate limit, scan concurrency/timeouts, scheduler, retention, traceroute privacy (redact scanner LAN/ISP prefix on local paths), alert rules (graph drift + mail/DNS security presets, per-webhook filters), and optional Shodan/Censys/HIBP/RiskIQ/VirusTotal API keys.
+- **Settings** — DNS resolvers, DKIM selectors, pWhois server, rate limit, scan concurrency, HTTP timeouts (scan, enrichment, Wayback), scheduler, retention, traceroute privacy (redact scanner LAN/ISP prefix on local paths), alert rules (graph drift + mail/DNS security presets, per-webhook filters), and optional Shodan/Censys/HIBP/RiskIQ/VirusTotal API keys.
 - **Passkey authentication (beta.20+)** — WebAuthn passkeys with single-use enrollment/recovery codes; `admin` and `scanner` roles. See [Authentication](#authentication).
 - **Legacy API key** — Optional `ECHOSTATE_API_KEY` still works for admin mutations when no users exist yet.
 - **Neo4j graph** — Relationship sync on scan plus interactive `/graph` UI with infra, CT, DNS (NS/MX/CNAME/DMARC/SOA/CAA/MTA-STS/DNSSEC/BIMI), security.txt contacts, Wayback URLs, cert SAN, BGP, traceroute, and peering views; route diff, shared hops, intel events, and infra clusters.
@@ -198,7 +198,7 @@ Paste the printed code at `/login`.
 
 ```bash
 curl http://localhost:8080/health
-# {"status":"ok","env":"development","version":"0.0.1-beta.43"}
+# {"status":"ok","env":"development","version":"0.0.1"}
 ```
 
 ### Scan a target

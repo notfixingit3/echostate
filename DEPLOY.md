@@ -42,8 +42,8 @@ Open the UI, enter the enrollment code at `/login`, and register a passkey.
 Pin a specific release instead of `:main`:
 
 ```bash
-ECHOSTATE_API_IMAGE=ghcr.io/notfixingit3/echostate:0.0.1-beta.39
-ECHOSTATE_FRONTEND_IMAGE=ghcr.io/notfixingit3/echostate-frontend:0.0.1-beta.39
+ECHOSTATE_API_IMAGE=ghcr.io/notfixingit3/echostate:0.0.1
+ECHOSTATE_FRONTEND_IMAGE=ghcr.io/notfixingit3/echostate-frontend:0.0.1
 ```
 
 Set both images to the **same** version tag.

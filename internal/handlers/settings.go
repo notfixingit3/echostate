@@ -54,6 +54,7 @@ func (h *Handler) updateSettings(c *gin.Context) {
 	req.CensysAPISecret = mergeSecret(req.CensysAPISecret, current.CensysAPISecret)
 	req.HIBPAPIKey = mergeSecret(req.HIBPAPIKey, current.HIBPAPIKey)
 	req.RiskIQAPIKey = mergeSecret(req.RiskIQAPIKey, current.RiskIQAPIKey)
+	req.VirusTotalAPIKey = mergeSecret(req.VirusTotalAPIKey, current.VirusTotalAPIKey)
 	config.UpdateSettings(req)
 	req = config.GetSettings()
 

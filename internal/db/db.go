@@ -324,6 +324,13 @@ func Migrate(db *DB) error {
 			ON audit_events(action);
 		CREATE INDEX IF NOT EXISTS idx_audit_events_user_id
 			ON audit_events(user_id);
+
+		CREATE TABLE IF NOT EXISTS enrollment_verify_attempts (
+			ip TEXT PRIMARY KEY,
+			attempts INT NOT NULL DEFAULT 0,
+			window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

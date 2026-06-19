@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-06-19
+
+First stable release. Includes all beta.50 features plus security hardening and post-beta fixes.
+
+### Added
+
+- **Configurable timeouts** — Admin **Server settings → System** exposes scan HTTP timeout, enrichment HTTP timeout, and Wayback timeout for slow networks.
+
+### Changed
+
+- **Traceroute** — External vantage (HackerTarget) is skipped; local path only (API returns 404).
+- **Enrollment security** — Per-IP failed-attempt tracking, stricter rate limit on `POST /api/auth/enroll/verify`, and production startup requires `ECHOSTATE_AUTH_PEPPER`.
+- **Enrichment errors** — API failures are redacted before storage (no raw URLs or API keys in snapshot JSON).
+
+### Fixed
+
+- **PDF reports** — Long snapshot-change lines no longer clip in tables; timeout and upstream errors show friendly messages without raw Wayback URLs.
+- **Settings save** — Masked VirusTotal API key is preserved when saving other settings (same as other integration secrets).
+- **Shodan key leak** — Shodan and other enrichment provider errors no longer persist request URLs containing API keys.
+
 ## [0.0.1-beta.50] - 2026-06-19
 
 ### Changed

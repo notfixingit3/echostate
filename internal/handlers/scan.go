@@ -77,7 +77,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 
 	api.GET("/auth/config", h.authConfig)
 	api.GET("/auth/session", h.authSession)
-	api.POST("/auth/enroll/verify", h.enrollVerify)
+	api.POST("/auth/enroll/verify", rateLimiter.EnrollVerifyMiddleware(), h.enrollVerify)
 	api.POST("/auth/webauthn/register/begin", h.webauthnRegisterBegin)
 	api.POST("/auth/webauthn/register/finish", h.webauthnRegisterFinish)
 	api.POST("/auth/webauthn/login/begin", h.webauthnLoginBegin)
