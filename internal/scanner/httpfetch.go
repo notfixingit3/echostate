@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
-)
 
-const defaultHTTPTimeout = 8 * time.Second
+	"github.com/notfixingit3/echostate/internal/config"
+)
 
 func newHTTPClient(timeout time.Duration) *http.Client {
 	if timeout <= 0 {
-		timeout = defaultHTTPTimeout
+		timeout = config.ScannerHTTPTimeout()
 	}
 	return &http.Client{
 		Timeout: timeout,
@@ -27,7 +27,7 @@ func newHTTPClient(timeout time.Duration) *http.Client {
 }
 
 func httpGet(ctx context.Context, rawURL string, maxBytes int64) ([]byte, string, error) {
-	return httpGetTimeout(ctx, rawURL, maxBytes, defaultHTTPTimeout)
+	return httpGetTimeout(ctx, rawURL, maxBytes, config.ScannerHTTPTimeout())
 }
 
 func httpGetTimeout(ctx context.Context, rawURL string, maxBytes int64, timeout time.Duration) ([]byte, string, error) {

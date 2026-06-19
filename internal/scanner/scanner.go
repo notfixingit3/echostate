@@ -14,11 +14,9 @@ import (
 type Gatherer func(ctx context.Context, host string) (key string, value map[string]any, err error)
 
 type timedGatherer struct {
-	timeout time.Duration
+	profile string
 	fn      Gatherer
 }
-
-const defaultGathererTimeout = 20 * time.Second
 
 // Scanner orchestrates passive reconnaissance tasks.
 type Scanner struct {
@@ -31,38 +29,20 @@ func NewScanner(browserWSURL string) *Scanner {
 	if browserWSURL == "" {
 		browserWSURL = "ws://localhost:3000/"
 	}
-	settings := config.GetSettings()
-	defaultTimeout := time.Duration(settings.DefaultGathererTimeoutSec) * time.Second
-	if defaultTimeout <= 0 {
-		defaultTimeout = defaultGathererTimeout
-	}
-	ctTimeout := time.Duration(settings.CTHTTPTimeoutSec+20) * time.Second
-	if ctTimeout <= 0 {
-		ctTimeout = 80 * time.Second
-	}
-	tracerouteTimeout := time.Duration(settings.TracerouteTimeoutSec) * time.Second
-	if tracerouteTimeout <= 0 {
-		tracerouteTimeout = 40 * time.Second
-	}
-	screenshotTimeout := time.Duration(settings.ScreenshotTimeoutSec) * time.Second
-	if screenshotTimeout <= 0 {
-		screenshotTimeout = 25 * time.Second
-	}
-
 	return &Scanner{
 		browserWSURL: browserWSURL,
 		gatherers: []timedGatherer{
-			{timeout: defaultTimeout, fn: gatherWHOIS},
-			{timeout: defaultTimeout, fn: gatherASN},
-			{timeout: defaultTimeout, fn: gatherTLS},
-			{timeout: defaultTimeout, fn: gatherDNS},
-			{timeout: defaultTimeout, fn: gatherFavicon},
-			{timeout: defaultTimeout, fn: gatherCrawl},
-			{timeout: defaultTimeout, fn: gatherStorage},
-			{timeout: ctTimeout, fn: gatherCT},
-			{timeout: tracerouteTimeout, fn: gatherTraceroute},
-			{timeout: defaultTimeout, fn: newWebGatherer(browserWSURL)},
-			{timeout: screenshotTimeout, fn: newScreenshotGatherer(browserWSURL)},
+			{profile: "default", fn: gatherWHOIS},
+			{profile: "default", fn: gatherASN},
+			{profile: "default", fn: gatherTLS},
+			{profile: "default", fn: gatherDNS},
+			{profile: "default", fn: gatherFavicon},
+			{profile: "default", fn: gatherCrawl},
+			{profile: "default", fn: gatherStorage},
+			{profile: "ct", fn: gatherCT},
+			{profile: "traceroute", fn: gatherTraceroute},
+			{profile: "default", fn: newWebGatherer(browserWSURL)},
+			{profile: "screenshot", fn: newScreenshotGatherer(browserWSURL)},
 		},
 	}
 }
@@ -96,11 +76,7 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 		go func(g timedGatherer) {
 			defer wg.Done()
 
-			timeout := g.timeout
-			if timeout <= 0 {
-				timeout = defaultGathererTimeout
-			}
-			gatherCtx, cancel := context.WithTimeout(ctx, timeout)
+			gatherCtx, cancel := context.WithTimeout(ctx, config.GathererTimeout(g.profile))
 			defer cancel()
 
 			key, value, err := g.fn(gatherCtx, normalized)

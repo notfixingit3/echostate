@@ -73,6 +73,9 @@ export type SystemSettings = {
   traceroute_redact_scanner_prefix?: boolean
   traceroute_redact_local_extra_hops?: number
   screenshot_timeout_sec?: number
+  scanner_http_timeout_sec?: number
+  enrichment_http_timeout_sec?: number
+  wayback_http_timeout_sec?: number
   retention_max_snapshots?: number
   audit_retention_days?: number
   schedule_enabled?: boolean
@@ -103,6 +106,9 @@ export const defaultSystemSettings = (): SystemSettings => ({
   traceroute_redact_scanner_prefix: true,
   traceroute_redact_local_extra_hops: 0,
   screenshot_timeout_sec: 25,
+  scanner_http_timeout_sec: 8,
+  enrichment_http_timeout_sec: 12,
+  wayback_http_timeout_sec: 30,
   retention_max_snapshots: 0,
   audit_retention_days: 90,
   schedule_enabled: false,

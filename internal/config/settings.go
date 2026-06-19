@@ -33,7 +33,10 @@ type SystemSettings struct {
 	TracerouteTimeoutSec           int  `json:"traceroute_timeout_sec"`
 	TracerouteRedactScannerPrefix  *bool `json:"traceroute_redact_scanner_prefix,omitempty"`
 	TracerouteRedactLocalExtraHops int  `json:"traceroute_redact_local_extra_hops,omitempty"`
-	ScreenshotTimeoutSec      int         `json:"screenshot_timeout_sec"`
+	ScreenshotTimeoutSec           int  `json:"screenshot_timeout_sec"`
+	ScannerHTTPTimeoutSec          int  `json:"scanner_http_timeout_sec"`
+	EnrichmentHTTPTimeoutSec       int  `json:"enrichment_http_timeout_sec"`
+	WaybackHTTPTimeoutSec          int  `json:"wayback_http_timeout_sec"`
 	RetentionMaxSnapshots     int         `json:"retention_max_snapshots"`
 	AuditRetentionDays        int         `json:"audit_retention_days"`
 	ScheduleEnabled           bool        `json:"schedule_enabled"`
@@ -62,7 +65,10 @@ var (
 		DefaultGathererTimeoutSec: 20,
 		CTHTTPTimeoutSec:          60,
 		TracerouteTimeoutSec:      40,
-		ScreenshotTimeoutSec:        25,
+		ScreenshotTimeoutSec:      25,
+		ScannerHTTPTimeoutSec:     8,
+		EnrichmentHTTPTimeoutSec:  12,
+		WaybackHTTPTimeoutSec:     30,
 		RetentionMaxSnapshots:     0,
 		AuditRetentionDays:        90,
 		ScheduleEnabled:           false,
@@ -155,6 +161,15 @@ func normalizeSettings(s SystemSettings) SystemSettings {
 	}
 	if s.ScreenshotTimeoutSec <= 0 {
 		s.ScreenshotTimeoutSec = defaultSettings.ScreenshotTimeoutSec
+	}
+	if s.ScannerHTTPTimeoutSec <= 0 {
+		s.ScannerHTTPTimeoutSec = defaultSettings.ScannerHTTPTimeoutSec
+	}
+	if s.EnrichmentHTTPTimeoutSec <= 0 {
+		s.EnrichmentHTTPTimeoutSec = defaultSettings.EnrichmentHTTPTimeoutSec
+	}
+	if s.WaybackHTTPTimeoutSec <= 0 {
+		s.WaybackHTTPTimeoutSec = defaultSettings.WaybackHTTPTimeoutSec
 	}
 	if s.ScheduleIntervalMinutes <= 0 {
 		s.ScheduleIntervalMinutes = defaultSettings.ScheduleIntervalMinutes

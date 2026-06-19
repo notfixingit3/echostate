@@ -187,35 +187,51 @@ export function SettingsSystemPanel() {
             <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="inline-flex items-center gap-1.5">
-                  Scan Performance
+                  Scan performance & timeouts
                   <HelpTip id="settings.scan_concurrency" />
                 </CardTitle>
                 <CardDescription>
-                  Worker concurrency and per-gatherer timeouts (seconds).
+                  Worker concurrency and per-gatherer limits in seconds. Changes apply on the next scan.
                   <HelpTip id="settings.scan_timeouts" className="ml-1.5" />
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
-                {[
-                  ["scan_concurrency", "Scan concurrency"],
-                  ["scan_job_timeout_sec", "Scan job timeout"],
-                  ["default_gatherer_timeout_sec", "Default gatherer timeout"],
-                  ["ct_http_timeout_sec", "CT HTTP timeout"],
-                  ["traceroute_timeout_sec", "Traceroute timeout"],
-                  ["screenshot_timeout_sec", "Screenshot timeout"],
-                ].map(([key, label]) => (
+                <div className="space-y-2">
+                  <Label htmlFor="scan_concurrency">
+                    <LabelWithHelp label="Scan concurrency" helpId="settings.scan_concurrency" />
+                  </Label>
+                  <Input
+                    id="scan_concurrency"
+                    type="number"
+                    min="1"
+                    value={Number(sysSettings.scan_concurrency ?? 0)}
+                    onChange={(e) =>
+                      setSysSettings({
+                        ...sysSettings,
+                        scan_concurrency: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                {(
+                  [
+                    ["scan_job_timeout_sec", "Scan job timeout", "settings.timeout_scan_job"],
+                    ["default_gatherer_timeout_sec", "Default gatherer timeout", "settings.timeout_gatherer"],
+                    ["ct_http_timeout_sec", "CT HTTP timeout", "settings.timeout_ct"],
+                    ["traceroute_timeout_sec", "Traceroute timeout", "settings.timeout_traceroute"],
+                    ["screenshot_timeout_sec", "Screenshot timeout", "settings.timeout_screenshot"],
+                    ["scanner_http_timeout_sec", "In-scan HTTP timeout", "settings.timeout_scanner_http"],
+                  ] as const
+                ).map(([key, label, helpId]) => (
                   <div className="space-y-2" key={key}>
                     <Label htmlFor={key}>
-                      <LabelWithHelp
-                        label={label}
-                        helpId={key === "scan_concurrency" ? "settings.scan_concurrency" : "settings.scan_timeouts"}
-                      />
+                      <LabelWithHelp label={label} helpId={helpId} />
                     </Label>
                     <Input
                       id={key}
                       type="number"
                       min="1"
-                      value={Number(sysSettings[key as keyof SystemSettings] ?? 0)}
+                      value={Number(sysSettings[key] ?? 0)}
                       onChange={(e) =>
                         setSysSettings({
                           ...sysSettings,
@@ -225,6 +241,53 @@ export function SettingsSystemPanel() {
                     />
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="inline-flex items-center gap-1.5">
+                  Enrichment timeouts
+                  <HelpTip id="settings.enrichment_timeouts" />
+                </CardTitle>
+                <CardDescription>
+                  HTTP limits for post-scan enrichment APIs. Bump these if Wayback or Shodan often time out.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {(
+                  [
+                    ["enrichment_http_timeout_sec", "Enrichment HTTP timeout", "settings.timeout_enrichment_http"],
+                    ["wayback_http_timeout_sec", "Wayback CDX timeout", "settings.timeout_wayback"],
+                  ] as const
+                ).map(([key, label, helpId]) => (
+                  <div className="space-y-2" key={key}>
+                    <Label htmlFor={key}>
+                      <LabelWithHelp label={label} helpId={helpId} />
+                    </Label>
+                    <Input
+                      id={key}
+                      type="number"
+                      min="1"
+                      value={Number(sysSettings[key] ?? 0)}
+                      onChange={(e) =>
+                        setSysSettings({
+                          ...sysSettings,
+                          [key]: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle>Traceroute privacy</CardTitle>
+                <CardDescription>Redact local network hops from stored traceroute paths.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div className="flex items-center gap-2 sm:col-span-2">
                   <Switch
                     checked={sysSettings.traceroute_redact_scanner_prefix !== false}

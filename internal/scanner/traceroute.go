@@ -10,15 +10,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/notfixingit3/echostate/internal/config"
 )
 
 const (
-	tracerouteTimeout       = 35 * time.Second
-	vantageLocal              = "local"
-	vantageExternal           = "external"
+	vantageLocal    = "local"
+	vantageExternal = "external"
 )
 
 // HackerTarget discontinued the public traceroute API (returns HTTP 404).
@@ -50,7 +48,7 @@ func gatherTraceroute(ctx context.Context, host string) (string, map[string]any,
 		}, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, tracerouteTimeout)
+	ctx, cancel := context.WithTimeout(ctx, config.GathererTimeout("traceroute"))
 	defer cancel()
 
 	var (

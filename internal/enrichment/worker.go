@@ -18,7 +18,7 @@ import (
 	"github.com/notfixingit3/echostate/internal/webhooks"
 )
 
-const httpTimeout = 12 * time.Second
+
 
 // PendingPayload is stored on new snapshots while async enrichment runs.
 func PendingPayload() map[string]any {
@@ -224,5 +224,5 @@ func loadPreviousEnrichment(ctx context.Context, database *db.DB, targetID, snap
 }
 
 func httpClient() *http.Client {
-	return &http.Client{Timeout: httpTimeout}
+	return &http.Client{Timeout: config.EnrichmentHTTPTimeout()}
 }

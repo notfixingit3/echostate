@@ -246,7 +246,22 @@ export const HELP_COPY: Record<string, string> = {
   "settings.rate_limit": "Maximum API requests per minute per client IP.",
   "settings.scan_concurrency": "Maximum scan jobs processed in parallel by the API worker pool.",
   "settings.scan_timeouts":
-    "Per-gatherer timeouts in seconds. Increase for slow CT or traceroute targets.",
+    "Wall-clock limits for each scan gatherer in seconds. Applied on the next scan after you save.",
+  "settings.timeout_scan_job":
+    "Maximum time for a full scan job before the worker cancels it. Should exceed your slowest gatherer timeouts combined.",
+  "settings.timeout_gatherer":
+    "Default cap for WHOIS, DNS, TLS, web, crawl, and similar gatherers.",
+  "settings.timeout_ct": "HTTP timeout budget for certificate transparency log queries.",
+  "settings.timeout_traceroute": "Time allowed for local traceroute to finish.",
+  "settings.timeout_screenshot": "Time allowed for the headless browser screenshot step.",
+  "settings.enrichment_timeouts":
+    "HTTP timeouts for async enrichment (Shodan, Wayback, VirusTotal, etc.). Increase on slow or high-latency networks.",
+  "settings.timeout_scanner_http":
+    "HTTP timeout for in-scan fetches such as robots.txt, security.txt, and header probes.",
+  "settings.timeout_enrichment_http":
+    "Default HTTP timeout for Shodan, Censys, HIBP, VirusTotal, and other enrichment APIs.",
+  "settings.timeout_wayback":
+    "Separate timeout for Internet Archive CDX lookups, which are often slower than other enrichment calls.",
   "settings.traceroute_redact_scanner_prefix":
     "Strip private LAN hops and the first public ISP hop from local traceroutes before storing results. External vantage paths are unchanged.",
   "settings.traceroute_redact_local_extra_hops":

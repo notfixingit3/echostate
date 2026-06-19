@@ -151,7 +151,7 @@ func mockGatherer(key string, value map[string]any, err error) Gatherer {
 }
 
 func mockTimedGatherer(key string, value map[string]any, err error) timedGatherer {
-	return timedGatherer{timeout: defaultGathererTimeout, fn: mockGatherer(key, value, err)}
+	return timedGatherer{profile: "default", fn: mockGatherer(key, value, err)}
 }
 
 func TestRun_SuccessfulGatherer(t *testing.T) {
@@ -269,7 +269,7 @@ func TestRun_ContextCancellation(t *testing.T) {
 	}
 
 	s := &Scanner{
-		gatherers: []timedGatherer{{timeout: defaultGathererTimeout, fn: blocking}},
+		gatherers: []timedGatherer{{profile: "default", fn: blocking}},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -302,7 +302,7 @@ func TestRun_ContextTimeout(t *testing.T) {
 	}
 
 	s := &Scanner{
-		gatherers: []timedGatherer{{timeout: defaultGathererTimeout, fn: sleepy}},
+		gatherers: []timedGatherer{{profile: "default", fn: sleepy}},
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
