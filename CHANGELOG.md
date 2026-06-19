@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **PDF reports** — Table of contents page, cleaner cover logo, GitHub project URL (replaces echostate.io). Raw WHOIS dump omitted (structured WHOIS/RDAP fields retained).
+
 ### Fixed
 
 - **API multi-arch Docker** — CI cross-compiles linux/amd64 and linux/arm64 on the native runner, then packages per-arch binaries (avoids slow QEMU Go builds).

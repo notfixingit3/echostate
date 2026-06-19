@@ -21,21 +21,26 @@ import (
 )
 
 const (
-	maxCopyrights         = 10
-	maxErrorsShown        = 20
-	maxChangesShown       = 25
-	maxChangeDetails      = 20
-	maxCtSubdomainsShown  = 40
-	maxTracerouteHops     = 30
-	maxTechStackItems     = 20
-	maxJSAssets           = 15
-	maxBuckets            = 20
-	maxCrawlPaths         = 25
-	maxRawWHOISLines      = 500
-	pdfDateFormat         = "2006-01-02 15:04:05 UTC"
-	coverLogoHeight       = 28.0
-	screenshotRowHeight   = 55.0
+	maxCopyrights        = 10
+	maxErrorsShown       = 20
+	maxChangesShown      = 25
+	maxChangeDetails     = 20
+	maxCtSubdomainsShown = 40
+	maxTracerouteHops    = 30
+	maxTechStackItems    = 20
+	maxJSAssets          = 15
+	maxBuckets           = 20
+	maxCrawlPaths        = 25
+	pdfDateFormat        = "2006-01-02 15:04:05 UTC"
+	reportProjectURL     = "https://github.com/notfixingit3/echostate"
+	coverLogoHeight      = 22.0
+	screenshotRowHeight  = 55.0
 )
+
+type reportSection struct {
+	title  string
+	render func(core.Maroto)
+}
 
 // RenderReport renders snapshot reconnaissance data as a PDF using maroto v2.
 func RenderReport(data ReportData) ([]byte, error) {
@@ -57,37 +62,12 @@ func RenderReport(data ReportData) ([]byte, error) {
 
 	m := maroto.New(cfg)
 
+	sections := buildReportSections(data)
 	addCoverPage(m, result)
-	addReportMetadata(m, result, data.ClientIP)
-	addIntelHighlights(m, result, data.PWhois)
-	addChanges(m, data.Changes, data.ChangeDetails)
-	addScreenshot(m, data.ScreenshotJPEG, result.Screenshot)
-	addPWhoisSection(m, data.PWhois, data.PWhoisData)
-	addSectionHeader(m, "WHOIS")
-	addWHOIS(m, result.WHOIS)
-	addSectionHeader(m, "ASN / BGP")
-	addASN(m, result.ASN)
-	addSectionHeader(m, "DNS")
-	addDNS(m, result.DNS)
-	addSectionHeader(m, "TLS / Certificate")
-	addTLS(m, result.TLS)
-	addSectionHeader(m, "Web")
-	addWeb(m, result.Web)
-	addSectionHeader(m, "Favicon")
-	addFavicon(m, result.Favicon)
-	addSectionHeader(m, "Crawl")
-	addCrawl(m, result.Crawl)
-	addSectionHeader(m, "Storage")
-	addStorage(m, result.Storage)
-	addSectionHeader(m, "Certificate Transparency")
-	addCT(m, result.CT)
-	addSectionHeader(m, "Traceroute")
-	addTraceroute(m, result.Traceroute)
-	addEnrichment(m, result.Enrichment)
-
-	if len(result.Errors) > 0 {
-		addSectionHeader(m, "Errors")
-		addErrors(m, result.Errors)
+	addTableOfContents(m, sections)
+	for _, section := range sections {
+		addSectionHeader(m, section.title)
+		section.render(m)
 	}
 
 	doc, err := m.Generate()
@@ -98,6 +78,86 @@ func RenderReport(data ReportData) ([]byte, error) {
 	return doc.GetBytes(), nil
 }
 
+func buildReportSections(data ReportData) []reportSection {
+	result := data.Result
+	sections := []reportSection{
+		{"Report Metadata", func(m core.Maroto) { addReportMetadata(m, result, data.ClientIP) }},
+		{"Intel Highlights", func(m core.Maroto) { addIntelHighlights(m, result, data.PWhois) }},
+	}
+
+	if len(data.Changes) > 0 || len(data.ChangeDetails) > 0 {
+		sections = append(sections, reportSection{
+			"Snapshot Changes",
+			func(m core.Maroto) { addChanges(m, data.Changes, data.ChangeDetails) },
+		})
+	}
+	if len(data.ScreenshotJPEG) > 0 || len(result.Screenshot) > 0 {
+		sections = append(sections, reportSection{
+			"Web Screenshot",
+			func(m core.Maroto) { addScreenshot(m, data.ScreenshotJPEG, result.Screenshot) },
+		})
+	}
+	if len(data.PWhoisData) > 0 || (data.PWhois != nil && data.PWhois.HasData()) {
+		sections = append(sections, reportSection{
+			"Submitter / pWhois",
+			func(m core.Maroto) { addPWhoisSection(m, data.PWhois, data.PWhoisData) },
+		})
+	}
+
+	sections = append(sections,
+		reportSection{"WHOIS", func(m core.Maroto) { addWHOIS(m, result.WHOIS) }},
+		reportSection{"ASN / BGP", func(m core.Maroto) { addASN(m, result.ASN) }},
+		reportSection{"DNS", func(m core.Maroto) { addDNS(m, result.DNS) }},
+		reportSection{"TLS / Certificate", func(m core.Maroto) { addTLS(m, result.TLS) }},
+		reportSection{"Web", func(m core.Maroto) { addWeb(m, result.Web) }},
+		reportSection{"Favicon", func(m core.Maroto) { addFavicon(m, result.Favicon) }},
+		reportSection{"Crawl", func(m core.Maroto) { addCrawl(m, result.Crawl) }},
+		reportSection{"Storage", func(m core.Maroto) { addStorage(m, result.Storage) }},
+		reportSection{"Certificate Transparency", func(m core.Maroto) { addCT(m, result.CT) }},
+		reportSection{"Traceroute", func(m core.Maroto) { addTraceroute(m, result.Traceroute) }},
+	)
+
+	if len(result.Enrichment) > 0 {
+		sections = append(sections, reportSection{
+			"Third-Party Enrichment",
+			func(m core.Maroto) { addEnrichment(m, result.Enrichment) },
+		})
+	}
+	if len(result.Errors) > 0 {
+		sections = append(sections, reportSection{
+			"Errors",
+			func(m core.Maroto) { addErrors(m, result.Errors) },
+		})
+	}
+
+	return sections
+}
+
+func addTableOfContents(m core.Maroto, sections []reportSection) {
+	m.AddRows(row.New(6).Add(col.New(12)))
+	m.AddRows(
+		text.NewRow(12, "Table of Contents", props.Text{
+			Size:  16,
+			Style: fontstyle.Bold,
+		}),
+	)
+	m.AddRows(row.New(4).Add(col.New(12)))
+
+	for i, section := range sections {
+		m.AddRows(
+			text.NewRow(6, fmt.Sprintf("%d.  %s", i+1, section.title), props.Text{Size: 10}),
+		)
+	}
+
+	m.AddRows(row.New(8).Add(col.New(12)))
+	m.AddRows(
+		text.NewRow(5, "Sections follow in order. Use PDF search or page numbers in the footer to jump ahead.", props.Text{
+			Size:  8,
+			Style: fontstyle.Italic,
+		}),
+	)
+}
+
 func addCoverPage(m core.Maroto, result *models.ScanResult) {
 	m.AddRows(row.New(12).Add(col.New(12)))
 
@@ -105,10 +165,10 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 		m.AddRows(
 			image.NewFromBytesRow(coverLogoHeight, logoPNG, extension.Png, props.Rect{
 				Center:  true,
-				Percent: 45,
+				Percent: 18,
 			}),
 		)
-		m.AddRows(row.New(6).Add(col.New(12)))
+		m.AddRows(row.New(4).Add(col.New(12)))
 	}
 
 	m.AddRows(
@@ -145,7 +205,7 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 			Align: align.Center,
 			Style: fontstyle.Italic,
 		}),
-		text.NewRow(6, "Generated by EchoState · echostate.io", props.Text{
+		text.NewRow(6, "Generated by EchoState · "+reportProjectURL, props.Text{
 			Size:  8,
 			Align: align.Center,
 			Style: fontstyle.Italic,
@@ -154,8 +214,6 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 }
 
 func addReportMetadata(m core.Maroto, result *models.ScanResult, clientIP string) {
-	addSectionHeader(m, "Report Metadata")
-
 	addKeyValueRow(m, "Report Generated At", time.Now().UTC().Format(pdfDateFormat))
 	addKeyValueRow(m, "Target", valueOrNA(result.Host))
 
@@ -171,8 +229,6 @@ func addReportMetadata(m core.Maroto, result *models.ScanResult, clientIP string
 }
 
 func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhoisInfo) {
-	addSectionHeader(m, "Intel Highlights")
-
 	addKeyValueRow(m, "Resolved IP", stringVal(result.ASN, "ip"))
 	addKeyValueRow(m, "ASN", stringVal(result.ASN, "asn"))
 	addKeyValueRow(m, "AS Name", stringVal(result.ASN, "as_name"))
@@ -326,8 +382,6 @@ func addPWhoisSection(m core.Maroto, info *PWhoisInfo, data map[string]any) {
 		return
 	}
 
-	addSectionHeader(m, "Submitter / pWhois")
-
 	if info != nil && info.HasData() {
 		addKeyValueRow(m, "Origin AS", valueOrNA(info.OriginAS))
 		addKeyValueRow(m, "Organization", valueOrNA(info.OrgName))
@@ -351,8 +405,6 @@ func addChanges(m core.Maroto, changes []string, details []models.ChangeDetail) 
 	if len(changes) == 0 && len(details) == 0 {
 		return
 	}
-
-	addSectionHeader(m, "Snapshot Changes")
 
 	if len(details) > 0 {
 		addSubheader(m, "Structured changes")
@@ -382,8 +434,6 @@ func addScreenshot(m core.Maroto, jpeg []byte, meta map[string]any) {
 	if len(jpeg) == 0 && len(meta) == 0 {
 		return
 	}
-
-	addSectionHeader(m, "Web Screenshot")
 
 	if len(jpeg) > 0 {
 		m.AddRows(
@@ -441,9 +491,6 @@ func addWHOIS(m core.Maroto, data map[string]any) {
 		}
 	}
 
-	if raw, ok := data["raw"].(string); ok && strings.TrimSpace(raw) != "" {
-		addMultilineBlock(m, "Raw WHOIS Record", raw, maxRawWHOISLines)
-	}
 }
 
 func addASN(m core.Maroto, data map[string]any) {
@@ -851,8 +898,6 @@ func addEnrichment(m core.Maroto, data map[string]any) {
 	if len(data) == 0 {
 		return
 	}
-
-	addSectionHeader(m, "Third-Party Enrichment")
 
 	status := stringVal(data, "status")
 	if status == "pending" {

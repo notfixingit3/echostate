@@ -155,6 +155,64 @@ func TestRenderReport_NilResult(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestBuildReportSections_IncludesConditionalSections(t *testing.T) {
+	result := &models.ScanResult{
+		Host:      "example.com",
+		ScannedAt: time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC),
+		Errors:    []string{"dns timeout"},
+		Enrichment: map[string]any{
+			"status": "completed",
+		},
+	}
+
+	sections := buildReportSections(ReportData{
+		Result: result,
+		Changes: []string{
+			"Changed dns.A",
+		},
+		PWhois: &PWhoisInfo{OrgName: "Example Org"},
+	})
+
+	titles := make([]string, len(sections))
+	for i, section := range sections {
+		titles[i] = section.title
+	}
+
+	assert.Contains(t, titles, "Report Metadata")
+	assert.Contains(t, titles, "WHOIS")
+	assert.Contains(t, titles, "Snapshot Changes")
+	assert.Contains(t, titles, "Submitter / pWhois")
+	assert.Contains(t, titles, "Third-Party Enrichment")
+	assert.Contains(t, titles, "Errors")
+}
+
+func TestRenderReport_OmitsLargeRawWHOIS(t *testing.T) {
+	withRaw := &models.ScanResult{
+		Host:      "example.com",
+		ScannedAt: time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC),
+		WHOIS: map[string]any{
+			"domain":    "example.com",
+			"registrar": "Example Registrar",
+			"raw":       strings.Repeat("Registrar: EXAMPLE\n", 400),
+		},
+	}
+	withoutRaw := &models.ScanResult{
+		Host:      "example.com",
+		ScannedAt: time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC),
+		WHOIS: map[string]any{
+			"domain":    "example.com",
+			"registrar": "Example Registrar",
+		},
+	}
+
+	rawPDF, err := RenderReport(ReportData{Result: withRaw})
+	require.NoError(t, err)
+	leanPDF, err := RenderReport(ReportData{Result: withoutRaw})
+	require.NoError(t, err)
+
+	assert.Less(t, len(rawPDF), len(leanPDF)+50_000, "raw WHOIS should not dominate PDF size")
+}
+
 func TestRenderReport_EnrichmentPending(t *testing.T) {
 	result := &models.ScanResult{
 		Host:      "pending.example",
