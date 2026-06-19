@@ -278,9 +278,7 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
             <Checkbox
               id="wait-for-enrichment"
               checked={waitForEnrichment}
-              onCheckedChange={(checked) =>
-                setWaitForEnrichment(checked === true)
-              }
+              onCheckedChange={(checked) => setWaitForEnrichment(checked)}
             />
             <Label htmlFor="wait-for-enrichment" className="text-sm font-normal">
               Wait for enrichment before generating PDF

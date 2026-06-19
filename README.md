@@ -196,7 +196,7 @@ Paste the printed code at `/login`.
 
 ```bash
 curl http://localhost:8080/health
-# {"status":"ok","env":"development","version":"0.0.1-beta.14"}
+# {"status":"ok","env":"development","version":"0.0.1-beta.37"}
 ```
 
 ### Scan a target
@@ -313,6 +313,15 @@ Pre-release tags containing `beta`, `alpha`, or `rc` are marked as GitHub pre-re
 
 Bump the root `VERSION` file and run `./scripts/sync-version.sh` before tagging. Pin a specific release with `ECHOSTATE_API_IMAGE` / `ECHOSTATE_FRONTEND_IMAGE` in `.env`.
 
+## Third-party software & services
+
+EchoState depends on open-source libraries, Docker images, and many external data APIs (some **free**, some **paid or quota-limited**). See **[THIRD_PARTY.md](THIRD_PARTY.md)** for:
+
+- Direct Go and npm dependency licenses
+- Container image licenses
+- Passive scan data sources (crt.sh, RIPEstat, PeeringDB, etc.)
+- Optional enrichment APIs (Shodan, Censys, HIBP, RiskIQ, VirusTotal) and their cost models
+
 ## License
 
-[MIT](LICENSE)
+EchoState is [MIT](LICENSE). Third-party components are governed by their own licenses — see [THIRD_PARTY.md](THIRD_PARTY.md).

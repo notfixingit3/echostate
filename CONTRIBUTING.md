@@ -34,15 +34,17 @@ Thank you for your interest in contributing.
 
 1. Create a feature branch from `dev`.
 2. Make changes with tests where applicable.
-3. Verify locally:
+3. If you add a dependency, gatherer, or external API integration, update [THIRD_PARTY.md](THIRD_PARTY.md) with license and cost/terms notes.
+
+4. Verify locally:
 
    ```bash
    go test $(go list ./... | grep -v '/frontend/')
    cd frontend && npm run typecheck && npm run build
    ```
 
-4. Open a pull request targeting `dev`.
-5. After review, changes merge to `dev` and are promoted to `main` for release.
+5. Open a pull request targeting `dev`.
+6. After review, changes merge to `dev` and are promoted to `main` for release.
 
 ## Code Style
 

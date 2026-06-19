@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.37] - 2026-06-18
+
+### Added
+
+- **THIRD_PARTY.md** — Direct Go/npm dependency licenses, Docker image terms, and external API cost models (free vs paid enrichment).
+
+### Fixed
+
+- **Missing Checkbox UI component** — Restores `npm run typecheck` / snapshot report “wait for enrichment” control.
+- **Version drift** — `frontend/package.json`, `.env.example`, and README health example synced to current `VERSION`.
+
 ## [0.0.1-beta.36] - 2026-06-18
 
 ### Added
