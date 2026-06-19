@@ -137,6 +137,22 @@ func TestCreateScan_MissingHost(t *testing.T) {
 	require.Contains(t, w.Body.String(), "error")
 }
 
+func TestCreateScan_InvalidHost(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body, _ := json.Marshal(map[string]any{"host": "ipmcom"})
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/scan", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h := &Handler{}
+	h.createScan(c)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Contains(t, w.Body.String(), "domain suffix")
+}
+
 func TestCreateScan_EmptyHost(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -183,6 +199,42 @@ func TestCreateScan_ScannerFailure(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, models.ScanJobFailed, failed.Status)
 	require.Contains(t, failed.ErrorMessage, "scan failed")
+}
+
+func TestCancelScan_PendingJob(t *testing.T) {
+	d := setupTestDB(t)
+	runner := &mockScanRunner{result: &models.ScanResult{Host: "example.com"}}
+	h := newScanTestHandler(t, d, runner)
+	ctx := context.Background()
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body, _ := json.Marshal(map[string]any{"host": "example.com"})
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/scan", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	h.createScan(c)
+	require.Equal(t, http.StatusAccepted, w.Code)
+
+	var job models.ScanJob
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &job))
+
+	w2 := httptest.NewRecorder()
+	c2, _ := gin.CreateTestContext(w2)
+	c2.Request = httptest.NewRequest(http.MethodDelete, "/api/scans/"+job.ID.String(), nil)
+	c2.Params = gin.Params{{Key: "id", Value: job.ID.String()}}
+	h.cancelScan(c2)
+	require.Equal(t, http.StatusOK, w2.Code)
+
+	cancelled, err := h.scanWorker.GetJob(ctx, job.ID)
+	require.NoError(t, err)
+	require.Equal(t, models.ScanJobFailed, cancelled.Status)
+	require.Equal(t, "cancelled by user", cancelled.ErrorMessage)
+
+	processed, err := h.scanWorker.ProcessNext(ctx)
+	require.NoError(t, err)
+	require.False(t, processed)
 }
 
 func TestCreateScan_ValidHost(t *testing.T) {

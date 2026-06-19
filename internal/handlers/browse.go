@@ -166,6 +166,49 @@ func (h *Handler) getTarget(c *gin.Context) {
 	c.JSON(http.StatusOK, detail)
 }
 
+func (h *Handler) deleteTarget(c *gin.Context) {
+	targetID, ok := h.parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	exists, err := h.targetExists(ctx, targetID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify target"})
+		return
+	}
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "target not found"})
+		return
+	}
+
+	if _, err := h.db.Pool.Exec(ctx, `DELETE FROM scan_jobs WHERE target_id = $1`, targetID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete scan jobs"})
+		return
+	}
+
+	tag, err := h.db.Pool.Exec(ctx, `DELETE FROM targets WHERE id = $1`, targetID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete target"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "target not found"})
+		return
+	}
+
+	if h.neo4jClient != nil {
+		go func() {
+			_ = h.neo4jClient.DeleteTarget(context.Background(), targetID.String())
+		}()
+	}
+
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
 func (h *Handler) listTargetSnapshots(c *gin.Context) {
 	targetID, ok := h.parseUUIDParam(c, "id")
 	if !ok {

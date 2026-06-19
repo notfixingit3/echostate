@@ -6,10 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.41] - 2026-06-19
+
+### Added
+
+- **Scan target validation** — Hostnames must include a domain suffix (e.g. `example.com`); bare labels like `ipmcom` are rejected client- and server-side before enqueue.
+- **Cancel scan** — Cancel button on the scan form and `DELETE /api/scans/:id` for pending/running jobs.
+- **Delete target** — Admin trash action on the targets list; removes snapshots, reports, and related scan jobs.
+
 ### Fixed
 
 - **Recovery passkeys** — Recovery codes now route straight to passkey registration and revoke other registered passkeys when the new one is created (one active device set after break-glass recovery).
 - **E2E data safety** — Playwright no longer runs `docker compose down -v` on the default dev project; CI uses isolated `echostate-e2e` volumes.
+- **E2E auth setup** — Login helper waits for hydration before choosing enrollment-code vs passkey step (fixes CI flake on `login-use-code-button`).
 
 ## [0.0.1-beta.40] - 2026-06-19
 

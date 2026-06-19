@@ -30,7 +30,7 @@ export const HELP_COPY: Record<string, string> = {
     "PDF intelligence reports generated from snapshot data. Reports queue asynchronously after you request them.",
 
   "scan.host":
-    "Hostname, IP address, or full URL. EchoState normalizes input and gathers WHOIS, ASN, DNS, TLS, and web intel concurrently.",
+    "Hostname, IP address, or full URL. Hostnames must include a domain suffix (e.g. example.com). EchoState normalizes input and gathers WHOIS, ASN, DNS, TLS, and web intel concurrently.",
   "scan.submit":
     "Queues an async scan job. Poll until complete, then open the target or snapshot detail page.",
   "scan.status":

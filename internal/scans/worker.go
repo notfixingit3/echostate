@@ -20,7 +20,11 @@ const (
 	wakeBufferSize        = 1
 	pollInterval          = 2 * time.Second
 	scanJobTimeout        = 120 * time.Second
+	cancelledByUserMsg    = "cancelled by user"
 )
+
+// ErrScanNotCancellable is returned when a scan job is already finished.
+var ErrScanNotCancellable = fmt.Errorf("scan cannot be cancelled")
 
 // Runner executes a full reconnaissance scan for a host.
 type Runner interface {
@@ -121,6 +125,33 @@ func (w *Worker) CreateJob(ctx context.Context, host, clientIP string) (uuid.UUI
 	}
 
 	return jobID, nil
+}
+
+// CancelJob marks a pending or running scan job as failed (cancelled by user).
+func (w *Worker) CancelJob(ctx context.Context, jobID uuid.UUID) (*models.ScanJob, error) {
+	tag, err := w.db.Pool.Exec(ctx, `
+		UPDATE scan_jobs
+		SET status = $1,
+		    error_message = $2,
+		    updated_at = NOW(),
+		    completed_at = NOW()
+		WHERE id = $3 AND status IN ($4, $5)
+	`, models.ScanJobFailed, cancelledByUserMsg, jobID, models.ScanJobPending, models.ScanJobRunning)
+	if err != nil {
+		return nil, fmt.Errorf("cancel scan job: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		job, err := w.GetJob(ctx, jobID)
+		if err != nil {
+			return nil, err
+		}
+		if job == nil {
+			return nil, nil
+		}
+		return nil, ErrScanNotCancellable
+	}
+
+	return w.GetJob(ctx, jobID)
 }
 
 // GetJob returns a scan job by ID.
@@ -247,6 +278,12 @@ func (w *Worker) runJob(parent context.Context, jobID uuid.UUID, host, clientIP 
 		return
 	}
 
+	if cancelled, err := w.jobWasCancelled(ctx, jobID); err != nil {
+		log.Printf("scan worker: check cancelled %s: %v", jobID, err)
+	} else if cancelled {
+		return
+	}
+
 	snapshot, err := w.persister.PersistScan(ctx, clientIP, result)
 	if err != nil {
 		w.failJob(ctx, jobID, fmt.Sprintf("persist snapshot: %v", err))
@@ -280,6 +317,23 @@ func (w *Worker) failJob(ctx context.Context, jobID uuid.UUID, message string) {
 	if err != nil {
 		log.Printf("scan worker: mark failed %s: %v", jobID, err)
 	}
+}
+
+func (w *Worker) jobWasCancelled(ctx context.Context, jobID uuid.UUID) (bool, error) {
+	var status models.ScanJobStatus
+	var message string
+	err := w.db.Pool.QueryRow(ctx, `
+		SELECT status, COALESCE(error_message, '')
+		FROM scan_jobs
+		WHERE id = $1
+	`, jobID).Scan(&status, &message)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return status == models.ScanJobFailed && message == cancelledByUserMsg, nil
 }
 
 func (w *Worker) failStaleRunning(ctx context.Context) error {

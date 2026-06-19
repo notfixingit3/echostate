@@ -91,20 +91,36 @@ export async function fetchApi<T = unknown>(
   return response.json() as Promise<T>
 }
 
+export type ScanHostOptions = {
+  onStatus?: (status: ScanJobResponse["status"]) => void
+  onJobId?: (jobId: string) => void
+  signal?: AbortSignal
+}
+
 async function waitForScanJob(
   jobId: string,
-  onStatus?: (status: ScanJobResponse["status"]) => void
+  options?: Pick<ScanHostOptions, "onStatus" | "signal">
 ): Promise<ScanJobResponse> {
   const deadline = Date.now() + SCAN_POLL_TIMEOUT_MS
 
   while (Date.now() < deadline) {
-    const job = await fetchApi<ScanJobResponse>(`/api/scans/${jobId}`)
-    onStatus?.(job.status)
+    if (options?.signal?.aborted) {
+      throw new DOMException("Scan cancelled", "AbortError")
+    }
+
+    const job = await fetchApi<ScanJobResponse>(`/api/scans/${jobId}`, {
+      signal: options?.signal,
+    })
+    options?.onStatus?.(job.status)
     if (job.status === "completed" && job.snapshot) {
       return job
     }
     if (job.status === "failed") {
-      throw new ApiError(job.error || "Scan failed", 500)
+      const message =
+        job.error === "cancelled by user"
+          ? "Scan cancelled"
+          : job.error || "Scan failed"
+      throw new ApiError(message, 500)
     }
     await sleep(SCAN_POLL_INTERVAL_MS)
   }
@@ -114,18 +130,20 @@ async function waitForScanJob(
 
 export async function scanHost(
   host: string,
-  onStatus?: (status: ScanJobResponse["status"]) => void
+  options?: ScanHostOptions
 ): Promise<ScanResponse> {
   const job = await fetchApi<ScanJobResponse>("/api/scan", {
     method: "POST",
     body: JSON.stringify({ host }),
+    signal: options?.signal,
   })
-  onStatus?.(job.status)
+  options?.onJobId?.(job.id)
+  options?.onStatus?.(job.status)
 
   const completed =
     job.status === "completed" && job.snapshot
       ? job
-      : await waitForScanJob(job.id, onStatus)
+      : await waitForScanJob(job.id, options)
 
   const snapshot = completed.snapshot
   if (!snapshot) {
@@ -251,6 +269,14 @@ export async function getTarget(target_id: string): Promise<TargetDetail> {
 
 export async function deleteSnapshot(snapshotId: string): Promise<void> {
   await fetchApi(`/api/snapshots/${snapshotId}`, { method: "DELETE" })
+}
+
+export async function deleteTarget(targetId: string): Promise<void> {
+  await fetchApi(`/api/targets/${targetId}`, { method: "DELETE" })
+}
+
+export async function cancelScan(scanId: string): Promise<void> {
+  await fetchApi(`/api/scans/${scanId}`, { method: "DELETE" })
 }
 
 export async function deleteReport(reportId: string): Promise<void> {

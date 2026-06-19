@@ -19,11 +19,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { IntelSummary } from "@/components/intel-summary"
 import {
   scanHost,
+  cancelScan,
   createReport,
   getReport,
   downloadReport,
   ApiError,
 } from "@/lib/api"
+import { validateScanTarget } from "@/lib/validate-host"
 import { extractIntel } from "@/lib/intel"
 import type { ScanResponse, Report } from "@/lib/types"
 import {
@@ -33,6 +35,7 @@ import {
   CheckCircleIcon,
   FileTextIcon,
   DownloadIcon,
+  XIcon,
 } from "lucide-react"
 
 export function ScanForm() {
@@ -53,10 +56,16 @@ export function ScanForm() {
   const [reportError, setReportError] = React.useState<string | null>(null)
   const [isCreatingReport, setIsCreatingReport] = React.useState(false)
   const [withReport, setWithReport] = React.useState(false)
+  const [activeJobId, setActiveJobId] = React.useState<string | null>(null)
+  const abortRef = React.useRef<AbortController | null>(null)
 
   const busy = isLoading || isCreatingReport
 
-  async function runScan(trimmedHost: string, queueReport: boolean) {
+  async function runScan(normalizedHost: string, queueReport: boolean) {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setIsLoading(true)
     setWithReport(queueReport)
     setError(null)
@@ -65,10 +74,13 @@ export function ScanForm() {
     setReportError(null)
     setIsCreatingReport(false)
     setScanStatus(null)
+    setActiveJobId(null)
 
     try {
-      const scanResult = await scanHost(trimmedHost, (status) => {
-        setScanStatus(status)
+      const scanResult = await scanHost(normalizedHost, {
+        signal: controller.signal,
+        onJobId: setActiveJobId,
+        onStatus: setScanStatus,
       })
       setResult(scanResult)
 
@@ -90,6 +102,11 @@ export function ScanForm() {
         }
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("Scan cancelled.")
+        return
+      }
+
       if (err instanceof ApiError && err.status === 429 && typeof err.retryAfter === "number") {
         setError(`Too many scans. Try again in ${err.retryAfter} seconds.`)
         return
@@ -102,32 +119,59 @@ export function ScanForm() {
 
       setError("Something went wrong. Please try again.")
     } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null
+      }
       setIsLoading(false)
       setWithReport(false)
       setScanStatus(null)
+      setActiveJobId(null)
     }
+  }
+
+  function validateHostInput(): string | null {
+    try {
+      return validateScanTarget(host)
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Please enter a valid host, IP address, or URL.")
+      }
+      return null
+    }
+  }
+
+  const handleCancelScan = async () => {
+    abortRef.current?.abort()
+    if (activeJobId) {
+      try {
+        await cancelScan(activeJobId)
+      } catch {
+        // Polling abort still stops the UI; the job may already be finished.
+      }
+    }
+    setIsLoading(false)
+    setWithReport(false)
+    setScanStatus(null)
+    setActiveJobId(null)
+    setError("Scan cancelled.")
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const trimmedHost = host.trim()
-    if (!trimmedHost) {
-      setError("Please enter a host, IP address, or URL.")
-      return
-    }
+    const normalizedHost = validateHostInput()
+    if (!normalizedHost) return
 
-    await runScan(trimmedHost, false)
+    await runScan(normalizedHost, false)
   }
 
   const handleScanAndReport = async () => {
-    const trimmedHost = host.trim()
-    if (!trimmedHost) {
-      setError("Please enter a host, IP address, or URL.")
-      return
-    }
+    const normalizedHost = validateHostInput()
+    if (!normalizedHost) return
 
-    await runScan(trimmedHost, true)
+    await runScan(normalizedHost, true)
   }
 
   const handleGenerateReport = async () => {
@@ -238,6 +282,17 @@ export function ScanForm() {
               </>
             )}
           </Button>
+          {isLoading ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleCancelScan()}
+              data-testid="scan-cancel-button"
+            >
+              <XIcon data-icon="inline-start" />
+              Cancel scan
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="secondary"

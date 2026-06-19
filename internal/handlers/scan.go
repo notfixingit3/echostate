@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -84,6 +85,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 
 	api.POST("/scan", requireScanner, rateLimiter.Middleware(), h.createScan)
 	api.GET("/scans/:id", requireScanner, h.getScan)
+	api.DELETE("/scans/:id", requireScanner, h.cancelScan)
 
 	api.GET("/reports", requireScanner, h.listReports)
 	api.POST("/reports", requireScanner, h.createReport)
@@ -93,6 +95,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 
 	api.GET("/targets", requireScanner, h.listTargets)
 	api.GET("/targets/:id", requireScanner, h.getTarget)
+	api.DELETE("/targets/:id", requireAdmin, h.deleteTarget)
 	api.PUT("/targets/:id/tags", requireAdmin, h.updateTargetTags)
 	api.GET("/targets/:id/snapshots", requireScanner, h.listTargetSnapshots)
 	api.GET("/targets/:id/screenshots", requireScanner, h.listTargetScreenshots)
@@ -180,10 +183,16 @@ func (h *Handler) createScan(c *gin.Context) {
 		return
 	}
 
+	normalized, err := scanner.ValidateScanTarget(req.Host)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	jobID, err := h.scanWorker.CreateJob(ctx, req.Host, c.ClientIP())
+	jobID, err := h.scanWorker.CreateJob(ctx, normalized, c.ClientIP())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("enqueue scan failed: %v", err)})
 		return
@@ -227,6 +236,33 @@ func (h *Handler) getScan(c *gin.Context) {
 		if snapshot != nil {
 			job.Snapshot = snapshot
 		}
+	}
+
+	c.JSON(http.StatusOK, job)
+}
+
+func (h *Handler) cancelScan(c *gin.Context) {
+	jobID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid scan id"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	job, err := h.scanWorker.CancelJob(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, scans.ErrScanNotCancellable) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to cancel scan"})
+		return
+	}
+	if job == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "scan not found"})
+		return
 	}
 
 	c.JSON(http.StatusOK, job)

@@ -201,3 +201,19 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 
 	return err
 }
+
+// DeleteTarget removes a target and its snapshot nodes from the graph.
+func (c *Neo4jClient) DeleteTarget(ctx context.Context, targetID string) error {
+	session := c.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer session.Close(ctx)
+
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		_, err := tx.Run(ctx, `
+			MATCH (t:Target {id: $target_id})
+			OPTIONAL MATCH (t)-[:HAS_SNAPSHOT]->(s:Snapshot)
+			DETACH DELETE s, t
+		`, map[string]any{"target_id": targetID})
+		return nil, err
+	})
+	return err
+}

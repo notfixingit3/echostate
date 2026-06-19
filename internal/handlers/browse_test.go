@@ -384,6 +384,39 @@ func TestListReports_NoFilter(t *testing.T) {
 	require.Len(t, resp.Data, 2)
 }
 
+func TestDeleteTarget_RemovesRowAndSnapshots(t *testing.T) {
+	d := setupTestDB(t)
+	targetID := seedTarget(t, d, "ipmcom")
+	snapshotID := seedSnapshotForTarget(t, d, targetID, map[string]any{"host": "ipmcom"}, "")
+
+	h := &Handler{db: d}
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/targets/"+targetID.String(), nil)
+	c.Params = gin.Params{{Key: "id", Value: targetID.String()}}
+	h.deleteTarget(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), `"deleted":true`)
+
+	ctx := context.Background()
+	var targetExists bool
+	err := d.Pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM targets WHERE id = $1)
+	`, targetID).Scan(&targetExists)
+	require.NoError(t, err)
+	require.False(t, targetExists)
+
+	var snapshotExists bool
+	err = d.Pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM snapshots WHERE id = $1)
+	`, snapshotID).Scan(&snapshotExists)
+	require.NoError(t, err)
+	require.False(t, snapshotExists)
+}
+
 func TestDeleteSnapshot_RemovesRow(t *testing.T) {
 	d := setupTestDB(t)
 	targetID := seedTarget(t, d, "example.com")
