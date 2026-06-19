@@ -174,22 +174,22 @@ Passive recon gaps, wiring fixes, and follow-on UI/PDF/graph work.
 | C22 | HSTS preload check | ✅ Done | beta.35 — hstspreload.org API when HSTS header present |
 | C23 | Cookie name fingerprint | ✅ Done | beta.35 — `web.cookie_names` from Set-Cookie + document (no values) |
 
-### P5 — Reporting, UI & platform wiring
+### P5 — Reporting, UI & platform wiring ✅
 
 New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF renderer**, **snapshot diffs**, **webhooks**, and **Neo4j** where applicable.
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | R1 | Crawl/DNS intel tab fields | ✅ Done | beta.32 — P1 fields in `intel.ts`, intel tabs, and PDF renderer |
-| R2 | PDF enrichment formatting | 🔲 Next | Human-readable Shodan/Censys match summaries (not truncated map dumps) |
-| R3 | PDF “pending enrichment” note | 🔲 Next | Footnote when report generated before async enrichment completes |
+| R2 | PDF enrichment formatting | ✅ Done | beta.36 — Shodan/Censys port lists, vuln IDs, favicon/JARM match host summaries |
+| R3 | PDF “pending enrichment” note | ✅ Done | beta.36 — footnote + unit test when enrichment.status is pending |
 | R4 | Intel highlights parity | ✅ Done | beta.32 — summary cards for security contact, MTA-STS, CAA, redirect hops |
-| R5 | `change_details` for new fields | 🔲 Next | Diff rules for CAA, security.txt, MTA-STS, redirect chain, BIMI, etc. |
-| R6 | Webhook payloads | 🔲 Next | Include new change types in structured webhook entries + alert-rule filters |
-| R7 | Neo4j sync | 🔲 Next | Graph nodes/edges for security.txt contacts, MTA-STS, CAA, Wayback URLs as needed |
-| R8 | README + help copy | 🔲 Next | Document new gatherers in README features list and Settings `help-copy.ts` |
+| R5 | `change_details` for new fields | ✅ Done | beta.36 — CAA, DNSSEC, MTA-STS, TLS-RPT, BIMI, security.txt, redirect, cookies, CT certs, TLS hardening |
+| R6 | Webhook payloads | ✅ Done | beta.36 — mail/DNS security alert preset + expanded match_types help |
+| R7 | Neo4j sync | ✅ Done | beta.36 — SecurityContact, CAA, MTA-STS, DNSSEC, BIMI, WaybackURL nodes |
+| R8 | README + help copy | ✅ Done | beta.36 — README features + intel/help entries for P1–P4 gatherers |
 | R9 | Gatherer unit + integration tests | ✅ Done | beta.32 — parser tests for security.txt, MTA-STS, TLS-RPT, CAA, plain sitemaps, emails |
-| R10 | E2E report coverage | 🔲 Next | Extend Playwright report spec when new PDF sections ship |
+| R10 | E2E report coverage | ✅ Done | beta.36 — Playwright PDF size assertion after full report sections |
 
 ### Explicitly out of scope (unchanged)
 
@@ -206,9 +206,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 87 items (core + graph + platform + P1–P4 batches through beta.35) |
-| **Next** | 1 (P5 wiring backlog: R2–R3, R5–R8, R10) |
+| **Done** | 94 items (core + graph + platform + P1–P5 batches through beta.36) |
+| **Next** | 0 (P5 wiring complete) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 2 (distributed agents, OIDC/RBAC) |
 
-**Suggested next picks:** R5 `change_details` for new fields → R2/R3 PDF polish → R7 Neo4j sync for new intel
+**Suggested next picks:** Collection backlog complete — consider distributed agents or OIDC/RBAC (Later / platform tier)

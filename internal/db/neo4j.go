@@ -171,6 +171,15 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 		if err = syncDNSGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}
+		if err = syncMailDNSIntelGraph(ctx, tx, meta, snapshot.RawData); err != nil {
+			return nil, err
+		}
+		if err = syncCrawlIntelGraph(ctx, tx, meta, snapshot.RawData); err != nil {
+			return nil, err
+		}
+		if err = syncWaybackGraph(ctx, tx, meta, snapshot.RawData); err != nil {
+			return nil, err
+		}
 		if err = syncTracerouteGraph(ctx, tx, meta, snapshot.RawData); err != nil {
 			return nil, err
 		}

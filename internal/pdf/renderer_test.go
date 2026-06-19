@@ -155,6 +155,53 @@ func TestRenderReport_NilResult(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestRenderReport_EnrichmentPending(t *testing.T) {
+	result := &models.ScanResult{
+		Host:      "pending.example",
+		ScannedAt: time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC),
+		Enrichment: map[string]any{
+			"status": "pending",
+		},
+	}
+
+	pdfBytes, err := RenderReport(ReportData{Result: result})
+	require.NoError(t, err)
+	require.NotEmpty(t, pdfBytes)
+	assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF")))
+}
+
+func TestRenderReport_EnrichmentShodanFormatting(t *testing.T) {
+	result := &models.ScanResult{
+		Host:      "shodan.example",
+		ScannedAt: time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC),
+		Enrichment: map[string]any{
+			"status":       "completed",
+			"completed_at": "2026-06-18T12:00:05Z",
+			"shodan": map[string]any{
+				"host": map[string]any{
+					"ip":         "203.0.113.1",
+					"org":        "Example Org",
+					"ports":      []any{80, 443},
+					"vuln_count": 2,
+					"vulns":      []any{"CVE-2024-0001", "CVE-2024-0002"},
+				},
+				"favicon_search": map[string]any{
+					"query": "12345",
+					"total": 3,
+					"matches": []any{
+						map[string]any{"ip_str": "198.51.100.1", "org": "Match Org", "ports": []any{443}},
+					},
+				},
+			},
+		},
+	}
+
+	pdfBytes, err := RenderReport(ReportData{Result: result})
+	require.NoError(t, err)
+	require.NotEmpty(t, pdfBytes)
+	assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF")))
+}
+
 func minimalJPEG(t *testing.T) []byte {
 	t.Helper()
 

@@ -898,13 +898,25 @@ func addEnrichmentProvider(m core.Maroto, provider string, block map[string]any)
 			addKeyValueRow(m, "Organization", stringVal(host, "org"))
 			addKeyValueRow(m, "ISP", stringVal(host, "isp"))
 			addKeyValueRow(m, "ASN", stringVal(host, "asn"))
-			addKeyValueRow(m, "Open Ports", stringVal(host, "ports"))
+			if ports := formatPortList(host["ports"]); ports != "" {
+				addKeyValueRow(m, "Open Ports", ports)
+			}
 			if count := stringVal(host, "vuln_count"); count != "N/A" {
 				addKeyValueRow(m, "Known Vulns", count)
 			}
+			if vulns := stringSlice(host, "vulns"); len(vulns) > 0 {
+				addSubheader(m, "Vulnerability IDs")
+				addBulletItems(m, vulns, maxErrorsShown)
+			}
+			if services := mapSlice(host, "services"); len(services) > 0 {
+				addSubheader(m, "Banner Services")
+				addBulletItems(m, formatEnrichmentServices(services, "shodan"), 0)
+			}
 		}
 		if search, ok := block["favicon_search"].(map[string]any); ok {
-			addKeyValueRow(m, "Favicon Matches", stringVal(search, "total"))
+			addKeyValueRow(m, "Favicon Hash", stringVal(search, "query"))
+			addKeyValueRow(m, "Matching Hosts", stringVal(search, "total"))
+			addBulletItems(m, formatShodanFaviconMatches(search), maxErrorsShown)
 		}
 	case "censys":
 		if host, ok := block["host"].(map[string]any); ok {
@@ -912,19 +924,14 @@ func addEnrichmentProvider(m core.Maroto, provider string, block map[string]any)
 			addKeyValueRow(m, "ASN", stringVal(host, "asn"))
 			addKeyValueRow(m, "AS Name", stringVal(host, "as_name"))
 			if services := mapSlice(host, "services"); len(services) > 0 {
-				var lines []string
-				for i, service := range services {
-					if i >= 6 {
-						lines = append(lines, fmt.Sprintf("... and %d more service(s)", len(services)-6))
-						break
-					}
-					lines = append(lines, fmt.Sprintf("%s:%s %s", stringVal(service, "transport"), stringVal(service, "port"), stringVal(service, "service_name")))
-				}
-				addBulletItems(m, lines, 0)
+				addSubheader(m, "Services")
+				addBulletItems(m, formatEnrichmentServices(services, "censys"), 0)
 			}
 		}
 		if search, ok := block["jarm_search"].(map[string]any); ok {
-			addKeyValueRow(m, "JARM Query", stringVal(search, "query"))
+			addKeyValueRow(m, "JARM Fingerprint", stringVal(search, "query"))
+			addKeyValueRow(m, "Matching Hosts", censysSearchTotal(search))
+			addBulletItems(m, formatCensysJARMHits(search), maxErrorsShown)
 		}
 	case "hibp":
 		addKeyValueRow(m, "Emails Checked", stringVal(block, "checked"))
@@ -1288,4 +1295,139 @@ func truncate(s string, n int) string {
 		return s[:n]
 	}
 	return s[:n-3] + "..."
+}
+
+func formatPortList(raw any) string {
+	switch ports := raw.(type) {
+	case []any:
+		var out []string
+		for _, item := range ports {
+			val := strings.TrimSpace(fmt.Sprint(item))
+			if val != "" && val != "<nil>" {
+				out = append(out, val)
+			}
+		}
+		if len(out) == 0 {
+			return ""
+		}
+		return strings.Join(out, ", ")
+	case []int:
+		var out []string
+		for _, port := range ports {
+			out = append(out, fmt.Sprintf("%d", port))
+		}
+		return strings.Join(out, ", ")
+	default:
+		val := strings.TrimSpace(fmt.Sprint(raw))
+		if val == "" || val == "<nil>" || val == "N/A" {
+			return ""
+		}
+		return val
+	}
+}
+
+func formatEnrichmentServices(services []map[string]any, provider string) []string {
+	var lines []string
+	for i, service := range services {
+		if i >= 6 {
+			lines = append(lines, fmt.Sprintf("... and %d more service(s)", len(services)-6))
+			break
+		}
+		switch provider {
+		case "censys":
+			lines = append(lines, fmt.Sprintf(
+				"%s:%s %s",
+				stringVal(service, "transport"),
+				stringVal(service, "port"),
+				stringVal(service, "service_name"),
+			))
+		default:
+			product := stringVal(service, "product")
+			version := stringVal(service, "version")
+			label := stringVal(service, "service_name")
+			if label == "N/A" {
+				label = product
+			}
+			if version != "N/A" && label != "N/A" {
+				label += " " + version
+			}
+			lines = append(lines, fmt.Sprintf(
+				"%s:%s %s",
+				stringVal(service, "transport"),
+				stringVal(service, "port"),
+				label,
+			))
+		}
+	}
+	return lines
+}
+
+func formatShodanFaviconMatches(search map[string]any) []string {
+	matches := mapSlice(search, "matches")
+	if len(matches) == 0 {
+		return nil
+	}
+	var lines []string
+	for i, match := range matches {
+		if i >= maxErrorsShown {
+			lines = append(lines, fmt.Sprintf("... and %d more host(s)", len(matches)-maxErrorsShown))
+			break
+		}
+		ip := stringVal(match, "ip_str", "ip")
+		org := stringVal(match, "org")
+		ports := formatPortList(match["ports"])
+		line := ip
+		if org != "N/A" {
+			line += " (" + org + ")"
+		}
+		if ports != "" {
+			line += " ports: " + ports
+		}
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+func censysSearchTotal(search map[string]any) string {
+	if total := stringVal(search, "total"); total != "N/A" {
+		return total
+	}
+	if result, ok := search["result"].(map[string]any); ok {
+		if total := stringVal(result, "total"); total != "N/A" {
+			return total
+		}
+	}
+	return "N/A"
+}
+
+func formatCensysJARMHits(search map[string]any) []string {
+	result, _ := search["result"].(map[string]any)
+	if len(result) == 0 {
+		return nil
+	}
+	hits, _ := result["hits"].([]any)
+	if len(hits) == 0 {
+		return nil
+	}
+	var lines []string
+	for i, item := range hits {
+		if i >= maxErrorsShown {
+			lines = append(lines, fmt.Sprintf("... and %d more host(s)", len(hits)-maxErrorsShown))
+			break
+		}
+		row, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		ip := stringVal(row, "ip")
+		if ip == "N/A" {
+			continue
+		}
+		if name := stringVal(row, "name"); name != "N/A" {
+			lines = append(lines, ip+" ("+name+")")
+			continue
+		}
+		lines = append(lines, ip)
+	}
+	return lines
 }

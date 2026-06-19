@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.36] - 2026-06-18
+
+### Added
+
+- **P5 diff rules** — `change_details` for CAA, DNSSEC, MTA-STS, TLS-RPT, BIMI, security.txt contacts, redirect chains, HSTS preload, cookie names, security headers, CT certificates, and TLS version/OCSP changes.
+- **Mail & DNS security alert preset** — Default alert rule and Settings UI preset for mail/DNS/security change types.
+- **Neo4j intel sync** — Security contacts, CAA, MTA-STS, DNSSEC, BIMI, and Wayback URL nodes/edges on snapshot sync.
+- **PDF enrichment polish** — Human-readable Shodan/Censys summaries with port lists, vuln IDs, favicon/JARM match hosts (not raw map dumps).
+
+### Changed
+
+- **Webhooks** — Structured payloads now include the expanded change type catalog; alert-rule filters document new types in help copy.
+- **E2E report spec** — Asserts generated PDF exceeds minimum size after full intel sections ship.
+
 ## [0.0.1-beta.35] - 2026-06-18
 
 ### Added

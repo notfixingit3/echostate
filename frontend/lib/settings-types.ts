@@ -18,8 +18,30 @@ export const GRAPH_DRIFT_TYPES = [
   "graph_traceroute_reordered",
 ]
 
+export const MAIL_SECURITY_CHANGE_TYPES = [
+  "caa_added",
+  "caa_removed",
+  "dnssec_status",
+  "mta_sts_added",
+  "mta_sts_mode",
+  "tls_rpt_added",
+  "tls_rpt_changed",
+  "bimi_added",
+  "dmarc_policy",
+  "mail_posture",
+  "security_txt_added",
+  "security_contact_added",
+  "csp_changed",
+  "hsts_changed",
+  "hsts_preload_status",
+  "tls_ocsp_stapling",
+  "new_ct_certificate",
+  "redirect_chain_changed",
+  "enrichment_hibp_breach",
+]
+
 export const CHANGE_TYPE_HINTS =
-  "cert_expiry, bgp_origin, bgp_hijack_risk, new_ct_subdomain, dmarc_policy, web_title, graph_bgp_origin_added, graph_traceroute_hop_removed"
+  "cert_expiry, bgp_origin, new_ct_subdomain, caa_added, dnssec_status, mta_sts_mode, security_contact_added, redirect_chain_changed, new_ct_certificate, enrichment_hibp_breach, graph_traceroute_hop_removed"
 
 export type AlertRule = {
   id: string

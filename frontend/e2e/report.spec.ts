@@ -45,5 +45,6 @@ test.describe("Report flow", () => {
 
     const buffer = fs.readFileSync(path!)
     expect(buffer.toString("ascii", 0, 4)).toBe("%PDF")
+    expect(buffer.length).toBeGreaterThan(4096)
   })
 })

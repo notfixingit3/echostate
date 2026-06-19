@@ -14,6 +14,7 @@ import { fetchApi } from "@/lib/api"
 import {
   CHANGE_TYPE_HINTS,
   GRAPH_DRIFT_TYPES,
+  MAIL_SECURITY_CHANGE_TYPES,
   defaultSystemSettings,
   type SystemSettings,
   type Webhook,
@@ -399,6 +400,20 @@ export function SettingsSystemPanel() {
                   })}>
                     <PlusIcon data-icon="inline-start" />
                     Add graph drift preset
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setSysSettings({
+                    ...sysSettings,
+                    alert_rules: [...(sysSettings.alert_rules || []), {
+                      id: `rule-mail-${Date.now()}`,
+                      name: "Mail & DNS security",
+                      enabled: true,
+                      min_severity: "info",
+                      match_types: MAIL_SECURITY_CHANGE_TYPES,
+                      webhook_ids: [],
+                    }],
+                  })}>
+                    <PlusIcon data-icon="inline-start" />
+                    Add mail security preset
                   </Button>
                 </div>
               </CardContent>

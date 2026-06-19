@@ -47,7 +47,9 @@ func Compute(previous map[string]any, current *models.ScanResult) []Entry {
 	entries = append(entries, diffCT(previous, currentMap)...)
 	entries = append(entries, diffDMARC(previous, currentMap)...)
 	entries = append(entries, diffMailPosture(previous, currentMap)...)
+	entries = append(entries, diffDNSIntel(previous, currentMap)...)
 	entries = append(entries, diffSOA(previous, currentMap)...)
+	entries = append(entries, diffCrawlIntel(previous, currentMap)...)
 	entries = append(entries, diffWeb(previous, currentMap)...)
 	entries = append(entries, diffGeneric(previous, currentMap)...)
 
@@ -122,6 +124,8 @@ func diffTLS(previous, current map[string]any) []Entry {
 			Summary: "TLS certificate is expired",
 		})
 	}
+
+	entries = append(entries, diffTLSExtended(prevTLS, curTLS)...)
 
 	prevJA3S := stringVal(prevTLS, "ja3s")
 	curJA3S := stringVal(curTLS, "ja3s")
@@ -223,6 +227,7 @@ func diffCT(previous, current map[string]any) []Entry {
 			Detail:  name,
 		})
 	}
+	entries = append(entries, diffCTCertificates(prevCT, curCT)...)
 	return entries
 }
 
@@ -391,6 +396,10 @@ func diffWeb(previous, current map[string]any) []Entry {
 
 	entries = append(entries, diffWordPressPlugins(prevWeb, curWeb)...)
 	entries = append(entries, diffWordPressThemes(prevWeb, curWeb)...)
+	entries = append(entries, diffRedirectChain(prevWeb, curWeb)...)
+	entries = append(entries, diffHSTSPreload(prevWeb, curWeb)...)
+	entries = append(entries, diffCookieNames(prevWeb, curWeb)...)
+	entries = append(entries, diffSecurityHeaders(prevWeb, curWeb)...)
 	return entries
 }
 
@@ -487,7 +496,10 @@ func wordpressVersionSuffix(version string) string {
 }
 
 func diffGeneric(previous, current map[string]any) []Entry {
-	tracked := map[string]bool{"tls": true, "asn": true, "ct": true, "dns": true, "web": true, "screenshot": true, "scanned_at": true, "host": true, "errors": true, "enrichment": true}
+	tracked := map[string]bool{
+		"tls": true, "asn": true, "ct": true, "dns": true, "web": true, "crawl": true,
+		"screenshot": true, "scanned_at": true, "host": true, "errors": true, "enrichment": true,
+	}
 	var entries []Entry
 	for key, curVal := range current {
 		if tracked[key] {

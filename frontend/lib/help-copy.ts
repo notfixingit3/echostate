@@ -157,16 +157,24 @@ export const HELP_COPY: Record<string, string> = {
     "Async third-party enrichment status: pending while Shodan/Censys/HIBP/Wayback run after the scan.",
   "intel.shodan_host": "Shodan host profile for the resolved scan IP (ports, org, vulns).",
   "intel.wayback_urls": "Historical URLs from the Internet Archive CDX index (passive, no crawl).",
-  "settings.virustotal_key":
-    "VirusTotal API key for passive DNS resolution history on scanned domains.",
-  "intel.enrichment_status":
-    "Async third-party enrichment status: pending while Shodan/Censys/HIBP/Wayback run after the scan.",
-  "intel.shodan_host": "Shodan host profile for the resolved scan IP (ports, org, vulns).",
-  "intel.wayback_urls": "Historical URLs from the Internet Archive CDX index (passive, no crawl).",
+  "intel.dnssec":
+    "DNSSEC signing status from DNSKEY/DS lookups (signed vs unsigned).",
+  "intel.caa":
+    "Certificate Authority Authorization records restricting which CAs may issue certs.",
+  "intel.security_txt":
+    "Parsed security.txt contacts, policy URLs, and expiry from /.well-known/security.txt.",
+  "intel.mta_sts":
+    "MTA-STS SMTP transport policy (none, testing, or enforce) from _mta-sts DNS.",
+  "intel.hsts_preload":
+    "hstspreload.org preload list status when Strict-Transport-Security is present.",
+  "intel.cookie_names":
+    "Cookie names observed on the page (values are not stored).",
+  "intel.ct_certificates":
+    "Recent certificate transparency issuances from crt.sh with issuer, serial, and validity.",
   "settings.alert_rules":
     "Filter which change_details events trigger webhook notifications.",
   "settings.alert_match_types":
-    "Comma-separated change types. Leave empty to match all severities above the minimum.",
+    "Comma-separated change types (e.g. caa_added, dnssec_status, security_contact_added). Leave empty to match all severities above the minimum.",
   "settings.alert_webhooks":
     "Limit delivery to specific integrations. Empty means all enabled webhooks.",
   "settings.auth":

@@ -90,6 +90,18 @@ func defaultAlertRules() []AlertRule {
 				"graph_traceroute_hop_added", "graph_traceroute_hop_removed", "graph_traceroute_reordered",
 			},
 		},
+		{
+			ID: "mail-security", Name: "Mail & DNS security", Enabled: true, MinSeverity: "info",
+			MatchTypes: []string{
+				"caa_added", "caa_removed", "dnssec_status",
+				"mta_sts_added", "mta_sts_mode", "tls_rpt_added", "tls_rpt_changed", "tls_rpt_removed",
+				"bimi_added", "bimi_changed", "bimi_removed", "dmarc_policy", "mail_posture",
+				"security_txt_added", "security_txt_removed", "security_contact_added", "security_txt_expires",
+				"csp_changed", "hsts_changed", "hsts_preload_status", "tls_ocsp_stapling",
+				"new_ct_certificate", "redirect_chain_added", "redirect_chain_changed",
+				"enrichment_hibp_breach",
+			},
+		},
 	}
 }
 
