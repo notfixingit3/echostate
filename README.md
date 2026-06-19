@@ -198,7 +198,7 @@ Paste the printed code at `/login`.
 
 ```bash
 curl http://localhost:8080/health
-# {"status":"ok","env":"development","version":"0.0.1-beta.40"}
+# {"status":"ok","env":"development","version":"0.0.1-beta.41"}
 ```
 
 ### Scan a target
