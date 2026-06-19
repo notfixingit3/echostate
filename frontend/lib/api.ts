@@ -6,6 +6,7 @@ import type {
   PaginatedResponse,
   CreateReportRequest,
   TargetDetail,
+  TargetSummary,
 } from "./types"
 
 // Empty string = same-origin /api (Docker nginx proxy). Unset = local dev against :8080.
@@ -269,6 +270,13 @@ export async function getTarget(target_id: string): Promise<TargetDetail> {
 
 export async function deleteSnapshot(snapshotId: string): Promise<void> {
   await fetchApi(`/api/snapshots/${snapshotId}`, { method: "DELETE" })
+}
+
+export async function createTarget(host: string): Promise<TargetSummary> {
+  return fetchApi<TargetSummary>("/api/targets", {
+    method: "POST",
+    body: JSON.stringify({ host }),
+  })
 }
 
 export async function deleteTarget(targetId: string): Promise<void> {

@@ -38,6 +38,8 @@ export const HELP_COPY: Record<string, string> = {
   "scan.status":
     "Shows queued, running, completed, or failed state for the current scan job.",
 
+  "targets.add":
+    "Add a host or IP to surveillance without running a scan. Run a scan from Home or the target detail page when you want intel.",
   "targets.host": "Canonical normalized hostname for this target.",
   "targets.tags": "Labels you assign plus auto-tags such as wordpress when signals are detected.",
   "targets.snapshots": "Number of stored scans for this host.",

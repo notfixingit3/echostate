@@ -34,6 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
   "auth.enrollment_code_issued": "Enrollment code issued",
   "user.create": "User created",
   "user.credential_delete": "Passkey removed",
+  "target.create": "Target added",
   "target.delete": "Target deleted",
   "target.tags_update": "Target tags updated",
   "snapshot.delete": "Snapshot deleted",

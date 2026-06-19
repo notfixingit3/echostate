@@ -13,6 +13,7 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/models"
+	"github.com/notfixingit3/echostate/internal/scanner"
 )
 
 const (
@@ -97,6 +98,79 @@ func (h *Handler) listTargets(c *gin.Context) {
 		Limit: limit,
 		Total: total,
 	})
+}
+
+func (h *Handler) createTarget(c *gin.Context) {
+	var req struct {
+		Host string `json:"host" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	normalized, err := scanner.ValidateScanTarget(req.Host)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	var existed bool
+	err = h.db.Pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM targets WHERE host = $1)
+	`, normalized).Scan(&existed)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check target"})
+		return
+	}
+
+	targetID, err := h.upsertTarget(ctx, normalized)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create target"})
+		return
+	}
+
+	summary, err := h.loadTargetSummary(ctx, targetID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load target"})
+		return
+	}
+
+	if !existed {
+		h.recordAudit(c, audit.ActionTargetCreate, "target", targetID.String(), map[string]any{
+			"host": normalized,
+		})
+		c.JSON(http.StatusCreated, summary)
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
+}
+
+func (h *Handler) loadTargetSummary(ctx context.Context, targetID uuid.UUID) (models.TargetSummary, error) {
+	var summary models.TargetSummary
+	var latestAt *time.Time
+	err := h.db.Pool.QueryRow(ctx, `
+		SELECT t.id, t.host, t.tags, t.created_at,
+			COALESCE((SELECT COUNT(*) FROM snapshots s WHERE s.target_id = t.id), 0) AS snapshot_count,
+			(SELECT MAX(s.scanned_at) FROM snapshots s WHERE s.target_id = t.id) AS latest_snapshot_at,
+			(SELECT s.raw_data->'asn'->>'asn' FROM snapshots s WHERE s.target_id = t.id ORDER BY s.scanned_at DESC LIMIT 1) AS latest_asn,
+			(SELECT s.raw_data->'asn'->>'as_name' FROM snapshots s WHERE s.target_id = t.id ORDER BY s.scanned_at DESC LIMIT 1) AS latest_as_name,
+			(SELECT s.raw_data->'web'->>'title' FROM snapshots s WHERE s.target_id = t.id ORDER BY s.scanned_at DESC LIMIT 1) AS latest_web_title
+		FROM targets t
+		WHERE t.id = $1
+	`, targetID).Scan(
+		&summary.ID, &summary.Host, &summary.Tags, &summary.CreatedAt, &summary.SnapshotCount, &latestAt,
+		&summary.LatestAsn, &summary.LatestAsName, &summary.LatestWebTitle,
+	)
+	if err != nil {
+		return models.TargetSummary{}, err
+	}
+	summary.LatestSnapshotAt = latestAt
+	return summary, nil
 }
 
 func (h *Handler) getTarget(c *gin.Context) {

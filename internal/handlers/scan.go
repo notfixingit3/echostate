@@ -97,6 +97,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.DELETE("/reports/:id", requireScanner, h.deleteReport)
 
 	api.GET("/targets", requireScanner, h.listTargets)
+	api.POST("/targets", requireScanner, h.createTarget)
 	api.GET("/targets/:id", requireScanner, h.getTarget)
 	api.DELETE("/targets/:id", requireAdmin, h.deleteTarget)
 	api.PUT("/targets/:id/tags", requireAdmin, h.updateTargetTags)

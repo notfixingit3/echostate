@@ -25,9 +25,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/components/auth-provider"
 import { useConfirm } from "@/components/confirm-dialog"
-import { fetchApi, deleteTarget, ApiError } from "@/lib/api"
+import { HelpTip } from "@/components/help-tip"
+import { Label } from "@/components/ui/label"
+import { fetchApi, createTarget, deleteTarget, ApiError } from "@/lib/api"
+import { validateScanTarget } from "@/lib/validate-host"
 import type { TargetSummary, PaginatedResponse } from "@/lib/types"
-import { SearchIcon, AlertCircleIcon, Trash2Icon } from "lucide-react"
+import { SearchIcon, AlertCircleIcon, Trash2Icon, PlusIcon } from "lucide-react"
 
 type TargetsResponse = PaginatedResponse<TargetSummary>
 
@@ -44,6 +47,8 @@ export function TargetsTable() {
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [reloadKey, setReloadKey] = React.useState(0)
   const [error, setError] = React.useState<string | null>(null)
+  const [newHost, setNewHost] = React.useState("")
+  const [adding, setAdding] = React.useState(false)
 
   const limit = 20
   const columnCount = canDelete ? 7 : 6
@@ -129,8 +134,66 @@ export function TargetsTable() {
     // The effect will re-fetch because q changed.
   }
 
+  async function handleAddTarget(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+
+    let normalized: string
+    try {
+      normalized = validateScanTarget(newHost)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid host")
+      return
+    }
+
+    setAdding(true)
+    try {
+      const target = await createTarget(normalized)
+      setNewHost("")
+      setPage(1)
+      setReloadKey((key) => key + 1)
+      router.push(`/target?id=${target.id}`)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to add target")
+      }
+    } finally {
+      setAdding(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      <form
+        onSubmit={handleAddTarget}
+        className="flex flex-wrap items-end gap-2"
+        data-testid="add-target-form"
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="add-target-host" className="inline-flex items-center gap-1.5">
+            Add target
+            <HelpTip id="targets.add" />
+          </Label>
+          <Input
+            id="add-target-host"
+            placeholder="example.com or 203.0.113.10"
+            value={newHost}
+            onChange={(event) => setNewHost(event.target.value)}
+            className="w-full min-w-[16rem] max-w-md"
+            data-testid="add-target-host-input"
+            disabled={adding}
+          />
+        </div>
+        <Button type="submit" disabled={adding || !newHost.trim()} data-testid="add-target-submit">
+          <PlusIcon data-icon="inline-start" />
+          Add target
+        </Button>
+      </form>
+
       <form
         onSubmit={handleSearchSubmit}
         className="flex items-center gap-2"

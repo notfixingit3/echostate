@@ -9,6 +9,7 @@ const (
 	ActionEnrollmentCodeIssued = "auth.enrollment_code_issued"
 	ActionUserCreate         = "user.create"
 	ActionCredentialDelete   = "user.credential_delete"
+	ActionTargetCreate       = "target.create"
 	ActionTargetDelete       = "target.delete"
 	ActionTargetTagsUpdate   = "target.tags_update"
 	ActionSnapshotDelete     = "snapshot.delete"
