@@ -224,7 +224,7 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 106 items (core + graph + platform + P1–P6 through beta.41) |
+| **Done** | 106 items (core + graph + platform + P1–P6 through beta.42) |
 | **Next** | 0 (P6 polish complete) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 3 (distributed agents, OIDC/RBAC, P6-3 offline cache) |
