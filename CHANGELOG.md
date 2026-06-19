@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- **Recovery passkeys** — Recovery codes now route straight to passkey registration and revoke other registered passkeys when the new one is created (one active device set after break-glass recovery).
+- **E2E data safety** — Playwright no longer runs `docker compose down -v` on the default dev project; CI uses isolated `echostate-e2e` volumes.
+
 ## [0.0.1-beta.40] - 2026-06-19
 
 ### Added

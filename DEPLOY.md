@@ -21,7 +21,7 @@ Before tagging a release (beta or `v1.0.0`):
 4. Promote `dev` → `main` when shipping stable `:main` images.
 5. Tag with a `v` prefix and push the tag to trigger GHCR binaries/images.
 
-E2E recreates the Docker Compose stack with **fresh volumes** by default so auth, scans, and delete flows run against a clean database.
+E2E reuses your local Compose stack and **does not** run `docker compose down -v` against the default project (dev data is preserved). CI uses an isolated `echostate-e2e` compose project with fresh volumes.
 
 ---
 

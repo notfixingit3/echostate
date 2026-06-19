@@ -12,12 +12,25 @@ const composeFiles = [
   "docker-compose.dev.yml",
 ]
 
+const composeProject =
+  process.env.E2E_COMPOSE_PROJECT?.trim() ||
+  (process.env.CI ? "echostate-e2e" : "")
+
+function composeArgs(): string[] {
+  const args = ["docker", "compose"]
+  if (composeProject) {
+    args.push("-p", composeProject)
+  }
+  args.push(...composeFiles)
+  return args
+}
+
 async function globalTeardown() {
-  // Stop containers only — do not pass -v. Wiping postgres_data destroys the
-  // user's targets, snapshots, and auth users on the same compose project.
+  // Never pass -v here. Local dev uses the default compose project; CI uses
+  // E2E_COMPOSE_PROJECT=echostate-e2e so volumes stay isolated from dev data.
   console.log("[global-teardown] Stopping Docker Compose stack (volumes preserved)...")
   try {
-    execSync(["docker", "compose", ...composeFiles, "down"].join(" "), {
+    execSync(composeArgs().concat(["down"]).join(" "), {
       cwd: projectRoot,
       stdio: "inherit",
       timeout: 120000,

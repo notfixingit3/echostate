@@ -60,10 +60,13 @@ export async function fetchAuthSession(): Promise<AuthSession> {
   return fetchApi<AuthSession>("/api/auth/session")
 }
 
+export type EnrollmentPurpose = "initial" | "device" | "recovery"
+
 export async function verifyEnrollmentCode(code: string) {
   return fetchApi<{
     user: AuthUser
     needs_passkey: boolean
+    purpose: EnrollmentPurpose
     expires_at: string
   }>("/api/auth/enroll/verify", {
     method: "POST",

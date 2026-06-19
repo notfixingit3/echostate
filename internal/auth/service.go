@@ -264,7 +264,12 @@ func (s *Service) IssueEnrollmentCode(ctx context.Context, userID uuid.UUID, cre
 	}, nil
 }
 
-func (s *Service) VerifyEnrollmentCode(ctx context.Context, code, clientIP string) (*User, error) {
+type EnrollmentVerifyResult struct {
+	User    *User
+	Purpose string
+}
+
+func (s *Service) VerifyEnrollmentCode(ctx context.Context, code, clientIP string) (*EnrollmentVerifyResult, error) {
 	settings := s.Settings()
 	normalized := NormalizeEnrollmentInput(code)
 	if normalized == "" {
@@ -275,18 +280,19 @@ func (s *Service) VerifyEnrollmentCode(ctx context.Context, code, clientIP strin
 	var (
 		codeID    uuid.UUID
 		userID    uuid.UUID
+		purpose   string
 		attempts  int
 		firstTry  time.Time
 		expiresAt time.Time
 		usedAt    *time.Time
 	)
 	err := s.db.Pool.QueryRow(ctx, `
-		SELECT id, user_id, attempts, created_at, expires_at, used_at
+		SELECT id, user_id, purpose, attempts, created_at, expires_at, used_at
 		FROM enrollment_codes
 		WHERE code_hash = $1
 		ORDER BY created_at DESC
 		LIMIT 1
-	`, hash).Scan(&codeID, &userID, &attempts, &firstTry, &expiresAt, &usedAt)
+	`, hash).Scan(&codeID, &userID, &purpose, &attempts, &firstTry, &expiresAt, &usedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			_ = s.recordFailedAttempt(ctx, nil, clientIP)
@@ -318,7 +324,10 @@ func (s *Service) VerifyEnrollmentCode(ctx context.Context, code, clientIP strin
 	if err != nil {
 		return nil, err
 	}
-	return user, nil
+	if stringsTrim(purpose) == "" {
+		purpose = PurposeInitial
+	}
+	return &EnrollmentVerifyResult{User: user, Purpose: purpose}, nil
 }
 
 func (s *Service) recordFailedAttempt(ctx context.Context, codeID *uuid.UUID, clientIP string) error {
@@ -329,32 +338,51 @@ func (s *Service) recordFailedAttempt(ctx context.Context, codeID *uuid.UUID, cl
 	return nil
 }
 
-func (s *Service) CreateEnrollmentSession(ctx context.Context, userID uuid.UUID) (string, time.Time, error) {
+func (s *Service) CreateEnrollmentSession(ctx context.Context, userID uuid.UUID, purpose string) (string, time.Time, error) {
 	token, err := NewSessionToken()
 	if err != nil {
 		return "", time.Time{}, err
 	}
+	if stringsTrim(purpose) == "" {
+		purpose = PurposeInitial
+	}
 	expires := time.Now().Add(enrollCookieMinutes * time.Minute)
 	_, err = s.db.Pool.Exec(ctx, `
-		INSERT INTO enrollment_sessions (token_hash, user_id, expires_at)
-		VALUES ($1, $2, $3)
-	`, HashCode(token), userID, expires)
+		INSERT INTO enrollment_sessions (token_hash, user_id, expires_at, purpose)
+		VALUES ($1, $2, $3, $4)
+	`, HashCode(token), userID, expires, purpose)
 	if err != nil {
 		return "", time.Time{}, err
 	}
 	return token, expires, nil
 }
 
-func (s *Service) EnrollmentUser(ctx context.Context, token string) (*User, error) {
-	var userID uuid.UUID
+type EnrollmentSession struct {
+	UserID  uuid.UUID
+	Purpose string
+}
+
+func (s *Service) LookupEnrollmentSession(ctx context.Context, token string) (*EnrollmentSession, error) {
+	var session EnrollmentSession
 	err := s.db.Pool.QueryRow(ctx, `
-		SELECT user_id FROM enrollment_sessions
+		SELECT user_id, purpose FROM enrollment_sessions
 		WHERE token_hash = $1 AND expires_at > NOW()
-	`, HashCode(stringsTrim(token))).Scan(&userID)
+	`, HashCode(stringsTrim(token))).Scan(&session.UserID, &session.Purpose)
 	if err != nil {
 		return nil, err
 	}
-	return s.GetUser(ctx, userID)
+	if stringsTrim(session.Purpose) == "" {
+		session.Purpose = PurposeInitial
+	}
+	return &session, nil
+}
+
+func (s *Service) EnrollmentUser(ctx context.Context, token string) (*User, error) {
+	session, err := s.LookupEnrollmentSession(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetUser(ctx, session.UserID)
 }
 
 func (s *Service) DeleteEnrollmentSession(ctx context.Context, token string) error {
@@ -562,6 +590,14 @@ func (s *Service) UpdateUserProfile(ctx context.Context, userID uuid.UUID, updat
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (s *Service) DeleteAllCredentialsExcept(ctx context.Context, userID uuid.UUID, keepCredentialID []byte) error {
+	_, err := s.db.Pool.Exec(ctx, `
+		DELETE FROM webauthn_credentials
+		WHERE user_id = $1 AND credential_id <> $2
+	`, userID, keepCredentialID)
+	return err
 }
 
 func (s *Service) DeleteCredential(ctx context.Context, userID, credID uuid.UUID) error {

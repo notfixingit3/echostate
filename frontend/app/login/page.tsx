@@ -16,6 +16,7 @@ import {
   registerPasskey,
   storeUserId,
   verifyEnrollmentCode,
+  type EnrollmentPurpose,
 } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 
@@ -28,6 +29,7 @@ export default function LoginPage() {
   const [code, setCode] = React.useState("")
   const [nickname, setNickname] = React.useState("")
   const [pendingUserId, setPendingUserId] = React.useState<string | null>(null)
+  const [enrollPurpose, setEnrollPurpose] = React.useState<EnrollmentPurpose | null>(null)
   const [step, setStep] = React.useState<Step>("passkey")
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
@@ -51,10 +53,15 @@ export default function LoginPage() {
     try {
       const result = await verifyEnrollmentCode(code.trim())
       setPendingUserId(result.user.id)
+      setEnrollPurpose(result.purpose)
       storeUserId(result.user.id)
       setStoredUserId(result.user.id)
 
-      if (result.needs_passkey) {
+      if (
+        result.needs_passkey ||
+        result.purpose === "recovery" ||
+        result.purpose === "device"
+      ) {
         setStep("register")
         return
       }
@@ -113,6 +120,7 @@ export default function LoginPage() {
     clearStoredUserId()
     setStoredUserId(null)
     setPendingUserId(null)
+    setEnrollPurpose(null)
     setStep("code")
     setError(null)
   }
@@ -242,7 +250,11 @@ export default function LoginPage() {
         {step === "register" ? (
           <form onSubmit={handleRegisterPasskey} className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Register a passkey for this device. You can add more devices later in Profile.
+              {enrollPurpose === "recovery"
+                ? "Recovery code accepted. Register a new passkey for this device. Other registered passkeys will be revoked."
+                : enrollPurpose === "device"
+                  ? "Device code accepted. Register a passkey for this device."
+                  : "Register a passkey for this device. You can add more devices later in Profile."}
             </p>
             <div className="space-y-2">
               <Label htmlFor="nickname">Device nickname (optional)</Label>

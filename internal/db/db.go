@@ -302,6 +302,7 @@ func Migrate(db *DB) error {
 
 		ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'UTC';
 		ALTER TABLE users ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'system';
+		ALTER TABLE enrollment_sessions ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'initial';
 	`)
 	if err != nil {
 		return fmt.Errorf("execute migrations: %w", err)

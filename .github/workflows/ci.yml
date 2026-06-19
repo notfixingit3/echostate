@@ -147,6 +147,8 @@ jobs:
         run: npm run test:e2e
         env:
           CI: true
+          E2E_COMPOSE_PROJECT: echostate-e2e
+          E2E_FRESH_STACK: "1"
 
       - name: Upload Playwright report
         if: failure()

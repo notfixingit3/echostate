@@ -279,11 +279,11 @@ go test $(go list ./... | grep -v '/frontend/')
 # Frontend
 cd frontend && npm run typecheck && npm run build
 
-# E2E (recreates compose stack with fresh volumes; allow ~15–30 min first run)
+# E2E (reuses your local compose stack and preserves DB volumes; allow ~15–30 min first run)
 cd frontend && npm run test:e2e
 
-# Faster local re-runs against an existing stack (requires ECHOSTATE_BREAK_GLASS_SECRET in .env)
-E2E_REUSE_STACK=1 npm run test:e2e
+# Isolated fresh stack (does not touch dev postgres_data)
+E2E_COMPOSE_PROJECT=echostate-e2e E2E_FRESH_STACK=1 npm run test:e2e
 ```
 
 See [DEPLOY.md](DEPLOY.md) for production deployment, backup, and the pre-release checklist.

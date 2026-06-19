@@ -54,7 +54,7 @@ func (h *Handler) enrollVerify(c *gin.Context) {
 		return
 	}
 
-	user, err := h.auth.VerifyEnrollmentCode(c.Request.Context(), req.Code, c.ClientIP())
+	verified, err := h.auth.VerifyEnrollmentCode(c.Request.Context(), req.Code, c.ClientIP())
 	if err != nil {
 		status := http.StatusUnauthorized
 		if err == auth.ErrTooManyAttempts {
@@ -64,19 +64,20 @@ func (h *Handler) enrollVerify(c *gin.Context) {
 		return
 	}
 
-	token, expires, err := h.auth.CreateEnrollmentSession(c.Request.Context(), user.ID)
+	token, expires, err := h.auth.CreateEnrollmentSession(c.Request.Context(), verified.User.ID, verified.Purpose)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start enrollment"})
 		return
 	}
 
-	creds, _ := h.auth.ListCredentials(c.Request.Context(), user.ID)
+	creds, _ := h.auth.ListCredentials(c.Request.Context(), verified.User.ID)
 	needsPasskey := len(creds) == 0
 
 	setEnrollCookie(c, token, expires, h.config.Env == "production")
 	c.JSON(http.StatusOK, gin.H{
-		"user":          user,
+		"user":          verified.User,
 		"needs_passkey": needsPasskey,
+		"purpose":       verified.Purpose,
 		"expires_at":    expires,
 	})
 }
@@ -131,6 +132,11 @@ func (h *Handler) webauthnRegisterFinish(c *gin.Context) {
 	}
 
 	if token, err := c.Cookie(auth.EnrollCookieName); err == nil && token != "" {
+		if session, lookupErr := h.auth.LookupEnrollmentSession(c.Request.Context(), token); lookupErr == nil {
+			if session.Purpose == auth.PurposeRecovery {
+				_ = h.auth.DeleteAllCredentialsExcept(c.Request.Context(), userID, cred.ID)
+			}
+		}
 		_ = h.auth.DeleteEnrollmentSession(c.Request.Context(), token)
 		clearEnrollCookie(c, h.config.Env == "production")
 	}
@@ -170,7 +176,7 @@ func (h *Handler) webauthnLoginBegin(c *gin.Context) {
 	options, challengeID, err := h.auth.BeginLogin(c.Request.Context(), userID)
 	if err != nil {
 		if err == auth.ErrNoCredentials {
-			token, expires, err2 := h.auth.CreateEnrollmentSession(c.Request.Context(), userID)
+			token, expires, err2 := h.auth.CreateEnrollmentSession(c.Request.Context(), userID, auth.PurposeInitial)
 			if err2 != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start enrollment"})
 				return
