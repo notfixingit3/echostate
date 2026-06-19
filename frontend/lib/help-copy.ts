@@ -139,6 +139,10 @@ export const HELP_COPY: Record<string, string> = {
   "settings.scan_concurrency": "Maximum scan jobs processed in parallel by the API worker pool.",
   "settings.scan_timeouts":
     "Per-gatherer timeouts in seconds. Increase for slow CT or traceroute targets.",
+  "settings.traceroute_redact_scanner_prefix":
+    "Strip private LAN hops and the first public ISP hop from local traceroutes before storing results. External vantage paths are unchanged.",
+  "settings.traceroute_redact_local_extra_hops":
+    "Additional local hops to hide after the automatic scanner-prefix redaction (0 = none).",
   "settings.retention":
     "Per-target snapshot keep-N policy. Older snapshots are pruned after each scan.",
   "settings.scheduler":

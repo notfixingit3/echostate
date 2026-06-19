@@ -693,10 +693,19 @@ export function IntelPanels({
               Network path
             </CardTitle>
             <CardDescription>
-              Hop-by-hop path from the scanner host to the resolved destination.
+              Hop-by-hop path toward the resolved destination. Local scanner hops on
+              your LAN/ISP are redacted by default; external vantage is unchanged.
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {typeof raw?.traceroute?.local_prefix_redacted === "number" &&
+            raw.traceroute.local_prefix_redacted > 0 ? (
+              <p className="mb-4 text-xs text-muted-foreground">
+                First {raw.traceroute.local_prefix_redacted} local hop
+                {raw.traceroute.local_prefix_redacted === 1 ? "" : "s"} hidden
+                (scanner network).
+              </p>
+            ) : null}
             {typeof raw?.traceroute?.skipped === "string" ? (
               <p className="text-sm text-muted-foreground">{raw.traceroute.skipped}</p>
             ) : (

@@ -70,6 +70,8 @@ export type SystemSettings = {
   default_gatherer_timeout_sec?: number
   ct_http_timeout_sec?: number
   traceroute_timeout_sec?: number
+  traceroute_redact_scanner_prefix?: boolean
+  traceroute_redact_local_extra_hops?: number
   screenshot_timeout_sec?: number
   retention_max_snapshots?: number
   schedule_enabled?: boolean
@@ -97,6 +99,8 @@ export const defaultSystemSettings = (): SystemSettings => ({
   default_gatherer_timeout_sec: 20,
   ct_http_timeout_sec: 60,
   traceroute_timeout_sec: 40,
+  traceroute_redact_scanner_prefix: true,
+  traceroute_redact_local_extra_hops: 0,
   screenshot_timeout_sec: 25,
   retention_max_snapshots: 0,
   schedule_enabled: false,

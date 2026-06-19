@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/notfixingit3/echostate/internal/config"
 )
 
 const (
@@ -70,6 +72,7 @@ func gatherTraceroute(ctx context.Context, host string) (string, map[string]any,
 	wg.Wait()
 
 	localHops := parseTracerouteOutput(localOutput)
+	localHops, localPrefixRedacted := redactScannerTraceroutePrefix(localHops)
 	enrichHopGeo(ctx, localHops)
 
 	externalHops := parseTracerouteOutput(extOutput)
@@ -79,12 +82,18 @@ func gatherTraceroute(ctx context.Context, host string) (string, map[string]any,
 		buildVantageResult(vantageLocal, "Local scanner", "traceroute", localHops, localErr),
 		buildVantageResult(vantageExternal, "External vantage", "remote-api", externalHops, extErr),
 	}
+	if localPrefixRedacted > 0 && len(vantages) > 0 {
+		vantages[0]["prefix_redacted"] = localPrefixRedacted
+	}
 
 	result := map[string]any{
 		"destination": host,
 		"hops":        localHops,
 		"hop_count":   len(localHops),
 		"vantages":    vantages,
+	}
+	if localPrefixRedacted > 0 {
+		result["local_prefix_redacted"] = localPrefixRedacted
 	}
 
 	var warnings []string
@@ -110,6 +119,71 @@ func gatherTraceroute(ctx context.Context, host string) (string, map[string]any,
 	}
 
 	return "traceroute", result, nil
+}
+
+func redactScannerTraceroutePrefix(hops []map[string]any) ([]map[string]any, int) {
+	settings := config.GetSettings()
+	if !config.TracerouteRedactScannerPrefixEnabled(settings) {
+		return hops, 0
+	}
+
+	skip := 0
+	for skip < len(hops) {
+		if isScannerPrefixHop(hops[skip]) {
+			skip++
+			continue
+		}
+		break
+	}
+
+	// Hide the first public hop after local/private hops when it is not the destination.
+	if skip < len(hops)-1 && !hopTimedOut(hops[skip]) {
+		ip := stringProp(hops[skip], "ip")
+		if parsed := net.ParseIP(ip); parsed != nil && !isNonPublicScannerHop(parsed) {
+			skip++
+		}
+	}
+
+	extra := settings.TracerouteRedactLocalExtraHops
+	if extra > 0 {
+		skip += extra
+	}
+	if skip <= 0 {
+		return hops, 0
+	}
+	if skip >= len(hops) {
+		return nil, skip
+	}
+
+	trimmed := append([]map[string]any(nil), hops[skip:]...)
+	renumberTracerouteHops(trimmed)
+	return trimmed, skip
+}
+
+func isScannerPrefixHop(hop map[string]any) bool {
+	if hopTimedOut(hop) {
+		return true
+	}
+	ip := stringProp(hop, "ip")
+	if ip == "" {
+		return true
+	}
+	parsed := net.ParseIP(ip)
+	return parsed != nil && isNonPublicScannerHop(parsed)
+}
+
+func hopTimedOut(hop map[string]any) bool {
+	return hop["timeout"] == true
+}
+
+func isNonPublicScannerHop(ip net.IP) bool {
+	return ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast()
+}
+
+func renumberTracerouteHops(hops []map[string]any) {
+	for index, hop := range hops {
+		hop["hop"] = index + 1
+	}
 }
 
 func buildVantageResult(id, label, source string, hops []map[string]any, err error) map[string]any {

@@ -225,6 +225,46 @@ export function SettingsSystemPanel() {
                     />
                   </div>
                 ))}
+                <div className="flex items-center gap-2 sm:col-span-2">
+                  <Switch
+                    checked={sysSettings.traceroute_redact_scanner_prefix !== false}
+                    onCheckedChange={(checked) =>
+                      setSysSettings({
+                        ...sysSettings,
+                        traceroute_redact_scanner_prefix: checked,
+                      })
+                    }
+                    id="traceroute_redact_scanner_prefix"
+                  />
+                  <Label htmlFor="traceroute_redact_scanner_prefix">
+                    <LabelWithHelp
+                      label="Hide scanner network in local traceroutes"
+                      helpId="settings.traceroute_redact_scanner_prefix"
+                    />
+                  </Label>
+                </div>
+                {sysSettings.traceroute_redact_scanner_prefix !== false ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="traceroute_redact_local_extra_hops">
+                      <LabelWithHelp
+                        label="Extra local hops to hide"
+                        helpId="settings.traceroute_redact_local_extra_hops"
+                      />
+                    </Label>
+                    <Input
+                      id="traceroute_redact_local_extra_hops"
+                      type="number"
+                      min="0"
+                      value={Number(sysSettings.traceroute_redact_local_extra_hops ?? 0)}
+                      onChange={(e) =>
+                        setSysSettings({
+                          ...sysSettings,
+                          traceroute_redact_local_extra_hops: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
       

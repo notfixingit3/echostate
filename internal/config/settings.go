@@ -30,7 +30,9 @@ type SystemSettings struct {
 	ScanJobTimeoutSec         int         `json:"scan_job_timeout_sec"`
 	DefaultGathererTimeoutSec int         `json:"default_gatherer_timeout_sec"`
 	CTHTTPTimeoutSec          int         `json:"ct_http_timeout_sec"`
-	TracerouteTimeoutSec      int         `json:"traceroute_timeout_sec"`
+	TracerouteTimeoutSec           int  `json:"traceroute_timeout_sec"`
+	TracerouteRedactScannerPrefix  *bool `json:"traceroute_redact_scanner_prefix,omitempty"`
+	TracerouteRedactLocalExtraHops int  `json:"traceroute_redact_local_extra_hops,omitempty"`
 	ScreenshotTimeoutSec      int         `json:"screenshot_timeout_sec"`
 	RetentionMaxSnapshots     int         `json:"retention_max_snapshots"`
 	ScheduleEnabled           bool        `json:"schedule_enabled"`
@@ -115,6 +117,13 @@ func UpdateSettings(s SystemSettings) {
 	settingsMu.Lock()
 	GlobalSettings = normalizeSettings(s)
 	settingsMu.Unlock()
+}
+
+func TracerouteRedactScannerPrefixEnabled(s SystemSettings) bool {
+	if s.TracerouteRedactScannerPrefix == nil {
+		return true
+	}
+	return *s.TracerouteRedactScannerPrefix
 }
 
 func normalizeSettings(s SystemSettings) SystemSettings {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/notfixingit3/echostate/internal/config"
 )
 
 func TestParseTracerouteOutput(t *testing.T) {
@@ -51,6 +53,61 @@ func TestGatherTraceroute_SkipsIP(t *testing.T) {
 	}
 }
 
+func TestRedactScannerTraceroutePrefix_PrivateAndISP(t *testing.T) {
+	enabled := true
+	config.UpdateSettings(config.SystemSettings{TracerouteRedactScannerPrefix: &enabled})
+
+	hops := []map[string]any{
+		{"hop": 1, "ip": "192.168.1.1", "rtt_ms": 1.0},
+		{"hop": 2, "ip": "203.0.113.10", "rtt_ms": 5.0},
+		{"hop": 3, "ip": "93.184.216.34", "rtt_ms": 10.0},
+	}
+
+	trimmed, redacted := redactScannerTraceroutePrefix(hops)
+	if redacted != 2 {
+		t.Fatalf("redacted = %d, want 2", redacted)
+	}
+	if len(trimmed) != 1 {
+		t.Fatalf("len(trimmed) = %d, want 1", len(trimmed))
+	}
+	if trimmed[0]["hop"] != 1 || trimmed[0]["ip"] != "93.184.216.34" {
+		t.Fatalf("unexpected trimmed hop: %#v", trimmed[0])
+	}
+}
+
+func TestRedactScannerTraceroutePrefix_Disabled(t *testing.T) {
+	disabled := false
+	config.UpdateSettings(config.SystemSettings{TracerouteRedactScannerPrefix: &disabled})
+
+	hops := []map[string]any{
+		{"hop": 1, "ip": "192.168.1.1"},
+		{"hop": 2, "ip": "93.184.216.34"},
+	}
+
+	trimmed, redacted := redactScannerTraceroutePrefix(hops)
+	if redacted != 0 || len(trimmed) != 2 {
+		t.Fatalf("expected unchanged hops, got redacted=%d len=%d", redacted, len(trimmed))
+	}
+}
+
+func TestRedactScannerTraceroutePrefix_ShortPathKeepsDestination(t *testing.T) {
+	enabled := true
+	config.UpdateSettings(config.SystemSettings{TracerouteRedactScannerPrefix: &enabled})
+
+	hops := []map[string]any{
+		{"hop": 1, "ip": "192.168.1.1"},
+		{"hop": 2, "ip": "93.184.216.34"},
+	}
+
+	trimmed, redacted := redactScannerTraceroutePrefix(hops)
+	if redacted != 1 {
+		t.Fatalf("redacted = %d, want 1", redacted)
+	}
+	if len(trimmed) != 1 || trimmed[0]["ip"] != "93.184.216.34" {
+		t.Fatalf("unexpected trimmed hops: %#v", trimmed)
+	}
+}
+
 func TestGatherTraceroute_FromMockOutput(t *testing.T) {
 	orig := runTracerouteFunc
 	defer func() { runTracerouteFunc = orig }()
@@ -69,8 +126,14 @@ func TestGatherTraceroute_FromMockOutput(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected hops slice, got %#v", data["hops"])
 	}
-	if len(hops) != 2 {
-		t.Fatalf("len(hops) = %d, want 2", len(hops))
+	if len(hops) != 1 {
+		t.Fatalf("len(hops) = %d, want 1", len(hops))
+	}
+	if hops[0]["ip"] != "93.184.216.34" {
+		t.Fatalf("unexpected destination hop: %#v", hops[0])
+	}
+	if data["local_prefix_redacted"] != 1 {
+		t.Fatalf("local_prefix_redacted = %#v, want 1", data["local_prefix_redacted"])
 	}
 }
 
