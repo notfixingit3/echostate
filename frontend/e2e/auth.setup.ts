@@ -22,6 +22,6 @@ setup("authenticate admin with passkey", async ({ page }) => {
 
   await enableWebAuthn(page)
   await loginWithEnrollmentCode(page, bootstrap)
-  await page.getByTestId("nav-link-profile").waitFor({ state: "visible", timeout: 30_000 })
+  await page.getByTestId("nav-account-menu").waitFor({ state: "visible", timeout: 30_000 })
   await page.context().storageState({ path: storageStateFile })
 })

@@ -6,16 +6,26 @@ import { usePathname } from "next/navigation"
 import { BrandLogo } from "@/components/brand-logo"
 import { Button } from "@/components/ui/button"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { Separator } from "@/components/ui/separator"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/components/auth-provider"
 import { cn } from "@/lib/utils"
-import { LogOutIcon, MenuIcon } from "lucide-react"
+import { ChevronDownIcon, LogOutIcon, MenuIcon, UserIcon } from "lucide-react"
 
 const appNavLinks = [
   { href: "/", label: "Home" },
@@ -29,9 +39,7 @@ const appNavLinks = [
 
 function isNavLinkActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/"
-  if (href === "/admin") {
-    return pathname.startsWith("/admin") && !pathname.startsWith("/admin/system")
-  }
+  if (href === "/admin") return pathname.startsWith("/admin")
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
@@ -41,10 +49,8 @@ export function Nav() {
 
   const navLinks = [
     ...appNavLinks,
-    ...(user?.role === "admin" ? [{ href: "/admin", label: "Admin" as const }] : []),
-    ...(user ? [{ href: "/profile", label: "Profile" as const }] : []),
     ...(user?.role === "admin"
-      ? [{ href: "/admin/system", label: "Settings" as const }]
+      ? [{ href: "/admin", label: "Server settings" as const }]
       : []),
   ]
 
@@ -68,7 +74,7 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  data-testid={`nav-link-${link.label.toLowerCase()}`}
+                  data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
                   className={cn(
                     "rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
                     isActive
@@ -82,11 +88,46 @@ export function Nav() {
             })}
           </nav>
           {user ? (
-            <div className="hidden items-center gap-2 md:flex">
-              <Button variant="ghost" size="sm" onClick={() => void signOut()}>
-                <LogOutIcon data-icon="inline-start" />
-                Sign out
-              </Button>
+            <div className="hidden md:flex">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      data-testid="nav-account-menu"
+                      className="max-w-48"
+                    />
+                  }
+                >
+                  <span className="truncate">{user.display_name}</span>
+                  <ChevronDownIcon data-icon="inline-end" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-40">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="truncate">
+                      {user.display_name}
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      render={
+                        <Link href="/profile" data-testid="nav-account-profile" />
+                      }
+                    >
+                      <UserIcon />
+                      Profile
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => void signOut()}
+                    data-testid="nav-account-sign-out"
+                  >
+                    <LogOutIcon />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ) : config?.auth_required ? (
             <Button
@@ -133,11 +174,25 @@ export function Nav() {
               })}
               {user ? (
                 <>
-                  <div className="my-2 border-t border-border/60" />
+                  <Separator className="my-2" />
+                  <p className="truncate px-3 py-1 text-xs font-medium text-muted-foreground">
+                    {user.display_name}
+                  </p>
+                  <Button
+                    variant={pathname === "/profile" ? "secondary" : "ghost"}
+                    className="justify-start"
+                    render={
+                      <Link href="/profile" data-testid="nav-account-profile" />
+                    }
+                  >
+                    <UserIcon data-icon="inline-start" />
+                    Profile
+                  </Button>
                   <Button
                     variant="ghost"
                     className="justify-start"
                     onClick={() => void signOut()}
+                    data-testid="nav-account-sign-out"
                   >
                     <LogOutIcon data-icon="inline-start" />
                     Sign out

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.45] - 2026-06-19
+
+### Added
+
+- **Add target** — Create a target from the Targets page without running a scan (`POST /api/targets`, scanner+).
+- **Account menu** — Profile and Sign out combined in a dropdown on the signed-in user's display name.
+
+### Changed
+
+- **Top navigation** — Admins see a single **Server settings** link (replaces duplicate Admin/Settings entries).
+
 ## [0.0.1-beta.44] - 2026-06-19
 
 ### Added
