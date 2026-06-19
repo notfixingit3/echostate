@@ -163,7 +163,13 @@ export default function LoginPage() {
                 <span className="bg-card px-2 text-muted-foreground">or</span>
               </div>
             </div>
-            <Button type="button" variant="outline" className="w-full" onClick={() => setStep("code")}>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              data-testid="login-use-code-button"
+              onClick={() => setStep("code")}
+            >
               Use enrollment or recovery code
             </Button>
             {storedUserId ? (
@@ -186,9 +192,15 @@ export default function LoginPage() {
                   placeholder={`${codeLength}-digit code or recovery code`}
                   autoComplete="one-time-code"
                   inputMode="text"
+                  data-testid="login-code-input"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={busy || !code.trim()}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={busy || !code.trim()}
+                data-testid="login-verify-code-button"
+              >
                 {busy ? "Verifying..." : "Verify code"}
               </Button>
             </form>
@@ -214,7 +226,14 @@ export default function LoginPage() {
               <KeyRoundIcon data-icon="inline-start" />
               Sign in with passkey
             </Button>
-            <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={() => setStep("register")}>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={busy}
+              data-testid="login-register-passkey-button"
+              onClick={() => setStep("register")}
+            >
               Register passkey on this device
             </Button>
           </div>
@@ -234,7 +253,7 @@ export default function LoginPage() {
                 placeholder="MacBook, YubiKey, phone…"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={busy}>
+            <Button type="submit" className="w-full" disabled={busy} data-testid="login-create-passkey-button">
               <KeyRoundIcon data-icon="inline-start" />
               {busy ? "Registering..." : "Create passkey"}
             </Button>

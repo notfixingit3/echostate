@@ -41,7 +41,10 @@ Thank you for your interest in contributing.
    ```bash
    go test $(go list ./... | grep -v '/frontend/')
    cd frontend && npm run typecheck && npm run build
+   cd frontend && npm run test:e2e
    ```
+
+   E2E boots the full Docker Compose stack (see `frontend/e2e/global-setup.ts`), bootstraps an admin, registers a virtual passkey, then runs smoke, auth, delete, and report specs. CI runs the same suite on every `dev` / `main` push.
 
 5. Open a pull request targeting `dev`.
 6. After review, changes merge to `dev` and are promoted to `main` for release.

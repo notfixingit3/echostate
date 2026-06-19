@@ -1,6 +1,9 @@
-import { execSync, spawn } from "child_process"
+import { execSync } from "child_process"
+import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
+
+import { authDir, bootstrapAuthFile } from "./helpers/paths"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -11,20 +14,19 @@ const composeFiles = [
   "-f",
   "docker-compose.dev.yml",
 ]
+const composeCmd = ["docker", "compose", ...composeFiles].join(" ")
+const reuseStack = process.env.E2E_REUSE_STACK === "1"
 
 async function waitForHealth(maxSeconds = 180): Promise<void> {
   const deadline = Date.now() + maxSeconds * 1000
 
   while (Date.now() < deadline) {
     try {
-      execSync(
-        "docker compose exec -T api wget --spider http://localhost:8080/health",
-        {
-          cwd: projectRoot,
-          stdio: "ignore",
-          timeout: 10000,
-        }
-      )
+      execSync(`${composeCmd} exec -T api wget --spider http://localhost:8080/health`, {
+        cwd: projectRoot,
+        stdio: "ignore",
+        timeout: 10000,
+      })
       return
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -39,14 +41,11 @@ async function waitForFrontendHealth(maxSeconds = 180): Promise<void> {
 
   while (Date.now() < deadline) {
     try {
-      execSync(
-        "docker compose exec -T frontend wget --spider http://127.0.0.1/",
-        {
-          cwd: projectRoot,
-          stdio: "ignore",
-          timeout: 10000,
-        }
-      )
+      execSync(`${composeCmd} exec -T frontend wget --spider http://127.0.0.1/`, {
+        cwd: projectRoot,
+        stdio: "ignore",
+        timeout: 10000,
+      })
       return
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -58,14 +57,16 @@ async function waitForFrontendHealth(maxSeconds = 180): Promise<void> {
 
 function isStackHealthy(): boolean {
   try {
-    execSync(
-      "docker compose exec -T api wget --spider http://localhost:8080/health",
-      { cwd: projectRoot, stdio: "ignore", timeout: 10000 }
-    )
-    execSync(
-      "docker compose exec -T frontend wget --spider http://127.0.0.1/",
-      { cwd: projectRoot, stdio: "ignore", timeout: 10000 }
-    )
+    execSync(`${composeCmd} exec -T api wget --spider http://localhost:8080/health`, {
+      cwd: projectRoot,
+      stdio: "ignore",
+      timeout: 10000,
+    })
+    execSync(`${composeCmd} exec -T frontend wget --spider http://127.0.0.1/`, {
+      cwd: projectRoot,
+      stdio: "ignore",
+      timeout: 10000,
+    })
     return true
   } catch {
     return false
@@ -85,57 +86,109 @@ async function isAuthRequired(): Promise<boolean> {
   }
 }
 
-async function globalSetup() {
-  if (isStackHealthy() && !(await isAuthRequired())) {
-    console.log("[global-setup] Existing stack is healthy; skipping rebuild.")
-    return
-  }
+function writeBootstrapMetadata(payload: Record<string, string>): void {
+  fs.mkdirSync(authDir, { recursive: true })
+  fs.writeFileSync(bootstrapAuthFile, JSON.stringify(payload, null, 2) + "\n")
+}
 
-  if (isStackHealthy() && (await isAuthRequired())) {
-    console.log(
-      "[global-setup] Stack has bootstrapped auth; recreating fresh volumes for E2E."
-    )
-  }
-
-  console.log("[global-setup] Bringing down any existing stack...")
-  try {
-    execSync(["docker", "compose", ...composeFiles, "down", "-v"].join(" "), {
-      cwd: projectRoot,
-      stdio: "inherit",
-      timeout: 120000,
-    })
-  } catch {
-    // Ignore errors when there is no existing stack.
-  }
-
-  console.log("[global-setup] Building and starting Docker Compose stack...")
-  const proc = spawn(
-    "docker",
-    ["compose", ...composeFiles, "up", "--build", "-d"],
+function bootstrapAdmin(): void {
+  console.log("[global-setup] Bootstrapping first admin user...")
+  const output = execSync(
+    `${composeCmd} run --rm api auth bootstrap-admin --name "E2E Admin"`,
     {
       cwd: projectRoot,
-      stdio: "inherit",
-      shell: false,
+      encoding: "utf8",
+      timeout: 180000,
+      stdio: ["ignore", "pipe", "pipe"],
     }
   )
 
-  await new Promise<void>((resolve, reject) => {
-    proc.on("error", reject)
-    proc.on("exit", (code) => {
-      if (code === 0) {
-        resolve()
-      } else {
-        reject(new Error(`docker compose up exited with code ${code}`))
-      }
-    })
+  const codeMatch = output.match(/Enrollment code \(single-use, expires [^)]+\):\s*(\S+)/)
+  const userMatch = output.match(/Admin user created:\s*(?:.+?)\s*\(([0-9a-f-]{36})\)/i)
+
+  if (!codeMatch?.[1] || !userMatch?.[1]) {
+    throw new Error(`Failed to parse bootstrap-admin output:\n${output}`)
+  }
+
+  writeBootstrapMetadata({
+    enrollmentCode: codeMatch[1],
+    userId: userMatch[1],
+    displayName: "E2E Admin",
+    codeType: "enrollment",
   })
+}
+
+function issueRecoveryCode(): void {
+  console.log("[global-setup] Issuing admin recovery code for Playwright setup...")
+  const output = execSync(`${composeCmd} run --rm api auth issue-admin-code`, {
+    cwd: projectRoot,
+    encoding: "utf8",
+    timeout: 180000,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+
+  const codeMatch = output.match(/Recovery code for .+ \(expires [^)]+\):\s*(\S+)/)
+  if (!codeMatch?.[1]) {
+    throw new Error(
+      `Failed to parse recovery code output. Set ECHOSTATE_BREAK_GLASS_SECRET in .env for E2E reuse:\n${output}`
+    )
+  }
+
+  writeBootstrapMetadata({
+    enrollmentCode: codeMatch[1],
+    userId: "",
+    displayName: "E2E Admin",
+    codeType: "recovery",
+  })
+}
+
+async function ensureBootstrapMetadata(): Promise<void> {
+  if (await isAuthRequired()) {
+    issueRecoveryCode()
+    return
+  }
+  bootstrapAdmin()
+}
+
+function startStack(): void {
+  console.log("[global-setup] Building and starting Docker Compose stack...")
+  execSync(`${composeCmd} up --build -d`, {
+    cwd: projectRoot,
+    stdio: "inherit",
+    timeout: 900000,
+  })
+}
+
+function stopStack(removeVolumes: boolean): void {
+  const args = removeVolumes ? "down -v" : "down"
+  try {
+    execSync(`${composeCmd} ${args}`, {
+      cwd: projectRoot,
+      stdio: "inherit",
+      timeout: 180000,
+    })
+  } catch {
+    // Ignore when no stack exists.
+  }
+}
+
+async function globalSetup() {
+  if (reuseStack && isStackHealthy()) {
+    console.log("[global-setup] E2E_REUSE_STACK=1 — reusing healthy stack.")
+    await ensureBootstrapMetadata()
+    return
+  }
+
+  console.log("[global-setup] Recreating Docker Compose stack with fresh volumes...")
+  stopStack(true)
+  startStack()
 
   console.log("[global-setup] Waiting for API health...")
   await waitForHealth()
-
   console.log("[global-setup] Waiting for frontend health...")
   await waitForFrontendHealth()
 
+  bootstrapAdmin()
   console.log("[global-setup] Stack is ready.")
 }
 

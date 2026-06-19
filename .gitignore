@@ -22,3 +22,6 @@ coverage.out
 .DS_Store
 postgres_data/
 .omo/
+frontend/e2e/.auth/
+frontend/playwright-report/
+frontend/test-results/

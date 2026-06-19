@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **PWA icons** — Dedicated maskable launcher icons (192/512) and refreshed Apple touch icon; `scripts/generate-pwa-icons.py` regenerates from `assets/logo.png`.
 - **Bulk delete** — Multi-select with select-all on snapshot and report list pages; bulk action bar with confirm (admin / scanner+).
+- **E2E suite** — Playwright auth setup (virtual WebAuthn), smoke/auth/delete/report specs, and CI job against Docker Compose.
+- **DEPLOY.md** — Production checklist, secrets, TLS, backup/restore, and upgrade notes.
+
+### Changed
+
+- **Login page** — `data-testid` hooks for enrollment and passkey registration (E2E).
 
 ## [0.0.1-beta.39] - 2026-06-19
 

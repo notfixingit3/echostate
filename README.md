@@ -279,9 +279,14 @@ go test $(go list ./... | grep -v '/frontend/')
 # Frontend
 cd frontend && npm run typecheck && npm run build
 
-# E2E (requires full docker compose stack)
-cd frontend && npx playwright test
+# E2E (recreates compose stack with fresh volumes; allow ~15–30 min first run)
+cd frontend && npm run test:e2e
+
+# Faster local re-runs against an existing stack (requires ECHOSTATE_BREAK_GLASS_SECRET in .env)
+E2E_REUSE_STACK=1 npm run test:e2e
 ```
+
+See [DEPLOY.md](DEPLOY.md) for production deployment, backup, and the pre-release checklist.
 
 ## Architecture
 

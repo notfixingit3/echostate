@@ -206,6 +206,8 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 | P6-2 | Maskable / adaptive icons | ✅ Done | Dedicated maskable PNGs, refreshed Apple touch icon, `scripts/generate-pwa-icons.py` |
 | P6-3 | Offline snapshot read cache | ❌ Later | SW cache visited snapshot pages or key GET responses for flaky mobile links |
 | P6-4 | Bulk delete on list pages | ✅ Done | Row checkboxes, select-all, bulk action bar on snapshots (admin) and reports (scanner+) |
+| P6-5 | E2E auth + delete + CI | ✅ Done | Virtual WebAuthn setup, auth/delete/report specs, GitHub Actions `e2e` job |
+| P6-6 | DEPLOY.md + release checklist | ✅ Done | Production secrets, backup, upgrade path, pre-tag test gate |
 
 ### Explicitly out of scope (unchanged)
 
@@ -222,7 +224,7 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 104 items (core + graph + platform + P1–P6 through beta.39 + maskable icons + bulk delete) |
+| **Done** | 106 items (core + graph + platform + P1–P6 through beta.39 + E2E/ops docs) |
 | **Next** | 0 (P6 polish complete) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 3 (distributed agents, OIDC/RBAC, P6-3 offline cache) |

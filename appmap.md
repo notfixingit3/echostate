@@ -246,6 +246,8 @@ Auth: `SessionAuth` on `/api/*`; role gates `scanner` vs `admin`. See [README §
 
 **Bulk list actions:** `components/bulk-action-bar.tsx`, `lib/use-table-selection.ts` — multi-select delete on `snapshots-table` (admin) and `reports-table` (scanner+).
 
+**E2E:** `frontend/e2e/` — Playwright global setup (Compose + bootstrap), `auth.setup.ts` (virtual WebAuthn), smoke/auth/delete/report specs. See [DEPLOY.md](DEPLOY.md).
+
 ---
 
 ## Package directory
