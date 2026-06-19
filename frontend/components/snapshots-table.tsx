@@ -24,8 +24,11 @@ import {
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { Checkbox } from "@/components/ui/checkbox"
+import { BulkActionBar } from "@/components/bulk-action-bar"
 import { useAuth } from "@/components/auth-provider"
 import { fetchApi, deleteSnapshot, ApiError } from "@/lib/api"
+import { useTableSelection } from "@/lib/use-table-selection"
 import type { SnapshotSummary, PaginatedResponse } from "@/lib/types"
 import { SearchIcon, AlertCircleIcon, Trash2Icon } from "lucide-react"
 
@@ -43,10 +46,11 @@ export function SnapshotsTable() {
   const [data, setData] = React.useState<SnapshotsResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [bulkDeleting, setBulkDeleting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
   const limit = 20
-  const columnCount = canDelete ? 8 : 7
+  const columnCount = canDelete ? 9 : 7
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedTargetId(targetId), 300)
@@ -132,6 +136,58 @@ export function SnapshotsTable() {
     }
   }, [data, country])
 
+  const visibleIds = React.useMemo(
+    () => (filteredData?.data ?? []).map((snapshot) => snapshot.id),
+    [filteredData?.data]
+  )
+  const selection = useTableSelection(visibleIds)
+
+  async function deleteSnapshots(ids: string[]) {
+    const results = await Promise.allSettled(ids.map((id) => deleteSnapshot(id)))
+    const failed = results.filter((result) => result.status === "rejected").length
+    if (failed > 0) {
+      throw new Error(
+        failed === ids.length
+          ? "Failed to delete selected snapshots"
+          : `Deleted ${ids.length - failed} of ${ids.length} snapshots; ${failed} failed`
+      )
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = [...selection.selected]
+    if (ids.length === 0) return
+
+    const noun = ids.length === 1 ? "snapshot" : `${ids.length} snapshots`
+    if (
+      !confirm(
+        `Delete ${noun}? Reports for these snapshots will also be removed.`
+      )
+    ) {
+      return
+    }
+
+    setBulkDeleting(true)
+    setError(null)
+
+    try {
+      await deleteSnapshots(ids)
+      selection.clear()
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to delete selected snapshots")
+      }
+      setReloadKey((key) => key + 1)
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
   const totalPages = filteredData
     ? Math.ceil(filteredData.total / filteredData.limit)
     : 0
@@ -179,10 +235,31 @@ export function SnapshotsTable() {
         </Alert>
       )}
 
+      {canDelete ? (
+        <BulkActionBar
+          count={selection.count}
+          noun="snapshot"
+          deleting={bulkDeleting}
+          onClear={selection.clear}
+          onDelete={() => void handleBulkDelete()}
+        />
+      ) : null}
+
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm" data-testid="snapshots-table-container">
         <Table>
           <TableHeader>
             <TableRow>
+              {canDelete ? (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={selection.allSelected}
+                    onCheckedChange={() => selection.toggleAll()}
+                    aria-label="Select all snapshots on this page"
+                    data-testid="snapshots-select-all"
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </TableHead>
+              ) : null}
               <TableHead>Host</TableHead>
               <TableHead>ASN</TableHead>
               <TableHead>Web title</TableHead>
@@ -207,9 +284,14 @@ export function SnapshotsTable() {
                   <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   {canDelete ? (
-                    <TableCell className="text-right">
-                      <Skeleton className="ml-auto h-8 w-8" />
-                    </TableCell>
+                    <>
+                      <TableCell>
+                        <Skeleton className="h-4 w-4" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="ml-auto h-8 w-8" />
+                      </TableCell>
+                    </>
                   ) : null}
                 </TableRow>
               ))
@@ -233,6 +315,16 @@ export function SnapshotsTable() {
                   onClick={() => router.push(`/snapshot?id=${snapshot.id}`)}
                   data-testid={`snapshot-row-${snapshot.id}`}
                 >
+                  {canDelete ? (
+                    <TableCell onClick={(event) => event.stopPropagation()}>
+                      <Checkbox
+                        checked={selection.selected.has(snapshot.id)}
+                        onCheckedChange={() => selection.toggle(snapshot.id)}
+                        aria-label={`Select snapshot for ${snapshot.host || snapshot.target_id}`}
+                        data-testid={`snapshot-select-${snapshot.id}`}
+                      />
+                    </TableCell>
+                  ) : null}
                   <TableCell className="font-medium">
                     {snapshot.host || snapshot.target_id}
                   </TableCell>
@@ -264,7 +356,7 @@ export function SnapshotsTable() {
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        disabled={deletingId === snapshot.id}
+                        disabled={deletingId === snapshot.id || bulkDeleting}
                         aria-label={`Delete snapshot for ${snapshot.host || snapshot.target_id}`}
                         onClick={(event) => {
                           event.stopPropagation()

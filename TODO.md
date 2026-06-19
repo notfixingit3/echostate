@@ -203,9 +203,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | P6-1 | PWA install + shell cache | ✅ Done | Standalone manifest, `sw.js` (skips `/api/`), safe-area nav/footer |
-| P6-2 | Maskable / adaptive icons | ⏳ Next | Apple touch icon + `purpose: maskable` variants for cleaner home-screen tiles |
+| P6-2 | Maskable / adaptive icons | ✅ Done | Dedicated maskable PNGs, refreshed Apple touch icon, `scripts/generate-pwa-icons.py` |
 | P6-3 | Offline snapshot read cache | ❌ Later | SW cache visited snapshot pages or key GET responses for flaky mobile links |
-| P6-4 | Bulk delete on list pages | ⏳ Next | Multi-select snapshots/reports with confirm dialog (admin / scanner+ gates) |
+| P6-4 | Bulk delete on list pages | ✅ Done | Row checkboxes, select-all, bulk action bar on snapshots (admin) and reports (scanner+) |
 
 ### Explicitly out of scope (unchanged)
 
@@ -222,9 +222,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 102 items (core + graph + platform + P1–P6 through beta.39) |
-| **Next** | 2 (P6-2 maskable icons, P6-4 bulk delete) |
+| **Done** | 104 items (core + graph + platform + P1–P6 through beta.39 + maskable icons + bulk delete) |
+| **Next** | 0 (P6 polish complete) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
 | **Later / platform** | 3 (distributed agents, OIDC/RBAC, P6-3 offline cache) |
 
-**Suggested next picks:** P6-2 maskable icons (quick polish) or P6-4 bulk delete — then distributed agents or OIDC/RBAC (Later tier)
+**Suggested next picks:** P6-3 offline cache (mobile) or distributed agents / OIDC/RBAC (Later tier)

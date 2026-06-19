@@ -1,4 +1,4 @@
-const CACHE_VERSION = "echostate-v1"
+const CACHE_VERSION = "echostate-v2"
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const SHELL_CACHE = `${CACHE_VERSION}-shell`
 

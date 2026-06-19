@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **PWA icons** — Dedicated maskable launcher icons (192/512) and refreshed Apple touch icon; `scripts/generate-pwa-icons.py` regenerates from `assets/logo.png`.
+- **Bulk delete** — Multi-select with select-all on snapshot and report list pages; bulk action bar with confirm (admin / scanner+).
+
 ## [0.0.1-beta.39] - 2026-06-19
 
 ### Added

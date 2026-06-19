@@ -242,7 +242,9 @@ Auth: `SessionAuth` on `/api/*`; role gates `scanner` vs `admin`. See [README §
 
 **API client:** `frontend/lib/api.ts` — cookie session, typed fetch helpers (`deleteSnapshot`, `deleteReport`).
 
-**PWA:** `public/manifest.webmanifest`, `public/sw.js` (shell cache; skips `/api/`), `components/pwa-register.tsx`, icons under `public/icons/`.
+**PWA:** `public/manifest.webmanifest`, `public/sw.js` (shell cache; skips `/api/`), `components/pwa-register.tsx`, icons under `public/icons/` (any + maskable; regenerate via `scripts/generate-pwa-icons.py`).
+
+**Bulk list actions:** `components/bulk-action-bar.tsx`, `lib/use-table-selection.ts` — multi-select delete on `snapshots-table` (admin) and `reports-table` (scanner+).
 
 ---
 

@@ -31,8 +31,11 @@ import {
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { Checkbox } from "@/components/ui/checkbox"
+import { BulkActionBar } from "@/components/bulk-action-bar"
 import { useAuth } from "@/components/auth-provider"
 import { fetchApi, downloadReport, deleteReport, ApiError } from "@/lib/api"
+import { useTableSelection } from "@/lib/use-table-selection"
 import type { ReportSummary, ReportStatus, PaginatedResponse } from "@/lib/types"
 import { SearchIcon, AlertCircleIcon, DownloadIcon, Trash2Icon } from "lucide-react"
 
@@ -73,10 +76,12 @@ export function ReportsTable() {
   const [data, setData] = React.useState<ReportsResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const [bulkDeleting, setBulkDeleting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [downloadError, setDownloadError] = React.useState<string | null>(null)
 
   const limit = 20
+  const columnCount = canDelete ? 8 : 7
 
   React.useEffect(() => {
     const fromUrl = searchParams.get("snapshot_id")?.trim() ?? ""
@@ -123,6 +128,52 @@ export function ReportsTable() {
       cancelled = true
     }
   }, [page, status, snapshotId, reloadKey])
+
+  const visibleIds = React.useMemo(
+    () => (data?.data ?? []).map((report) => report.id),
+    [data?.data]
+  )
+  const selection = useTableSelection(visibleIds)
+
+  async function deleteReports(ids: string[]) {
+    const results = await Promise.allSettled(ids.map((id) => deleteReport(id)))
+    const failed = results.filter((result) => result.status === "rejected").length
+    if (failed > 0) {
+      throw new Error(
+        failed === ids.length
+          ? "Failed to delete selected reports"
+          : `Deleted ${ids.length - failed} of ${ids.length} reports; ${failed} failed`
+      )
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = [...selection.selected]
+    if (ids.length === 0) return
+
+    const noun = ids.length === 1 ? "report" : `${ids.length} reports`
+    if (!confirm(`Delete ${noun}?`)) return
+
+    setBulkDeleting(true)
+    setError(null)
+
+    try {
+      await deleteReports(ids)
+      selection.clear()
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to delete selected reports")
+      }
+      setReloadKey((key) => key + 1)
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
 
   async function handleDelete(report: ReportSummary) {
     const label = report.host || report.id
@@ -203,10 +254,31 @@ export function ReportsTable() {
         </Alert>
       )}
 
+      {canDelete ? (
+        <BulkActionBar
+          count={selection.count}
+          noun="report"
+          deleting={bulkDeleting}
+          onClear={selection.clear}
+          onDelete={() => void handleBulkDelete()}
+        />
+      ) : null}
+
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm" data-testid="reports-table-container">
         <Table>
           <TableHeader>
             <TableRow>
+              {canDelete ? (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={selection.allSelected}
+                    onCheckedChange={() => selection.toggleAll()}
+                    aria-label="Select all reports on this page"
+                    data-testid="reports-select-all"
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </TableHead>
+              ) : null}
               <TableHead>ID</TableHead>
               <TableHead>Snapshot</TableHead>
               <TableHead>Host</TableHead>
@@ -226,6 +298,11 @@ export function ReportsTable() {
                   <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  {canDelete ? (
+                    <TableCell>
+                      <Skeleton className="h-4 w-4" />
+                    </TableCell>
+                  ) : null}
                   <TableCell className="text-right">
                     <Skeleton className="h-8 w-24" />
                   </TableCell>
@@ -233,13 +310,13 @@ export function ReportsTable() {
               ))
             ) : !data ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={columnCount} className="text-center text-muted-foreground">
                   {error ? "Could not load reports." : "Loading reports…"}
                 </TableCell>
               </TableRow>
             ) : data.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={columnCount} className="text-center text-muted-foreground">
                   No reports found.
                 </TableCell>
               </TableRow>
@@ -251,6 +328,16 @@ export function ReportsTable() {
                   onClick={() => router.push(`/report?id=${report.id}`)}
                   data-testid={`report-row-${report.id}`}
                 >
+                  {canDelete ? (
+                    <TableCell onClick={(event) => event.stopPropagation()}>
+                      <Checkbox
+                        checked={selection.selected.has(report.id)}
+                        onCheckedChange={() => selection.toggle(report.id)}
+                        aria-label={`Select report for ${report.host || report.id}`}
+                        data-testid={`report-select-${report.id}`}
+                      />
+                    </TableCell>
+                  ) : null}
                   <TableCell className="font-mono text-xs">{report.id}</TableCell>
                   <TableCell className="font-mono text-xs">
                     {report.snapshot_id}
@@ -297,7 +384,7 @@ export function ReportsTable() {
                           variant="ghost"
                           size="icon"
                           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          disabled={deletingId === report.id}
+                          disabled={deletingId === report.id || bulkDeleting}
                           aria-label={`Delete report for ${report.host || report.id}`}
                           onClick={(event) => {
                             event.stopPropagation()
