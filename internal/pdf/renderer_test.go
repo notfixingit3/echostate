@@ -65,6 +65,13 @@ func TestRenderReport(t *testing.T) {
 			"copyrights":       []string{"© 2026 Example Inc.", "All rights reserved."},
 			"tech_stack":       []string{"framework:react", "cdn:cloudflare"},
 			"security_headers": map[string]any{"strict-transport-security": "max-age=31536000"},
+			"js_assets": []map[string]any{
+				{"url": "https://example.com/app.js", "hint": "framework: React"},
+			},
+			"redirect_chain": []map[string]any{
+				{"url": "http://example.com/", "status": "301"},
+				{"url": "https://example.com/", "status": "200"},
+			},
 		},
 		Favicon: map[string]any{
 			"mmh3": "123456",
@@ -88,8 +95,8 @@ func TestRenderReport(t *testing.T) {
 			"destination": "93.184.216.34",
 			"hop_count":   2,
 			"hops": []map[string]any{
-				{"hop": 1, "ip": "10.0.0.1"},
-				{"hop": 2, "ip": "93.184.216.34"},
+				{"hop": 1, "ip": "10.0.0.1", "rtt_ms": 1.2, "country": "US", "city": "Ashburn"},
+				{"hop": 2, "ip": "93.184.216.34", "rtt_ms": 10.5, "host": "example.com"},
 			},
 		},
 		Screenshot: map[string]any{
@@ -138,6 +145,22 @@ func TestRenderReport(t *testing.T) {
 	assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF")), "output should start with PDF magic bytes")
 }
 
+func TestMeasureSectionPages_EmptyDataAscending(t *testing.T) {
+	result := &models.ScanResult{
+		Host:      "empty.test",
+		ScannedAt: time.Time{},
+	}
+	data := ReportData{Result: result}
+	sections := buildReportSections(data)
+	pages, err := measureSectionPages(data, sections)
+	require.NoError(t, err)
+	require.NotEmpty(t, pages)
+
+	for i := 1; i < len(pages); i++ {
+		assert.GreaterOrEqual(t, pages[i], pages[i-1], "section pages should be non-decreasing")
+	}
+}
+
 func TestRenderReport_EmptyData(t *testing.T) {
 	result := &models.ScanResult{
 		Host:      "empty.test",
@@ -179,6 +202,7 @@ func TestBuildReportSections_IncludesConditionalSections(t *testing.T) {
 	}
 
 	assert.Contains(t, titles, "Report Metadata")
+	assert.Contains(t, titles, "Security Findings")
 	assert.Contains(t, titles, "WHOIS")
 	assert.Contains(t, titles, "Snapshot Changes")
 	assert.Contains(t, titles, "Submitter / pWhois")

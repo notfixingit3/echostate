@@ -16,6 +16,7 @@ require (
 	github.com/likexian/whois v1.15.7
 	github.com/likexian/whois-parser v1.24.21
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
+	github.com/pdfcpu/pdfcpu v0.11.1
 	github.com/stretchr/testify v1.11.1
 	github.com/twmb/murmur3 v1.1.8
 	golang.org/x/crypto v0.53.0
@@ -64,7 +65,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.21 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pdfcpu/pdfcpu v0.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/phpdave11/gofpdf v1.4.3 // indirect

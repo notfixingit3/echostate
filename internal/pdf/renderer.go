@@ -33,7 +33,8 @@ const (
 	maxCrawlPaths        = 25
 	pdfDateFormat        = "2006-01-02 15:04:05 UTC"
 	reportProjectURL     = "https://github.com/notfixingit3/echostate"
-	coverLogoHeight      = 22.0
+	coverLogoHeight      = 40.0
+	coverLogoPercent     = 32.0
 	screenshotRowHeight  = 55.0
 )
 
@@ -49,22 +50,15 @@ func RenderReport(data ReportData) ([]byte, error) {
 	}
 	result := data.Result
 
-	cfg := config.NewBuilder().
-		WithTitle("EchoState Reconnaissance Report", true).
-		WithCreator("EchoState", true).
-		WithSubject(fmt.Sprintf("Reconnaissance report for %s", result.Host), true).
-		WithPageNumber(props.PageNumber{
-			Pattern: "Page {current} of {total}",
-			Place:   props.Bottom,
-			Size:    8,
-		}).
-		Build()
-
-	m := maroto.New(cfg)
-
 	sections := buildReportSections(data)
+	sectionPages, err := measureSectionPages(data, sections)
+	if err != nil {
+		return nil, err
+	}
+
+	m := buildReportMaroto(result.Host)
 	addCoverPage(m, result)
-	addTableOfContents(m, sections)
+	addTableOfContents(m, sections, sectionPages)
 	for _, section := range sections {
 		addSectionHeader(m, section.title)
 		section.render(m)
@@ -75,13 +69,34 @@ func RenderReport(data ReportData) ([]byte, error) {
 		return nil, fmt.Errorf("generate PDF: %w", err)
 	}
 
-	return doc.GetBytes(), nil
+	pdfBytes, err := injectBookmarks(doc.GetBytes(), data, sections, sectionPages)
+	if err != nil {
+		return nil, err
+	}
+	return pdfBytes, nil
+}
+
+func buildReportMaroto(host string) core.Maroto {
+	cfg := config.NewBuilder().
+		WithTitle("EchoState Reconnaissance Report", true).
+		WithCreator("EchoState", true).
+		WithSubject(fmt.Sprintf("Reconnaissance report for %s", host), true).
+		WithPageNumber(props.PageNumber{
+			Pattern: "Page {current} of {total}",
+			Place:   props.Bottom,
+			Size:    8,
+		}).
+		Build()
+	return maroto.New(cfg)
 }
 
 func buildReportSections(data ReportData) []reportSection {
 	result := data.Result
+	findings := collectSecurityFindings(result, data.ChangeDetails)
+
 	sections := []reportSection{
 		{"Report Metadata", func(m core.Maroto) { addReportMetadata(m, result, data.ClientIP) }},
+		{"Security Findings", func(m core.Maroto) { addSecurityFindings(m, findings) }},
 		{"Intel Highlights", func(m core.Maroto) { addIntelHighlights(m, result, data.PWhois) }},
 	}
 
@@ -133,27 +148,42 @@ func buildReportSections(data ReportData) []reportSection {
 	return sections
 }
 
-func addTableOfContents(m core.Maroto, sections []reportSection) {
+func addTableOfContents(m core.Maroto, sections []reportSection, sectionPages []int) {
 	m.AddRows(row.New(6).Add(col.New(12)))
 	m.AddRows(
-		text.NewRow(12, "Table of Contents", props.Text{
-			Size:  16,
-			Style: fontstyle.Bold,
-		}),
+		row.New(10).WithStyle(&props.Cell{BackgroundColor: colorPtr(colorHeaderBG)}).Add(
+			text.NewCol(12, "Table of Contents", props.Text{
+				Size:  16,
+				Style: fontstyle.Bold,
+				Color: colorPtr(colorTealDark),
+				Top:   2,
+				Left:  2,
+			}),
+		),
 	)
 	m.AddRows(row.New(4).Add(col.New(12)))
 
+	headers := []string{"Section", "Page"}
+	colWidths := []int{10, 2}
+	var rows [][]tableCell
 	for i, section := range sections {
-		m.AddRows(
-			text.NewRow(6, fmt.Sprintf("%d.  %s", i+1, section.title), props.Text{Size: 10}),
-		)
+		pageLabel := "—"
+		if i < len(sectionPages) && sectionPages[i] > 0 {
+			pageLabel = fmt.Sprintf("%d", sectionPages[i])
+		}
+		rows = append(rows, []tableCell{
+			{text: fmt.Sprintf("%d. %s", i+1, section.title)},
+			{text: pageLabel, bold: true, color: colorPtr(colorTealDark)},
+		})
 	}
+	addTable(m, colWidths, headers, rows)
 
-	m.AddRows(row.New(8).Add(col.New(12)))
+	m.AddRows(row.New(6).Add(col.New(12)))
 	m.AddRows(
-		text.NewRow(5, "Sections follow in order. Use PDF search or page numbers in the footer to jump ahead.", props.Text{
+		text.NewRow(5, "Open the PDF bookmarks panel (sidebar) to jump directly to any section.", props.Text{
 			Size:  8,
 			Style: fontstyle.Italic,
+			Color: colorPtr(colorMuted),
 		}),
 	)
 }
@@ -165,7 +195,7 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 		m.AddRows(
 			image.NewFromBytesRow(coverLogoHeight, logoPNG, extension.Png, props.Rect{
 				Center:  true,
-				Percent: 18,
+				Percent: coverLogoPercent,
 			}),
 		)
 		m.AddRows(row.New(4).Add(col.New(12)))
@@ -186,11 +216,15 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 		scannedAt = "N/A"
 	}
 
+	target := valueOrNA(result.Host)
+	targetLink := hyperlinkURL(targetHTTPSURL(result.Host))
+	targetProps := props.Text{Size: 12, Align: align.Center}
+	if targetLink != nil {
+		targetProps.Hyperlink = targetLink
+		targetProps.Color = colorPtr(colorLink)
+	}
+	m.AddRows(text.NewRow(8, "Target: "+target, targetProps))
 	m.AddRows(
-		text.NewRow(8, fmt.Sprintf("Target: %s", valueOrNA(result.Host)), props.Text{
-			Size:  12,
-			Align: align.Center,
-		}),
 		text.NewRow(8, fmt.Sprintf("Scanned At: %s", scannedAt), props.Text{
 			Size:  12,
 			Align: align.Center,
@@ -199,16 +233,25 @@ func addCoverPage(m core.Maroto, result *models.ScanResult) {
 
 	m.AddRows(row.New(16).Add(col.New(12)))
 
+	projectURL := reportProjectURL
 	m.AddRows(
 		text.NewRow(6, "Passive reconnaissance intelligence report", props.Text{
 			Size:  9,
 			Align: align.Center,
 			Style: fontstyle.Italic,
 		}),
-		text.NewRow(6, "Generated by EchoState · "+reportProjectURL, props.Text{
+		text.NewRow(6, "Generated by EchoState", props.Text{
 			Size:  8,
 			Align: align.Center,
 			Style: fontstyle.Italic,
+			Color: colorPtr(colorMuted),
+		}),
+		text.NewRow(6, reportProjectURL, props.Text{
+			Size:      8,
+			Align:     align.Center,
+			Style:     fontstyle.Italic,
+			Color:     colorPtr(colorLink),
+			Hyperlink: &projectURL,
 		}),
 	)
 }
@@ -228,6 +271,25 @@ func addReportMetadata(m core.Maroto, result *models.ScanResult, clientIP string
 	}
 }
 
+func addSecurityFindings(m core.Maroto, findings []securityFinding) {
+	if len(findings) == 0 {
+		m.AddRows(text.NewRow(6, "No security findings available.", props.Text{Size: 10}))
+		return
+	}
+
+	headers := []string{"Severity", "Finding", "Detail"}
+	colWidths := []int{2, 5, 5}
+	var rows [][]tableCell
+	for _, finding := range findings {
+		rows = append(rows, []tableCell{
+			{text: strings.ToUpper(finding.severity), color: colorForSeverity(finding.severity), bold: true},
+			{text: finding.summary},
+			{text: finding.detail, color: colorPtr(colorMuted)},
+		})
+	}
+	addTable(m, colWidths, headers, rows)
+}
+
 func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhoisInfo) {
 	addKeyValueRow(m, "Resolved IP", stringVal(result.ASN, "ip"))
 	addKeyValueRow(m, "ASN", stringVal(result.ASN, "asn"))
@@ -236,14 +298,21 @@ func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhois
 	addKeyValueRow(m, "Country", firstNonNA(stringVal(result.ASN, "country"), pwhoisCountry(pwhois)))
 	addKeyValueRow(m, "Registrar", stringVal(result.WHOIS, "registrar"))
 	addKeyValueRow(m, "Web Title", stringVal(result.Web, "title"))
+
+	certDays := stringVal(result.TLS, "days_remaining")
+	addKeyValueRowStyled(m, "Cert Expires", stringVal(result.TLS, "not_after"), colorForCertDays(certDays), nil)
+	addKeyValueRowStyled(m, "Days Remaining", certDays, colorForCertDays(certDays), nil)
+
 	addKeyValueRow(m, "JARM", stringVal(result.TLS, "jarm"))
 	addKeyValueRow(m, "JA3S", stringVal(result.TLS, "ja3s"))
 	addKeyValueRow(m, "Favicon MMH3", firstNonNA(stringVal(result.Favicon, "mmh3"), stringVal(result.Favicon, "shodan")))
-	addKeyValueRow(m, "Cert Expires", stringVal(result.TLS, "not_after"))
 	addKeyValueRow(m, "Cert Issuer", stringVal(result.TLS, "issuer"))
 	addKeyValueRow(m, "TLS Version", stringVal(result.TLS, "tls_version"))
-	addKeyValueRow(m, "OCSP Stapled", stringVal(result.TLS, "ocsp_stapled"))
-	addKeyValueRow(m, "DNSSEC", stringVal(nestedMap(result.DNS, "DNSSEC"), "status"))
+	addKeyValueRowStyled(m, "OCSP Stapled", stringVal(result.TLS, "ocsp_stapled"), colorForBoolish(stringVal(result.TLS, "ocsp_stapled"), "true", "yes"), nil)
+
+	dnssecStatus := stringVal(nestedMap(result.DNS, "DNSSEC"), "status")
+	addKeyValueRowStyled(m, "DNSSEC", dnssecStatus, colorForBoolish(dnssecStatus, "secure", "signed", "valid"), nil)
+
 	addKeyValueRow(m, "CT Certificates", ctCertificateSummary(result.CT))
 	addKeyValueRow(m, "HSTS Preload", hstsPreloadSummary(result.Web))
 	addKeyValueRow(m, "Cookie Names", cookieNameSummary(result.Web))
@@ -252,10 +321,19 @@ func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhois
 	addKeyValueRow(m, "PTR", stringVal(result.DNS, "PTR"))
 	addKeyValueRow(m, "CDN Provider", stringVal(nestedMap(result.DNS, "INFRA_LABELS"), "cdn_provider"))
 	addKeyValueRow(m, "Mail Provider", stringVal(nestedMap(result.DNS, "INFRA_LABELS"), "mail_provider"))
-	addKeyValueRow(m, "Mail Posture", mailPostureSummary(result.DNS))
+
+	posture := nestedMap(result.DNS, "MAIL_POSTURE")
+	mailSummary := mailPostureSummary(result.DNS)
+	addKeyValueRowStyled(m, "Mail Posture", mailSummary, colorForMailGrade(stringVal(posture, "grade")), nil)
+
 	addKeyValueRow(m, "BIMI", bimiSummary(result.DNS))
-	addKeyValueRow(m, "Hijack Risk", stringVal(nestedMap(result.ASN, "routing"), "hijack_risk"))
-	addKeyValueRow(m, "BGP Path Stability", stringVal(nestedMap(nestedMap(result.ASN, "routing"), "path_profile"), "stability"))
+
+	hijackRisk := stringVal(nestedMap(result.ASN, "routing"), "hijack_risk")
+	addKeyValueRowStyled(m, "Hijack Risk", hijackRisk, colorForHijackRisk(hijackRisk), nil)
+
+	stability := stringVal(nestedMap(nestedMap(result.ASN, "routing"), "path_profile"), "stability")
+	addKeyValueRowStyled(m, "BGP Path Stability", stability, colorForBoolish(stability, "stable", "consistent"), nil)
+
 	addKeyValueRow(m, "CT Subdomains", ctCount(result.CT))
 	addKeyValueRow(m, "Sitemap Paths", crawlPathSummary(result.Crawl))
 	addKeyValueRow(m, "Security.txt", securityTxtSummary(result.Crawl))
@@ -408,6 +486,9 @@ func addChanges(m core.Maroto, changes []string, details []models.ChangeDetail) 
 
 	if len(details) > 0 {
 		addSubheader(m, "Structured changes")
+		headers := []string{"Severity", "Change"}
+		colWidths := []int{2, 10}
+		var rows [][]tableCell
 		for i, detail := range details {
 			if i >= maxChangeDetails {
 				m.AddRows(text.NewRow(5, fmt.Sprintf("... and %d more change(s)", len(details)-maxChangeDetails), props.Text{
@@ -416,11 +497,17 @@ func addChanges(m core.Maroto, changes []string, details []models.ChangeDetail) 
 				}))
 				break
 			}
-			line := fmt.Sprintf("[%s/%s] %s", strings.ToUpper(detail.Severity), detail.Type, detail.Summary)
+			line := fmt.Sprintf("[%s] %s", detail.Type, detail.Summary)
 			if detail.Field != "" {
 				line = fmt.Sprintf("%s (%s)", line, detail.Field)
 			}
-			addBulletItems(m, []string{line}, 0)
+			rows = append(rows, []tableCell{
+				{text: strings.ToUpper(detail.Severity), color: colorForSeverity(detail.Severity), bold: true},
+				{text: line},
+			})
+		}
+		if len(rows) > 0 {
+			addTable(m, colWidths, headers, rows)
 		}
 	}
 
@@ -445,7 +532,8 @@ func addScreenshot(m core.Maroto, jpeg []byte, meta map[string]any) {
 	}
 
 	if len(meta) > 0 {
-		addKeyValueRow(m, "URL", stringVal(meta, "url"))
+		screenshotURL := stringVal(meta, "url")
+		addKeyValueRowStyled(m, "URL", screenshotURL, nil, hyperlinkURL(screenshotURL))
 		addKeyValueRow(m, "Captured At", stringVal(meta, "captured_at"))
 		addKeyValueRow(m, "Dimensions", screenshotDimensions(meta))
 		addKeyValueRow(m, "Format", stringVal(meta, "format"))
@@ -460,11 +548,17 @@ func addScreenshot(m core.Maroto, jpeg []byte, meta map[string]any) {
 func addSectionHeader(m core.Maroto, title string) {
 	m.AddRows(row.New(4).Add(col.New(12)))
 	m.AddRows(
-		text.NewRow(10, title, props.Text{
-			Size:  14,
-			Style: fontstyle.Bold,
-		}),
+		row.New(9).WithStyle(&props.Cell{BackgroundColor: colorPtr(colorTeal)}).Add(
+			text.NewCol(12, title, props.Text{
+				Size:  13,
+				Style: fontstyle.Bold,
+				Color: &props.Color{Red: 255, Green: 255, Blue: 255},
+				Top:   2,
+				Left:  2,
+			}),
+		),
 	)
+	m.AddRows(row.New(2).Add(col.New(12)))
 }
 
 func addWHOIS(m core.Maroto, data map[string]any) {
@@ -509,12 +603,14 @@ func addASN(m core.Maroto, data map[string]any) {
 
 	if routing := nestedMap(data, "routing"); len(routing) > 0 {
 		addSubheader(m, "BGP Routing")
-		addKeyValueRow(m, "Hijack Risk", stringVal(routing, "hijack_risk"))
+		hijackRisk := stringVal(routing, "hijack_risk")
+		addKeyValueRowStyled(m, "Hijack Risk", hijackRisk, colorForHijackRisk(hijackRisk), nil)
 		addKeyValueRow(m, "Visible Origins", stringVal(routing, "visible_origins"))
 		addKeyValueRow(m, "First Seen", stringVal(routing, "first_seen"))
 		addKeyValueRow(m, "Last Seen", stringVal(routing, "last_seen"))
 		if profile := nestedMap(routing, "path_profile"); len(profile) > 0 {
-			addKeyValueRow(m, "Path Stability", stringVal(profile, "stability"))
+			stability := stringVal(profile, "stability")
+			addKeyValueRowStyled(m, "Path Stability", stability, colorForBoolish(stability, "stable", "consistent"), nil)
 			addKeyValueRow(m, "Path Count", stringVal(profile, "path_count"))
 			addKeyValueRow(m, "Unique Paths", stringVal(profile, "unique_paths"))
 		}
@@ -636,7 +732,8 @@ func addDNS(m core.Maroto, data map[string]any) {
 
 	if dnssec := nestedMap(data, "DNSSEC"); len(dnssec) > 0 {
 		addSubheader(m, "DNSSEC")
-		addKeyValueRow(m, "Status", stringVal(dnssec, "status"))
+		dnssecStatus := stringVal(dnssec, "status")
+		addKeyValueRowStyled(m, "Status", dnssecStatus, colorForBoolish(dnssecStatus, "secure", "signed", "valid"), nil)
 		addKeyValueRow(m, "Signed", stringVal(dnssec, "signed"))
 		addKeyValueRow(m, "Zone", stringVal(dnssec, "zone"))
 		addKeyValueRow(m, "DNSKEY Count", stringVal(dnssec, "dnskey_count"))
@@ -646,8 +743,10 @@ func addDNS(m core.Maroto, data map[string]any) {
 
 	if posture := nestedMap(data, "MAIL_POSTURE"); len(posture) > 0 {
 		addSubheader(m, "Mail Posture")
-		addKeyValueRow(m, "Grade", stringVal(posture, "grade"))
-		addKeyValueRow(m, "Score", stringVal(posture, "score"))
+		grade := stringVal(posture, "grade")
+		score := stringVal(posture, "score")
+		addKeyValueRowStyled(m, "Grade", grade, colorForMailGrade(grade), nil)
+		addKeyValueRowStyled(m, "Score", score, colorForMailGrade(grade), nil)
 		if findings := stringSlice(posture, "findings"); len(findings) > 0 {
 			addBulletItems(m, findings, maxErrorsShown)
 		}
@@ -666,8 +765,16 @@ func addTLS(m core.Maroto, data map[string]any) {
 	addKeyValueRow(m, "IP SANs", stringVal(data, "ip_sans"))
 	addKeyValueRow(m, "Not Before", stringVal(data, "not_before"))
 	addKeyValueRow(m, "Not After", stringVal(data, "not_after"))
-	addKeyValueRow(m, "Days Remaining", stringVal(data, "days_remaining"))
-	addKeyValueRow(m, "Expired", stringVal(data, "expired"))
+	daysRemaining := stringVal(data, "days_remaining")
+	addKeyValueRowStyled(m, "Days Remaining", daysRemaining, colorForCertDays(daysRemaining), nil)
+	expired := stringVal(data, "expired")
+	var expiredColor *props.Color
+	if strings.EqualFold(expired, "true") {
+		expiredColor = colorPtr(colorRed)
+	} else if expired != "N/A" {
+		expiredColor = colorPtr(colorGreen)
+	}
+	addKeyValueRowStyled(m, "Expired", expired, expiredColor, nil)
 	addKeyValueRow(m, "Chain Length", stringVal(data, "chain_length"))
 	addKeyValueRow(m, "Serial", stringVal(data, "serial"))
 	addKeyValueRow(m, "TLS Version", stringVal(data, "tls_version"))
@@ -696,22 +803,14 @@ func addWeb(m core.Maroto, data map[string]any) {
 	}
 
 	addKeyValueRow(m, "Title", stringVal(data, "title"))
-	addKeyValueRow(m, "URL", stringVal(data, "url"))
-	addKeyValueRow(m, "Header URL", stringVal(data, "header_url"))
+	pageURL := stringVal(data, "url")
+	addKeyValueRowStyled(m, "URL", pageURL, nil, hyperlinkURL(pageURL))
+	headerURL := stringVal(data, "header_url")
+	addKeyValueRowStyled(m, "Header URL", headerURL, nil, hyperlinkURL(headerURL))
 
 	if chain := mapSlice(data, "redirect_chain"); len(chain) > 0 {
 		addSubheader(m, "Redirect Chain")
-		var lines []string
-		for _, hop := range chain {
-			url := stringVal(hop, "url")
-			status := stringVal(hop, "status")
-			if status != "N/A" {
-				lines = append(lines, fmt.Sprintf("%s (%s)", url, status))
-			} else {
-				lines = append(lines, url)
-			}
-		}
-		addBulletItems(m, lines, maxCrawlPaths)
+		addRedirectChainTable(m, chain)
 	}
 
 	if emails := stringSlice(data, "contact_emails"); len(emails) > 0 {
@@ -736,21 +835,7 @@ func addWeb(m core.Maroto, data map[string]any) {
 
 	if assets := mapSlice(data, "js_assets"); len(assets) > 0 {
 		addSubheader(m, "JavaScript Assets")
-		var lines []string
-		for i, asset := range assets {
-			if i >= maxJSAssets {
-				lines = append(lines, fmt.Sprintf("... and %d more asset(s)", len(assets)-maxJSAssets))
-				break
-			}
-			url := stringVal(asset, "url")
-			hint := stringVal(asset, "hint")
-			if hint != "N/A" {
-				lines = append(lines, fmt.Sprintf("%s (%s)", url, hint))
-			} else {
-				lines = append(lines, url)
-			}
-		}
-		addBulletItems(m, lines, 0)
+		addJSAssetsTable(m, assets)
 	}
 
 	if plugins := mapSlice(data, "wordpress_plugins"); len(plugins) > 0 {
@@ -1124,6 +1209,84 @@ func addCT(m core.Maroto, data map[string]any) {
 	}
 }
 
+func addRedirectChainTable(m core.Maroto, chain []map[string]any) {
+	headers := []string{"#", "URL", "Status"}
+	colWidths := []int{1, 8, 3}
+	var rows [][]tableCell
+	for i, hop := range chain {
+		if i >= maxCrawlPaths {
+			break
+		}
+		url := stringVal(hop, "url")
+		status := stringVal(hop, "status")
+		if status == "N/A" {
+			status = "—"
+		}
+		rows = append(rows, []tableCell{
+			{text: fmt.Sprintf("%d", i+1)},
+			{text: truncate(url, 90), link: hyperlinkURL(url)},
+			{text: status},
+		})
+	}
+	addTable(m, colWidths, headers, rows)
+}
+
+func addJSAssetsTable(m core.Maroto, assets []map[string]any) {
+	headers := []string{"URL", "Hint"}
+	colWidths := []int{8, 4}
+	var rows [][]tableCell
+	for i, asset := range assets {
+		if i >= maxJSAssets {
+			m.AddRows(text.NewRow(5, fmt.Sprintf("... and %d more asset(s)", len(assets)-maxJSAssets), props.Text{
+				Size:  9,
+				Style: fontstyle.Italic,
+			}))
+			break
+		}
+		url := stringVal(asset, "url")
+		hint := stringVal(asset, "hint")
+		if hint == "N/A" {
+			hint = "—"
+		}
+		rows = append(rows, []tableCell{
+			{text: truncate(url, 72), link: hyperlinkURL(url)},
+			{text: hint, color: colorPtr(colorMuted)},
+		})
+	}
+	if len(rows) > 0 {
+		addTable(m, colWidths, headers, rows)
+	}
+}
+
+func addTracerouteHopTable(m core.Maroto, hops []map[string]any) {
+	headers := []string{"Hop", "IP", "Host", "RTT", "Location"}
+	colWidths := []int{1, 3, 3, 2, 3}
+	var rows [][]tableCell
+	for i, hop := range hops {
+		if i >= maxTracerouteHops {
+			m.AddRows(text.NewRow(5, fmt.Sprintf("... and %d more hop(s)", len(hops)-maxTracerouteHops), props.Text{
+				Size:  9,
+				Style: fontstyle.Italic,
+			}))
+			break
+		}
+		host := stringVal(hop, "host", "hostname")
+		if host == "N/A" {
+			host = "—"
+		}
+		rows = append(rows, []tableCell{
+			{text: stringVal(hop, "hop", "number", "ttl"), bold: true},
+			{text: tracerouteHopIP(hop)},
+			{text: host},
+			{text: formatHopRTT(hop)},
+			{text: tracerouteLocation(hop), color: colorPtr(colorMuted)},
+		})
+	}
+	if len(rows) > 0 {
+		addTable(m, colWidths, headers, rows)
+	}
+}
+
 func addTraceroute(m core.Maroto, data map[string]any) {
 	if len(data) == 0 {
 		m.AddRows(text.NewRow(6, "No traceroute data available.", props.Text{Size: 10}))
@@ -1138,41 +1301,29 @@ func addTraceroute(m core.Maroto, data map[string]any) {
 	addKeyValueRow(m, "Destination", stringVal(data, "destination"))
 	addKeyValueRow(m, "Hop Count", stringVal(data, "hop_count"))
 	if warning := stringVal(data, "warning"); warning != "N/A" {
-		addKeyValueRow(m, "Warning", warning)
+		addKeyValueRowStyled(m, "Warning", warning, colorPtr(colorAmber), nil)
 	}
 
 	if vantages := mapSlice(data, "vantages"); len(vantages) > 0 {
-		addSubheader(m, "Vantages")
 		for i, vantage := range vantages {
 			label := fmt.Sprintf("Vantage %d", i+1)
-			name := stringVal(vantage, "name")
-			if name != "N/A" {
+			if name := stringVal(vantage, "name", "label"); name != "N/A" {
 				label = name
 			}
-			addKeyValueRow(m, label, formatMapLines(vantage, ""))
+			if source := stringVal(vantage, "source"); source != "N/A" {
+				label += " (" + source + ")"
+			}
+			addSubheader(m, label)
+			if warning := stringVal(vantage, "warning"); warning != "N/A" {
+				addKeyValueRowStyled(m, "Warning", warning, colorPtr(colorAmber), nil)
+			}
+			if hops := mapSlice(vantage, "hops"); len(hops) > 0 {
+				addTracerouteHopTable(m, hops)
+			}
 		}
 	} else if hops := mapSlice(data, "hops"); len(hops) > 0 {
-		addSubheader(m, "Hops")
-		var lines []string
-		for i, hop := range hops {
-			if i >= maxTracerouteHops {
-				lines = append(lines, fmt.Sprintf("... and %d more hop(s)", len(hops)-maxTracerouteHops))
-				break
-			}
-			num := stringVal(hop, "hop", "number", "ttl")
-			ip := stringVal(hop, "ip", "address")
-			host := stringVal(hop, "host", "hostname")
-			rtt := stringVal(hop, "rtt", "latency_ms")
-			line := fmt.Sprintf("%s %s", num, ip)
-			if host != "N/A" {
-				line += " (" + host + ")"
-			}
-			if rtt != "N/A" {
-				line += " rtt=" + rtt
-			}
-			lines = append(lines, line)
-		}
-		addBulletItems(m, lines, 0)
+		addSubheader(m, "Route")
+		addTracerouteHopTable(m, hops)
 	}
 }
 

@@ -20,9 +20,22 @@ const (
 	rawLineHeight       = 3.8
 	labelColWidth       = 3
 	valueColWidth       = 9
+	tableRowHeight      = 6.0
+	tableHeaderHeight   = 7.0
 )
 
+type tableCell struct {
+	text  string
+	link  *string
+	color *props.Color
+	bold  bool
+}
+
 func addKeyValueRow(m core.Maroto, label, value string) {
+	addKeyValueRowStyled(m, label, value, nil, nil)
+}
+
+func addKeyValueRowStyled(m core.Maroto, label, value string, valueColor *props.Color, link *string) {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		value = "N/A"
@@ -34,12 +47,77 @@ func addKeyValueRow(m core.Maroto, label, value string) {
 		rowHeight = kvLineHeight
 	}
 
+	valueProps := props.Text{Size: 10, Top: 0.5}
+	if valueColor != nil {
+		valueProps.Color = valueColor
+	}
+	if link != nil {
+		valueProps.Hyperlink = link
+		if valueProps.Color == nil {
+			valueProps.Color = colorPtr(colorLink)
+		}
+	}
+
 	m.AddRows(
 		row.New(rowHeight).Add(
 			text.NewCol(labelColWidth, label+":", props.Text{Size: 10, Style: fontstyle.Bold, Top: 0.5}),
-			text.NewCol(valueColWidth, strings.Join(lines, "\n"), props.Text{Size: 10, Top: 0.5}),
+			text.NewCol(valueColWidth, strings.Join(lines, "\n"), valueProps),
 		),
 	)
+}
+
+func addTable(m core.Maroto, colWidths []int, headers []string, rows [][]tableCell) {
+	if len(headers) == 0 {
+		return
+	}
+
+	headerCells := make([]tableCell, len(headers))
+	for i, header := range headers {
+		headerCells[i] = tableCell{text: header, bold: true}
+	}
+	addTableRow(m, tableHeaderHeight, colWidths, headerCells, true)
+
+	for rowIndex, dataRow := range rows {
+		bg := &props.Cell{}
+		if rowIndex%2 == 0 {
+			bg.BackgroundColor = colorPtr(colorTableRow)
+		}
+		addTableRowStyled(m, tableRowHeight, colWidths, dataRow, bg)
+	}
+}
+
+func addTableRow(m core.Maroto, height float64, colWidths []int, cells []tableCell, header bool) {
+	bg := &props.Cell{}
+	if header {
+		bg.BackgroundColor = colorPtr(colorTableHead)
+	}
+	addTableRowStyled(m, height, colWidths, cells, bg)
+}
+
+func addTableRowStyled(m core.Maroto, height float64, colWidths []int, cells []tableCell, style *props.Cell) {
+	r := row.New(height)
+	if style != nil {
+		r = r.WithStyle(style)
+	}
+
+	for i, cell := range cells {
+		width := colWidths[i]
+		textProps := props.Text{Size: 8.5, Top: 1.2, Left: 1}
+		if cell.bold {
+			textProps.Style = fontstyle.Bold
+		}
+		if cell.color != nil {
+			textProps.Color = cell.color
+		}
+		if cell.link != nil {
+			textProps.Hyperlink = cell.link
+			if textProps.Color == nil {
+				textProps.Color = colorPtr(colorLink)
+			}
+		}
+		r.Add(text.NewCol(width, cell.text, textProps))
+	}
+	m.AddRows(r)
 }
 
 func addSubheader(m core.Maroto, title string) {
@@ -325,6 +403,50 @@ func stringSlice(data map[string]any, keys ...string) []string {
 	default:
 		return nil
 	}
+}
+
+func formatHopRTT(hop map[string]any) string {
+	if hop["timeout"] == true {
+		return "timeout"
+	}
+	rtt := stringVal(hop, "rtt_ms", "rtt", "latency_ms")
+	if rtt == "N/A" {
+		return "—"
+	}
+	return rtt + " ms"
+}
+
+func tracerouteHopIP(hop map[string]any) string {
+	if hop["timeout"] == true {
+		return "*"
+	}
+	return stringVal(hop, "ip", "address")
+}
+
+func tracerouteLocation(hop map[string]any) string {
+	country := stringVal(hop, "country")
+	city := stringVal(hop, "city")
+	switch {
+	case country != "N/A" && city != "N/A":
+		return city + ", " + country
+	case country != "N/A":
+		return country
+	case city != "N/A":
+		return city
+	default:
+		return "—"
+	}
+}
+
+func targetHTTPSURL(host string) string {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return ""
+	}
+	if strings.HasPrefix(host, "http://") || strings.HasPrefix(host, "https://") {
+		return host
+	}
+	return "https://" + host
 }
 
 func mapSlice(data map[string]any, key string) []map[string]any {

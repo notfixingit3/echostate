@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.50] - 2026-06-19
+
+### Changed
+
+- **PDF reports** — Larger cover logo, teal section headers, security findings table with severity colors, styled traceroute and JS asset tables (clickable URLs), color-coded scores and risks (mail grade, cert expiry, hijack risk, DNSSEC), TOC with page numbers, and PDF bookmarks for section navigation.
+
 ## [0.0.1-beta.49] - 2026-06-19
 
 ### Added
