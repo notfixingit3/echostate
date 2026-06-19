@@ -94,6 +94,7 @@ type ScanResult struct {
 	CT          map[string]any `json:"ct,omitempty"`
 	Traceroute  map[string]any `json:"traceroute,omitempty"`
 	Screenshot  map[string]any `json:"screenshot,omitempty"`
+	Enrichment  map[string]any `json:"enrichment,omitempty"`
 	Errors      []string       `json:"errors,omitempty"`
 }
 

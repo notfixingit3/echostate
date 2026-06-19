@@ -9,7 +9,19 @@ import (
 	"strings"
 )
 
-var sitemapLocPattern = regexp.MustCompile(`(?i)<loc>\s*([^<\s]+)\s*</loc>`)
+const (
+	maxSitemapFetches    = 20
+	maxSitemapURLsStored = 100
+)
+
+var (
+	sitemapLocPattern = regexp.MustCompile(`(?i)<loc>\s*([^<\s]+)\s*</loc>`)
+	defaultSitemapPaths = []string{
+		"/sitemap.xml",
+		"/sitemap_index.xml",
+		"/sitemap-index.xml",
+	}
+)
 
 func gatherCrawl(ctx context.Context, host string) (string, map[string]any, error) {
 	host = NormalizeHost(host)
@@ -26,18 +38,20 @@ func gatherCrawl(ctx context.Context, host string) (string, map[string]any, erro
 		errors = append(errors, "robots.txt: "+err.Error())
 	}
 
-	sitemapURLs := []string{"/sitemap.xml"}
+	queue := append([]string{}, defaultSitemapPaths...)
 	if robots, ok := result["robots"].(map[string]any); ok {
 		if raw, ok := robots["sitemaps"].([]string); ok {
-			for _, sm := range raw {
-				sitemapURLs = append(sitemapURLs, sm)
-			}
+			queue = append(queue, raw...)
 		}
 	}
 
 	seenSitemaps := make(map[string]struct{})
 	var allURLs []string
-	for _, sitemapPath := range sitemapURLs {
+
+	for len(queue) > 0 && len(seenSitemaps) < maxSitemapFetches {
+		sitemapPath := queue[0]
+		queue = queue[1:]
+
 		sitemapPath = normalizeFaviconPath(host, sitemapPath)
 		if sitemapPath == "" {
 			continue
@@ -53,17 +67,20 @@ func gatherCrawl(ctx context.Context, host string) (string, map[string]any, erro
 			continue
 		}
 
-		urls := parseSitemap(string(body))
-		if len(urls) == 0 {
-			continue
+		pageURLs, childSitemaps := classifySitemap(string(body))
+		for _, child := range childSitemaps {
+			queue = append(queue, child)
 		}
-		allURLs = append(allURLs, urls...)
+		if len(pageURLs) > 0 {
+			allURLs = append(allURLs, pageURLs...)
+		}
 	}
 
+	allURLs = uniqueStrings(allURLs)
 	if len(allURLs) > 0 {
-		if len(allURLs) > 100 {
+		if len(allURLs) > maxSitemapURLsStored {
 			result["sitemap_url_count"] = len(allURLs)
-			allURLs = allURLs[:100]
+			allURLs = allURLs[:maxSitemapURLsStored]
 		}
 		result["sitemap_urls"] = allURLs
 	}
@@ -121,62 +138,80 @@ func parseRobotsTxt(content string) map[string]any {
 	}
 }
 
-func parseSitemap(content string) []string {
+func classifySitemap(content string) (pageURLs []string, childSitemaps []string) {
 	content = strings.TrimSpace(content)
 	if content == "" {
-		return nil
+		return nil, nil
 	}
 
-	if strings.Contains(content, "<urlset") || strings.Contains(content, "<sitemapindex") {
-		if urls := parseSitemapXML(content); len(urls) > 0 {
-			return urls
+	lower := strings.ToLower(content)
+	switch {
+	case strings.Contains(lower, "<sitemapindex"):
+		return nil, parseSitemapIndexLocs(content)
+	case strings.Contains(lower, "<urlset"):
+		return parseSitemapURLSet(content), nil
+	default:
+		var urls []string
+		for _, match := range sitemapLocPattern.FindAllStringSubmatch(content, -1) {
+			if len(match) > 1 {
+				urls = append(urls, strings.TrimSpace(match[1]))
+			}
 		}
+		return uniqueStrings(urls), nil
 	}
+}
 
-	var urls []string
-	for _, match := range sitemapLocPattern.FindAllStringSubmatch(content, -1) {
-		if len(match) > 1 {
-			urls = append(urls, strings.TrimSpace(match[1]))
-		}
+func parseSitemap(content string) []string {
+	pageURLs, childSitemaps := classifySitemap(content)
+	if len(pageURLs) > 0 {
+		return pageURLs
 	}
-	return uniqueStrings(urls)
+	return childSitemaps
 }
 
 func parseSitemapXML(content string) []string {
+	return parseSitemap(content)
+}
+
+func parseSitemapURLSet(content string) []string {
 	type urlSet struct {
 		URLs []struct {
 			Loc string `xml:"loc"`
 		} `xml:"url"`
 	}
+
+	var set urlSet
+	if err := xml.NewDecoder(strings.NewReader(content)).Decode(&set); err != nil {
+		return nil
+	}
+
+	var urls []string
+	for _, item := range set.URLs {
+		if item.Loc != "" {
+			urls = append(urls, strings.TrimSpace(item.Loc))
+		}
+	}
+	return uniqueStrings(urls)
+}
+
+func parseSitemapIndexLocs(content string) []string {
 	type sitemapIndex struct {
 		Sitemaps []struct {
 			Loc string `xml:"loc"`
 		} `xml:"sitemap"`
 	}
 
-	var urls []string
-
-	var set urlSet
-	if err := xml.NewDecoder(strings.NewReader(content)).Decode(&set); err == nil {
-		for _, item := range set.URLs {
-			if item.Loc != "" {
-				urls = append(urls, strings.TrimSpace(item.Loc))
-			}
-		}
-		if len(urls) > 0 {
-			return uniqueStrings(urls)
-		}
-	}
-
 	var index sitemapIndex
-	if err := xml.NewDecoder(strings.NewReader(content)).Decode(&index); err == nil {
-		for _, item := range index.Sitemaps {
-			if item.Loc != "" {
-				urls = append(urls, strings.TrimSpace(item.Loc))
-			}
-		}
+	if err := xml.NewDecoder(strings.NewReader(content)).Decode(&index); err != nil {
+		return nil
 	}
 
+	var urls []string
+	for _, item := range index.Sitemaps {
+		if item.Loc != "" {
+			urls = append(urls, strings.TrimSpace(item.Loc))
+		}
+	}
 	return uniqueStrings(urls)
 }
 

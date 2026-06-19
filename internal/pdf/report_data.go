@@ -32,4 +32,5 @@ type ReportData struct {
 	ScreenshotJPEG []byte
 	ClientIP       string
 	PWhois         *PWhoisInfo
+	PWhoisData     map[string]any
 }

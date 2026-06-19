@@ -62,7 +62,7 @@ func RenderReport(data ReportData) ([]byte, error) {
 	addIntelHighlights(m, result, data.PWhois)
 	addChanges(m, data.Changes, data.ChangeDetails)
 	addScreenshot(m, data.ScreenshotJPEG, result.Screenshot)
-	addPWhois(m, data.PWhois)
+	addPWhoisSection(m, data.PWhois, data.PWhoisData)
 	addSectionHeader(m, "WHOIS")
 	addWHOIS(m, result.WHOIS)
 	addSectionHeader(m, "ASN / BGP")
@@ -83,6 +83,7 @@ func RenderReport(data ReportData) ([]byte, error) {
 	addCT(m, result.CT)
 	addSectionHeader(m, "Traceroute")
 	addTraceroute(m, result.Traceroute)
+	addEnrichment(m, result.Enrichment)
 
 	if len(result.Errors) > 0 {
 		addSectionHeader(m, "Errors")
@@ -189,22 +190,64 @@ func addIntelHighlights(m core.Maroto, result *models.ScanResult, pwhois *PWhois
 	addKeyValueRow(m, "Hijack Risk", stringVal(nestedMap(result.ASN, "routing"), "hijack_risk"))
 	addKeyValueRow(m, "BGP Path Stability", stringVal(nestedMap(nestedMap(result.ASN, "routing"), "path_profile"), "stability"))
 	addKeyValueRow(m, "CT Subdomains", ctCount(result.CT))
+	addKeyValueRow(m, "Sitemap Paths", crawlPathSummary(result.Crawl))
+	addKeyValueRow(m, "Storage Buckets", storageBucketSummary(result.Storage))
 }
 
-func addPWhois(m core.Maroto, info *PWhoisInfo) {
-	if info == nil || !info.HasData() {
+func crawlPathSummary(data map[string]any) string {
+	if len(data) == 0 {
+		return "N/A"
+	}
+	if count := stringVal(data, "sitemap_url_count"); count != "N/A" {
+		return count + " URLs"
+	}
+	if urls := stringSlice(data, "sitemap_urls"); len(urls) > 0 {
+		return fmt.Sprintf("%d URLs", len(urls))
+	}
+	robots := nestedMap(data, "robots")
+	if len(robots) > 0 {
+		paths := len(stringSlice(robots, "disallow")) + len(stringSlice(robots, "allow"))
+		if paths > 0 {
+			return fmt.Sprintf("%d robots rules", paths)
+		}
+		if len(stringSlice(robots, "sitemaps")) > 0 {
+			return "robots.txt only"
+		}
+	}
+	return "N/A"
+}
+
+func storageBucketSummary(data map[string]any) string {
+	buckets := mapSlice(data, "buckets")
+	if len(buckets) == 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", len(buckets))
+}
+
+func addPWhoisSection(m core.Maroto, info *PWhoisInfo, data map[string]any) {
+	if len(data) == 0 && (info == nil || !info.HasData()) {
 		return
 	}
 
-	addSectionHeader(m, "Passive WHOIS (pWhois)")
+	addSectionHeader(m, "Submitter / pWhois")
 
-	addKeyValueRow(m, "Origin AS", valueOrNA(info.OriginAS))
-	addKeyValueRow(m, "Organization", valueOrNA(info.OrgName))
-	addKeyValueRow(m, "Country", valueOrNA(info.CountryCode))
-	addKeyValueRow(m, "City", valueOrNA(info.City))
-	addKeyValueRow(m, "Prefix", valueOrNA(info.Prefix))
-	if info.LookedUpAt != nil && !info.LookedUpAt.IsZero() {
-		addKeyValueRow(m, "Looked Up At", info.LookedUpAt.UTC().Format(pdfDateFormat))
+	if info != nil && info.HasData() {
+		addKeyValueRow(m, "Origin AS", valueOrNA(info.OriginAS))
+		addKeyValueRow(m, "Organization", valueOrNA(info.OrgName))
+		addKeyValueRow(m, "Country", valueOrNA(info.CountryCode))
+		addKeyValueRow(m, "City", valueOrNA(info.City))
+		addKeyValueRow(m, "Prefix", valueOrNA(info.Prefix))
+		if info.LookedUpAt != nil && !info.LookedUpAt.IsZero() {
+			addKeyValueRow(m, "Looked Up At", info.LookedUpAt.UTC().Format(pdfDateFormat))
+		}
+	}
+
+	if len(data) > 0 {
+		addSubheader(m, "pWhois Record")
+		for _, key := range sortedMapKeys(data) {
+			addKeyValueRow(m, formatFieldLabel(key), formatScalar(data[key]))
+		}
 	}
 }
 
@@ -537,6 +580,41 @@ func addCrawl(m core.Maroto, data map[string]any) {
 	if crawlErrors := stringSlice(data, "errors"); len(crawlErrors) > 0 {
 		addSubheader(m, "Crawl Errors")
 		addBulletItems(m, crawlErrors, maxErrorsShown)
+	}
+
+	if stringSlice(data, "sitemap_urls") == nil && stringVal(data, "sitemap_url_count") == "N/A" {
+		if robots := nestedMap(data, "robots"); len(robots) > 0 && len(stringSlice(robots, "sitemaps")) > 0 {
+			m.AddRows(text.NewRow(5, "Sitemap URLs declared in robots.txt but page URLs could not be fetched.", props.Text{
+				Size:  9,
+				Style: fontstyle.Italic,
+			}))
+		}
+	}
+}
+
+func addEnrichment(m core.Maroto, data map[string]any) {
+	if len(data) == 0 {
+		return
+	}
+
+	addSectionHeader(m, "Third-Party Enrichment")
+
+	for _, key := range sortedMapKeys(data) {
+		if strings.HasSuffix(key, "_error") {
+			addKeyValueRow(m, formatFieldLabel(strings.TrimSuffix(key, "_error"))+" Error", formatScalar(data[key]))
+			continue
+		}
+
+		block, ok := data[key].(map[string]any)
+		if !ok {
+			addKeyValueRow(m, formatFieldLabel(key), formatScalar(data[key]))
+			continue
+		}
+
+		addSubheader(m, formatFieldLabel(key))
+		for _, field := range sortedMapKeys(block) {
+			addKeyValueRow(m, formatFieldLabel(field), formatScalar(block[field]))
+		}
 	}
 }
 

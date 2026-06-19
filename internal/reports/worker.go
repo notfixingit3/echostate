@@ -259,15 +259,18 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 	var clientIP string
 	var pwhoisOriginAS, pwhoisOrgName, pwhoisCountry, pwhoisCity, pwhoisPrefix *string
 	var pwhoisLookedUp *time.Time
+	var pwhoisDataRaw json.RawMessage
 	err := w.db.Pool.QueryRow(ctx, `
 		SELECT raw_data, COALESCE(changes, '{}'), COALESCE(change_details, '[]'),
 		       COALESCE(client_ip, ''), pwhois_origin_as, pwhois_org_name,
-		       pwhois_country_code, pwhois_city, pwhois_prefix, pwhois_looked_up_at
+		       pwhois_country_code, pwhois_city, pwhois_prefix, pwhois_looked_up_at,
+		       pwhois_data
 		FROM snapshots
 		WHERE id = $1
 	`, snapshotID).Scan(
 		&raw, &changes, &changeDetailsRaw,
 		&clientIP, &pwhoisOriginAS, &pwhoisOrgName, &pwhoisCountry, &pwhoisCity, &pwhoisPrefix, &pwhoisLookedUp,
+		&pwhoisDataRaw,
 	)
 	if err != nil {
 		msg := fmt.Sprintf("snapshot not found: %v", err)
@@ -298,6 +301,14 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 		return
 	}
 
+	var pwhoisData map[string]any
+	if len(pwhoisDataRaw) > 0 {
+		if err := json.Unmarshal(pwhoisDataRaw, &pwhoisData); err != nil {
+			w.failReport(ctx, reportID, fmt.Sprintf("decode pwhois data: %v", err))
+			return
+		}
+	}
+
 	reportData := pdf.ReportData{
 		Result:         &result,
 		Changes:        changes,
@@ -305,6 +316,7 @@ func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
 		ScreenshotJPEG: screenshotJPEG,
 		ClientIP:       clientIP,
 		PWhois:         buildPWhoisInfo(pwhoisOriginAS, pwhoisOrgName, pwhoisCountry, pwhoisCity, pwhoisPrefix, pwhoisLookedUp),
+		PWhoisData:     pwhoisData,
 	}
 
 	renderCtx, renderCancel := context.WithTimeout(ctx, renderTimeout)

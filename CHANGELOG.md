@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.31] - 2026-06-18
+
+### Added
+
+- **Crawl gatherer** — Recursively follows sitemap index files, tries common sitemap paths (`/sitemap.xml`, `/sitemap_index.xml`, `/sitemap-index.xml`), and surfaces robots-declared sitemaps.
+- **PDF enrichment** — Reports include async Shodan/Censys/HIBP/RiskIQ correlation when present in `raw_data`.
+- **PDF submitter intel** — Full `pwhois_data` record plus sitemap/bucket counts in intel highlights.
+
+### Fixed
+
+- **Sitemap index parsing** — Child sitemap URLs from `<sitemapindex>` are fetched for page URLs instead of being stored as page paths.
+
 ## [0.0.1-beta.30] - 2026-06-18
 
 ### Added

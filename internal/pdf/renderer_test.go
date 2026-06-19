@@ -97,6 +97,12 @@ func TestRenderReport(t *testing.T) {
 			"width":  "1280",
 			"height": "720",
 		},
+		Enrichment: map[string]any{
+			"shodan": map[string]any{
+				"query": "123456",
+				"total": 3,
+			},
+		},
 		Errors: []string{"web gatherer timed out"},
 	}
 
@@ -121,6 +127,10 @@ func TestRenderReport(t *testing.T) {
 			OrgName:     "Google LLC",
 			CountryCode: "US",
 			Prefix:      "142.250.0.0/15",
+		},
+		PWhoisData: map[string]any{
+			"asn": "15169",
+			"org": "Google LLC",
 		},
 	})
 	require.NoError(t, err)
