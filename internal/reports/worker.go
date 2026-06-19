@@ -166,6 +166,18 @@ func (w *Worker) ListReportsForSnapshot(ctx context.Context, snapshotID uuid.UUI
 	return reports, nil
 }
 
+// DeleteReport removes a report row by ID.
+func (w *Worker) DeleteReport(ctx context.Context, reportID uuid.UUID) error {
+	tag, err := w.db.Pool.Exec(ctx, `DELETE FROM reports WHERE id = $1`, reportID)
+	if err != nil {
+		return fmt.Errorf("delete report: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
 func (w *Worker) loop() {
 	defer w.wg.Done()
 

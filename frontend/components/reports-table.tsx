@@ -31,9 +31,10 @@ import {
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { fetchApi, downloadReport, ApiError } from "@/lib/api"
+import { useAuth } from "@/components/auth-provider"
+import { fetchApi, downloadReport, deleteReport, ApiError } from "@/lib/api"
 import type { ReportSummary, ReportStatus, PaginatedResponse } from "@/lib/types"
-import { SearchIcon, AlertCircleIcon, DownloadIcon } from "lucide-react"
+import { SearchIcon, AlertCircleIcon, DownloadIcon, Trash2Icon } from "lucide-react"
 
 type ReportsResponse = PaginatedResponse<ReportSummary>
 
@@ -61,13 +62,17 @@ function statusBadgeVariant(status: ReportStatus) {
 export function ReportsTable() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user } = useAuth()
+  const canDelete = Boolean(user)
   const [status, setStatus] = React.useState<ReportStatus | "">("")
   const [snapshotId, setSnapshotId] = React.useState(
     () => searchParams.get("snapshot_id")?.trim() ?? ""
   )
   const [page, setPage] = React.useState(1)
+  const [reloadKey, setReloadKey] = React.useState(0)
   const [data, setData] = React.useState<ReportsResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [downloadError, setDownloadError] = React.useState<string | null>(null)
 
@@ -117,7 +122,30 @@ export function ReportsTable() {
     return () => {
       cancelled = true
     }
-  }, [page, status, snapshotId])
+  }, [page, status, snapshotId, reloadKey])
+
+  async function handleDelete(report: ReportSummary) {
+    const label = report.host || report.id
+    if (!confirm(`Delete report for ${label}?`)) return
+
+    setDeletingId(report.id)
+    setError(null)
+
+    try {
+      await deleteReport(report.id)
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to delete report")
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0
 
@@ -242,27 +270,44 @@ export function ReportsTable() {
                       : "—"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={report.status !== "completed"}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        if (report.status !== "completed") return
-                        void downloadReport(report).catch((err) => {
-                          if (err instanceof ApiError) {
-                            setDownloadError(err.message)
-                          } else if (err instanceof Error) {
-                            setDownloadError(err.message)
-                          } else {
-                            setDownloadError("Failed to download report")
-                          }
-                        })
-                      }}
-                    >
-                      <DownloadIcon data-icon="inline-start" />
-                      Download
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={report.status !== "completed"}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          if (report.status !== "completed") return
+                          void downloadReport(report).catch((err) => {
+                            if (err instanceof ApiError) {
+                              setDownloadError(err.message)
+                            } else if (err instanceof Error) {
+                              setDownloadError(err.message)
+                            } else {
+                              setDownloadError("Failed to download report")
+                            }
+                          })
+                        }}
+                      >
+                        <DownloadIcon data-icon="inline-start" />
+                        Download
+                      </Button>
+                      {canDelete ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          disabled={deletingId === report.id}
+                          aria-label={`Delete report for ${report.host || report.id}`}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void handleDelete(report)
+                          }}
+                        >
+                          <Trash2Icon />
+                        </Button>
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

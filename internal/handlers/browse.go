@@ -655,3 +655,46 @@ func (h *Handler) listTargetScreenshots(c *gin.Context) {
 	})
 }
 
+func (h *Handler) deleteSnapshot(c *gin.Context) {
+	snapshotID, ok := h.parseSnapshotID(c)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	tag, err := h.db.Pool.Exec(ctx, `DELETE FROM snapshots WHERE id = $1`, snapshotID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete snapshot"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+func (h *Handler) deleteReport(c *gin.Context) {
+	reportID, ok := h.parseReportID(c)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := h.reportWorker.DeleteReport(ctx, reportID); err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "report not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete report"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+

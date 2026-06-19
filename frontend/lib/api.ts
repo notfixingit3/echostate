@@ -249,5 +249,13 @@ export async function getTarget(target_id: string): Promise<TargetDetail> {
   return fetchApi<TargetDetail>(`/api/targets/${target_id}`)
 }
 
+export async function deleteSnapshot(snapshotId: string): Promise<void> {
+  await fetchApi(`/api/snapshots/${snapshotId}`, { method: "DELETE" })
+}
+
+export async function deleteReport(reportId: string): Promise<void> {
+  await fetchApi(`/api/reports/${reportId}`, { method: "DELETE" })
+}
+
 // Backward-compatible alias for existing callers.
 export const fetchJson = fetchApi

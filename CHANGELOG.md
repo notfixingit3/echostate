@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Navigation** — Profile and server Settings links in the top menu (Settings is admin-only, `/admin/system`).
+- **Snapshots & reports** — Delete actions on list pages (snapshots: admin; reports: authenticated scanner+).
+
 ### Changed
 
 - **PDF reports** — Table of contents page, cleaner cover logo, GitHub project URL (replaces echostate.io). Raw WHOIS dump omitted (structured WHOIS/RDAP fields retained).

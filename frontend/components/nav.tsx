@@ -27,6 +27,14 @@ const appNavLinks = [
   { href: "/reports", label: "Reports" },
 ] as const
 
+function isNavLinkActive(href: string, pathname: string): boolean {
+  if (href === "/") return pathname === "/"
+  if (href === "/admin") {
+    return pathname.startsWith("/admin") && !pathname.startsWith("/admin/system")
+  }
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export function Nav() {
   const pathname = usePathname()
   const { user, config, signOut } = useAuth()
@@ -34,6 +42,10 @@ export function Nav() {
   const navLinks = [
     ...appNavLinks,
     ...(user?.role === "admin" ? [{ href: "/admin", label: "Admin" as const }] : []),
+    ...(user ? [{ href: "/profile", label: "Profile" as const }] : []),
+    ...(user?.role === "admin"
+      ? [{ href: "/admin/system", label: "Settings" as const }]
+      : []),
   ]
 
   return (
@@ -50,10 +62,7 @@ export function Nav() {
         <div className="flex items-center gap-2">
           <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => {
-              const isActive =
-                link.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(link.href)
+              const isActive = isNavLinkActive(link.href, pathname)
 
               return (
                 <Link
@@ -74,17 +83,6 @@ export function Nav() {
           </nav>
           {user ? (
             <div className="hidden items-center gap-2 md:flex">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "max-w-40 truncate",
-                  pathname.startsWith("/profile") && "bg-primary/10 text-primary"
-                )}
-                render={<Link href="/profile" />}
-              >
-                {user.display_name}
-              </Button>
               <Button variant="ghost" size="sm" onClick={() => void signOut()}>
                 <LogOutIcon data-icon="inline-start" />
                 Sign out
@@ -120,10 +118,7 @@ export function Nav() {
             </SheetHeader>
             <nav className="flex flex-col gap-1 p-4">
               {navLinks.map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(link.href)
+                const isActive = isNavLinkActive(link.href, pathname)
 
                 return (
                   <Button
@@ -139,22 +134,6 @@ export function Nav() {
               {user ? (
                 <>
                   <div className="my-2 border-t border-border/60" />
-                  <Button
-                    variant={pathname.startsWith("/profile") ? "secondary" : "ghost"}
-                    className="justify-start"
-                    render={<Link href="/profile" />}
-                  >
-                    {user.display_name}
-                  </Button>
-                  {user.role === "admin" ? (
-                    <Button
-                      variant={pathname.startsWith("/admin") ? "secondary" : "ghost"}
-                      className="justify-start"
-                      render={<Link href="/admin" />}
-                    >
-                      Administration
-                    </Button>
-                  ) : null}
                   <Button
                     variant="ghost"
                     className="justify-start"

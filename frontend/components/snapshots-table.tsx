@@ -24,23 +24,29 @@ import {
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { fetchApi, ApiError } from "@/lib/api"
+import { useAuth } from "@/components/auth-provider"
+import { fetchApi, deleteSnapshot, ApiError } from "@/lib/api"
 import type { SnapshotSummary, PaginatedResponse } from "@/lib/types"
-import { SearchIcon, AlertCircleIcon } from "lucide-react"
+import { SearchIcon, AlertCircleIcon, Trash2Icon } from "lucide-react"
 
 type SnapshotsResponse = PaginatedResponse<SnapshotSummary>
 
 export function SnapshotsTable() {
   const router = useRouter()
+  const { user } = useAuth()
+  const canDelete = user?.role === "admin"
   const [targetId, setTargetId] = React.useState("")
   const [debouncedTargetId, setDebouncedTargetId] = React.useState("")
   const [country, setCountry] = React.useState("")
   const [page, setPage] = React.useState(1)
+  const [reloadKey, setReloadKey] = React.useState(0)
   const [data, setData] = React.useState<SnapshotsResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
   const limit = 20
+  const columnCount = canDelete ? 8 : 7
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedTargetId(targetId), 300)
@@ -86,7 +92,32 @@ export function SnapshotsTable() {
     return () => {
       cancelled = true
     }
-  }, [page, debouncedTargetId])
+  }, [page, debouncedTargetId, reloadKey])
+
+  async function handleDelete(snapshot: SnapshotSummary) {
+    const label = snapshot.host || snapshot.target_id
+    if (!confirm(`Delete snapshot for ${label}? Reports for this snapshot will also be removed.`)) {
+      return
+    }
+
+    setDeletingId(snapshot.id)
+    setError(null)
+
+    try {
+      await deleteSnapshot(snapshot.id)
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to delete snapshot")
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const filteredData = React.useMemo(() => {
     if (!data) return null
@@ -159,6 +190,9 @@ export function SnapshotsTable() {
               <TableHead>Client IP</TableHead>
               <TableHead>Country</TableHead>
               <TableHead>Organization</TableHead>
+              {canDelete ? (
+                <TableHead className="text-right">Actions</TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -172,17 +206,22 @@ export function SnapshotsTable() {
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  {canDelete ? (
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-8 w-8" />
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             ) : !filteredData ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={columnCount} className="text-center text-muted-foreground">
                   {error ? "Could not load snapshots." : "Loading snapshots…"}
                 </TableCell>
               </TableRow>
             ) : filteredData.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={columnCount} className="text-center text-muted-foreground">
                   No snapshots found.
                 </TableCell>
               </TableRow>
@@ -219,6 +258,23 @@ export function SnapshotsTable() {
                   <TableCell>
                     {snapshot.pwhois_org_name || "—"}
                   </TableCell>
+                  {canDelete ? (
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        disabled={deletingId === snapshot.id}
+                        aria-label={`Delete snapshot for ${snapshot.host || snapshot.target_id}`}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void handleDelete(snapshot)
+                        }}
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             )}

@@ -89,6 +89,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.POST("/reports", requireScanner, h.createReport)
 	api.GET("/reports/:id", requireScanner, h.getReport)
 	api.GET("/reports/:id/download", requireScanner, h.downloadReport)
+	api.DELETE("/reports/:id", requireScanner, h.deleteReport)
 
 	api.GET("/targets", requireScanner, h.listTargets)
 	api.GET("/targets/:id", requireScanner, h.getTarget)
@@ -100,6 +101,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	api.GET("/snapshots/:id", requireScanner, h.getSnapshot)
 	api.GET("/snapshots/:id/diff", requireScanner, h.getSnapshotDiff)
 	api.GET("/snapshots/:id/report", requireScanner, h.snapshotReport)
+	api.DELETE("/snapshots/:id", requireAdmin, h.deleteSnapshot)
 
 	api.GET("/webhooks", requireAdmin, h.listWebhooks)
 	api.POST("/webhooks", requireAdmin, h.createWebhook)

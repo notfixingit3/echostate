@@ -384,6 +384,55 @@ func TestListReports_NoFilter(t *testing.T) {
 	require.Len(t, resp.Data, 2)
 }
 
+func TestDeleteSnapshot_RemovesRow(t *testing.T) {
+	d := setupTestDB(t)
+	targetID := seedTarget(t, d, "example.com")
+	snapshotID := seedSnapshotForTarget(t, d, targetID, map[string]any{"host": "example.com"}, "")
+
+	h := &Handler{db: d}
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/snapshots/"+snapshotID.String(), nil)
+	c.Params = gin.Params{{Key: "id", Value: snapshotID.String()}}
+	h.deleteSnapshot(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), `"deleted":true`)
+
+	var exists bool
+	err := d.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS(SELECT 1 FROM snapshots WHERE id = $1)
+	`, snapshotID).Scan(&exists)
+	require.NoError(t, err)
+	require.False(t, exists)
+}
+
+func TestDeleteReport_RemovesRow(t *testing.T) {
+	d := setupTestDB(t)
+	h := newTestHandler(t, d)
+	targetID := seedTarget(t, d, "example.com")
+	snapshotID := seedSnapshotForTarget(t, d, targetID, map[string]any{"host": "example.com"}, "")
+	reportID := insertReport(t, d, snapshotID, models.ReportCompleted, []byte("%PDF"))
+
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/reports/"+reportID.String(), nil)
+	c.Params = gin.Params{{Key: "id", Value: reportID.String()}}
+	h.deleteReport(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var exists bool
+	err := d.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS(SELECT 1 FROM reports WHERE id = $1)
+	`, reportID).Scan(&exists)
+	require.NoError(t, err)
+	require.False(t, exists)
+}
+
 func TestListTargets_InvalidTargetID(t *testing.T) {
 	d := setupTestDB(t)
 	h := &Handler{db: d}
