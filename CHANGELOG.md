@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.46] - 2026-06-19
+
+### Changed
+
+- **Home page** — Two-column layout puts the scan form above the fold; tighter spacing, no duplicate hero logo, and compact feature list instead of three cards.
+
 ## [0.0.1-beta.45] - 2026-06-19
 
 ### Added
