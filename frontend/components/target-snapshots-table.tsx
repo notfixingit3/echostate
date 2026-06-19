@@ -88,7 +88,7 @@ export function TargetSnapshotsTable({ targetId }: { targetId: string }) {
         </Alert>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm">
+      <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm">
         <Table>
           <TableHeader>
             <TableRow>

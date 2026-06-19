@@ -5,6 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --container-center: true;
+    --container-padding: 1rem;
+    --container-padding-sm: 1.5rem;
+    --container-padding-lg: 2rem;
+    --container-padding-xl: 2rem;
+    --container-padding-2xl: 2rem;
     --font-heading: var(--font-heading);
     --font-sans: var(--font-sans);
     --font-mono: var(--font-mono);
@@ -115,6 +121,12 @@
     --sidebar-accent-foreground: oklch(0.96 0.006 250);
     --sidebar-border: oklch(0.28 0.03 255);
     --sidebar-ring: oklch(0.72 0.14 195);
+}
+
+@layer components {
+  .container {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
 }
 
 @layer base {

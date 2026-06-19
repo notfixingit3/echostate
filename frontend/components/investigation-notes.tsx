@@ -23,6 +23,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { useConfirm } from "@/components/confirm-dialog"
 import { fetchApi, ApiError } from "@/lib/api"
 import type {
   InvestigationNote,
@@ -128,6 +129,7 @@ export function InvestigationNotes({
   graphNode,
   allowFreeform = false,
 }: InvestigationNotesProps) {
+  const confirm = useConfirm()
   const [status, setStatus] = React.useState<NoteStatus>("active")
   const [notes, setNotes] = React.useState<InvestigationNote[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -271,7 +273,13 @@ export function InvestigationNotes({
   }
 
   async function deleteForever(id: string) {
-    if (!confirm("Permanently delete this note? This cannot be undone.")) return
+    const ok = await confirm({
+      title: "Delete note permanently?",
+      description: "Permanently delete this note? This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    })
+    if (!ok) return
     setError(null)
     try {
       await fetchApi(`/api/notes/${id}`, { method: "DELETE" })

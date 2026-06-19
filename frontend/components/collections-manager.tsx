@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { useConfirm } from "@/components/confirm-dialog"
 import { fetchApi, ApiError } from "@/lib/api"
 import type {
   CollectionRescanResponse,
@@ -42,6 +43,7 @@ import {
 } from "lucide-react"
 
 export function CollectionsManager() {
+  const confirm = useConfirm()
   const [collections, setCollections] = React.useState<TargetCollectionSummary[]>([])
   const [selectedId, setSelectedId] = React.useState<string>("")
   const [detail, setDetail] = React.useState<TargetCollectionDetail | null>(null)
@@ -196,7 +198,13 @@ export function CollectionsManager() {
 
   async function deleteCollection() {
     if (!selectedId || !detail) return
-    if (!confirm(`Delete collection "${detail.name}"?`)) return
+    const ok = await confirm({
+      title: "Delete collection?",
+      description: `Delete collection "${detail.name}"?`,
+      confirmLabel: "Delete",
+      destructive: true,
+    })
+    if (!ok) return
     setSaving(true)
     setError(null)
     try {

@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useConfirm } from "@/components/confirm-dialog"
 import { fetchApi, ApiError } from "@/lib/api"
 import type { GraphCompareMode, GraphViewMode, SavedGraphView } from "@/lib/types"
 import { BookmarkIcon, PlusIcon, SaveIcon, Trash2Icon } from "lucide-react"
@@ -35,6 +36,7 @@ export function GraphSavedViews({
   getSnapshot: () => GraphViewSnapshot
   onApply: (view: SavedGraphView) => void | Promise<void>
 }) {
+  const confirm = useConfirm()
   const [views, setViews] = React.useState<SavedGraphView[]>([])
   const [selectedId, setSelectedId] = React.useState("")
   const [loading, setLoading] = React.useState(true)
@@ -124,7 +126,13 @@ export function GraphSavedViews({
     if (!selectedId) return
     const current = views.find((view) => view.id === selectedId)
     if (!current) return
-    if (!confirm(`Delete saved view "${current.name}"?`)) return
+    const ok = await confirm({
+      title: "Delete saved view?",
+      description: `Delete saved view "${current.name}"?`,
+      confirmLabel: "Delete",
+      destructive: true,
+    })
+    if (!ok) return
     setSaving(true)
     setError(null)
     try {

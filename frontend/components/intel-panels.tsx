@@ -484,8 +484,9 @@ export function IntelPanels({
   }
 
   return (
-    <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-muted/50 p-1 sm:w-auto">
+    <Tabs defaultValue="overview" className="w-full min-w-0">
+      <div className="w-full overflow-x-auto pb-1">
+      <TabsList className="h-auto w-max max-w-full flex-wrap justify-start gap-1 bg-muted/50 p-1 sm:w-auto">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="whois">WHOIS</TabsTrigger>
         <TabsTrigger value="asn">ASN / BGP</TabsTrigger>
@@ -545,6 +546,7 @@ export function IntelPanels({
           </TabsTrigger>
         )}
       </TabsList>
+      </div>
 
       <TabsContent value="overview" className="mt-4">
         <div className="grid items-start gap-4 md:grid-cols-2">

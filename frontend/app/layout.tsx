@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono, Sora } from "next/font/google"
 import "./globals.css"
 import { AppShell } from "@/components/app-shell"
 import { AuthProvider } from "@/components/auth-provider"
+import { ConfirmProvider } from "@/components/confirm-dialog"
 import { PwaRegister } from "@/components/pwa-register"
 import { ThemeProvider } from "@/components/theme-provider"
 import { UserThemeSync } from "@/components/user-theme-sync"
@@ -89,10 +90,12 @@ export default function RootLayout({
         <PwaRegister />
         <ThemeProvider>
           <AuthProvider>
-            <UserThemeSync />
-            <TooltipProvider>
-              <AppShell>{children}</AppShell>
-            </TooltipProvider>
+            <ConfirmProvider>
+              <UserThemeSync />
+              <TooltipProvider>
+                <AppShell>{children}</AppShell>
+              </TooltipProvider>
+            </ConfirmProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 
 import { useAuth } from "@/components/auth-provider"
+import { useConfirm } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -80,6 +81,7 @@ function formatTimestamp(value: string, timezone: string) {
 
 export function AccountProfilePanel() {
   const { user, refresh, setUser } = useAuth()
+  const confirm = useConfirm()
   const { setTheme } = useTheme()
   const [credentials, setCredentials] = React.useState<AuthCredential[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -222,7 +224,14 @@ export function AccountProfilePanel() {
   }
 
   async function handleDelete(credId: string) {
-    if (!user || !confirm("Remove this passkey from your account?")) return
+    if (!user) return
+    const ok = await confirm({
+      title: "Remove passkey?",
+      description: "Remove this passkey from your account?",
+      confirmLabel: "Remove",
+      destructive: true,
+    })
+    if (!ok) return
     setBusy(true)
     setError(null)
     setMessage(null)

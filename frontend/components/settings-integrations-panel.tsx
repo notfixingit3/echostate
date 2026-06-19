@@ -16,10 +16,12 @@ import {
   maskSecret,
   type PushoverConfig,
 } from "@/components/pushover-fields"
+import { useConfirm } from "@/components/confirm-dialog"
 import { fetchApi } from "@/lib/api"
 import type { Webhook } from "@/lib/settings-types"
 
 export function SettingsIntegrationsPanel() {
+  const confirm = useConfirm()
   const [webhooks, setWebhooks] = React.useState<Webhook[]>([])
   const [loading, setLoading] = React.useState(true)
   const [name, setName] = React.useState("")
@@ -93,7 +95,13 @@ export function SettingsIntegrationsPanel() {
   }
 
   async function deleteWebhook(id: string) {
-    if (!confirm("Are you sure you want to delete this webhook?")) return
+    const ok = await confirm({
+      title: "Delete webhook?",
+      description: "Are you sure you want to delete this webhook?",
+      confirmLabel: "Delete",
+      destructive: true,
+    })
+    if (!ok) return
     try {
       await fetchApi(`/api/webhooks/${id}`, { method: "DELETE" })
       await loadWebhooks()

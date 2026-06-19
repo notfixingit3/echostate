@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.42] - 2026-06-19
+
+### Added
+
+- **Themed confirm dialogs** — Delete and other destructive actions use in-app alert dialogs instead of the browser `confirm()` popup.
+
+### Fixed
+
+- **Page edge clipping** — Container horizontal padding, table spacing, and chart/tab layout no longer clip text against the left screen edge.
+
 ## [0.0.1-beta.41] - 2026-06-19
 
 ### Added

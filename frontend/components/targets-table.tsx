@@ -24,6 +24,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/components/auth-provider"
+import { useConfirm } from "@/components/confirm-dialog"
 import { fetchApi, deleteTarget, ApiError } from "@/lib/api"
 import type { TargetSummary, PaginatedResponse } from "@/lib/types"
 import { SearchIcon, AlertCircleIcon, Trash2Icon } from "lucide-react"
@@ -33,6 +34,7 @@ type TargetsResponse = PaginatedResponse<TargetSummary>
 export function TargetsTable() {
   const router = useRouter()
   const { user } = useAuth()
+  const confirm = useConfirm()
   const canDelete = user?.role === "admin"
   const [q, setQ] = React.useState("")
   const [debouncedQ, setDebouncedQ] = React.useState("")
@@ -92,13 +94,13 @@ export function TargetsTable() {
 
   async function handleDelete(target: TargetSummary, event: React.MouseEvent) {
     event.stopPropagation()
-    if (
-      !confirm(
-        `Delete target ${target.host}? All snapshots and reports for this host will be removed.`
-      )
-    ) {
-      return
-    }
+    const ok = await confirm({
+      title: "Delete target?",
+      description: `Delete target ${target.host}? All snapshots and reports for this host will be removed.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    })
+    if (!ok) return
 
     setDeletingId(target.id)
     setError(null)
@@ -156,7 +158,7 @@ export function TargetsTable() {
         </Alert>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm" data-testid="targets-table-container">
+      <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm" data-testid="targets-table-container">
         <Table>
           <TableHeader>
             <TableRow>
