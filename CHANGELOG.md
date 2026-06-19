@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.38] - 2026-06-18
+
+### Changed
+
+- **Node.js 24** — CI, frontend Docker builds, and local dev require Node 24 LTS (replaces Node 22).
+
 ## [0.0.1-beta.37] - 2026-06-18
 
 ### Added

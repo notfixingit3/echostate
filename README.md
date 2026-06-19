@@ -196,7 +196,7 @@ Paste the printed code at `/login`.
 
 ```bash
 curl http://localhost:8080/health
-# {"status":"ok","env":"development","version":"0.0.1-beta.37"}
+# {"status":"ok","env":"development","version":"0.0.1-beta.38"}
 ```
 
 ### Scan a target
@@ -244,7 +244,7 @@ Rescanning a target uses the same endpoint — there is no separate rescan API.
 ### Requirements
 
 - Go 1.26+
-- Node.js 22+ (frontend)
+- Node.js 24+ (frontend)
 - PostgreSQL 16+
 - browserless/chrome or another CDP WebSocket endpoint
 - Neo4j 5+ (optional; included in Compose)
