@@ -22,6 +22,8 @@ const (
 	valueColWidth       = 9
 	tableRowHeight      = 6.0
 	tableHeaderHeight   = 7.0
+	tableLineHeight     = 3.8
+	tableTotalCols      = 12
 )
 
 type tableCell struct {
@@ -82,7 +84,7 @@ func addTable(m core.Maroto, colWidths []int, headers []string, rows [][]tableCe
 		if rowIndex%2 == 0 {
 			bg.BackgroundColor = colorPtr(colorTableRow)
 		}
-		addTableRowStyled(m, tableRowHeight, colWidths, dataRow, bg)
+		addTableRowStyled(m, tableRowHeightForCells(colWidths, dataRow), colWidths, dataRow, bg)
 	}
 }
 
@@ -92,6 +94,39 @@ func addTableRow(m core.Maroto, height float64, colWidths []int, cells []tableCe
 		bg.BackgroundColor = colorPtr(colorTableHead)
 	}
 	addTableRowStyled(m, height, colWidths, cells, bg)
+}
+
+func tableCharsForCol(width int) int {
+	if width <= 0 {
+		return valueCharsPerLine
+	}
+	chars := int(float64(valueCharsPerLine) * float64(width) / float64(tableTotalCols))
+	if chars < 12 {
+		return 12
+	}
+	return chars
+}
+
+func tableRowHeightForCells(colWidths []int, cells []tableCell) float64 {
+	maxLines := 1
+	for i, cell := range cells {
+		if i >= len(colWidths) {
+			break
+		}
+		lines := wrapText(cell.text, tableCharsForCol(colWidths[i]))
+		if len(lines) > maxLines {
+			maxLines = len(lines)
+		}
+	}
+	height := float64(maxLines)*tableLineHeight + 1.5
+	if height < tableRowHeight {
+		return tableRowHeight
+	}
+	return height
+}
+
+func formatTableCellText(text string, colWidth int) string {
+	return strings.Join(wrapText(text, tableCharsForCol(colWidth)), "\n")
 }
 
 func addTableRowStyled(m core.Maroto, height float64, colWidths []int, cells []tableCell, style *props.Cell) {
@@ -115,9 +150,40 @@ func addTableRowStyled(m core.Maroto, height float64, colWidths []int, cells []t
 				textProps.Color = colorPtr(colorLink)
 			}
 		}
-		r.Add(text.NewCol(width, cell.text, textProps))
+		r.Add(text.NewCol(width, formatTableCellText(cell.text, width), textProps))
 	}
 	m.AddRows(r)
+}
+
+func sanitizeReportError(msg string) string {
+	msg = strings.TrimSpace(msg)
+	if msg == "" {
+		return msg
+	}
+
+	for _, verb := range []string{`Get "`, `Post "`, `Head "`} {
+		if strings.HasPrefix(msg, verb) {
+			if end := strings.Index(msg, `": `); end > 0 {
+				msg = strings.TrimSpace(msg[end+3:])
+			}
+			break
+		}
+	}
+
+	msg = strings.TrimPrefix(msg, "traceroute: ")
+	for strings.Contains(msg, "external traceroute: ") {
+		msg = strings.Replace(msg, "external traceroute: ", "", 1)
+	}
+	msg = strings.TrimPrefix(msg, "traceroute: ")
+
+	switch {
+	case strings.Contains(msg, "context deadline exceeded"),
+		strings.Contains(msg, "Client.Timeout exceeded"),
+		strings.Contains(msg, "i/o timeout"):
+		return "request timed out"
+	default:
+		return msg
+	}
 }
 
 func addSubheader(m core.Maroto, title string) {

@@ -20,6 +20,21 @@ func TestJoinDNSRecords_UppercaseKeys(t *testing.T) {
 	assert.Contains(t, got, "93.184.216.34")
 }
 
+func TestSanitizeReportError(t *testing.T) {
+	raw := `traceroute: external: external traceroute: HTTP 404`
+	assert.Equal(t, "external: HTTP 404", sanitizeReportError(raw))
+}
+
+func TestTableRowHeightForCells_GrowsWithWrappedText(t *testing.T) {
+	colWidths := []int{2, 10}
+	cells := []tableCell{
+		{text: "HIGH"},
+		{text: strings.Repeat("word ", 40)},
+	}
+	height := tableRowHeightForCells(colWidths, cells)
+	assert.Greater(t, height, tableRowHeight)
+}
+
 func TestFormatMapLines(t *testing.T) {
 	got := formatMapLines(map[string]any{
 		"hijack_risk": "low",

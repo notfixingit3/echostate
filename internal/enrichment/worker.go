@@ -118,7 +118,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 	if wayback, err := queryWayback(ctx, payload); err == nil && len(wayback) > 0 {
 		enrichment["wayback"] = wayback
 	} else if err != nil {
-		enrichment["wayback_error"] = err.Error()
+		enrichment["wayback_error"] = FriendlyError(err)
 		hadError = true
 	}
 	if settings.VirusTotalAPIKey != "" {

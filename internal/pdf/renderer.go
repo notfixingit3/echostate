@@ -1005,7 +1005,11 @@ func addEnrichment(m core.Maroto, data map[string]any) {
 			continue
 		}
 		if strings.HasSuffix(key, "_error") {
-			addKeyValueRow(m, formatFieldLabel(strings.TrimSuffix(key, "_error"))+" Error", formatScalar(data[key]))
+			addKeyValueRow(m, formatFieldLabel(strings.TrimSuffix(key, "_error"))+" Error", sanitizeReportError(formatScalar(data[key])))
+			continue
+		}
+		if strings.HasSuffix(key, "_skipped") {
+			addKeyValueRow(m, formatFieldLabel(strings.TrimSuffix(key, "_skipped")), formatScalar(data[key]))
 			continue
 		}
 
@@ -1301,7 +1305,7 @@ func addTraceroute(m core.Maroto, data map[string]any) {
 	addKeyValueRow(m, "Destination", stringVal(data, "destination"))
 	addKeyValueRow(m, "Hop Count", stringVal(data, "hop_count"))
 	if warning := stringVal(data, "warning"); warning != "N/A" {
-		addKeyValueRowStyled(m, "Warning", warning, colorPtr(colorAmber), nil)
+		addKeyValueRowStyled(m, "Warning", sanitizeReportError(warning), colorPtr(colorAmber), nil)
 	}
 
 	if vantages := mapSlice(data, "vantages"); len(vantages) > 0 {
@@ -1314,8 +1318,11 @@ func addTraceroute(m core.Maroto, data map[string]any) {
 				label += " (" + source + ")"
 			}
 			addSubheader(m, label)
+			if skipped := stringVal(vantage, "skipped"); skipped != "N/A" {
+				addKeyValueRow(m, "Status", skipped)
+			}
 			if warning := stringVal(vantage, "warning"); warning != "N/A" {
-				addKeyValueRowStyled(m, "Warning", warning, colorPtr(colorAmber), nil)
+				addKeyValueRowStyled(m, "Warning", sanitizeReportError(warning), colorPtr(colorAmber), nil)
 			}
 			if hops := mapSlice(vantage, "hops"); len(hops) > 0 {
 				addTracerouteHopTable(m, hops)
@@ -1328,7 +1335,11 @@ func addTraceroute(m core.Maroto, data map[string]any) {
 }
 
 func addErrors(m core.Maroto, errors []string) {
-	addBulletItems(m, errors, maxErrorsShown)
+	cleaned := make([]string, 0, len(errors))
+	for _, errMsg := range errors {
+		cleaned = append(cleaned, sanitizeReportError(errMsg))
+	}
+	addBulletItems(m, cleaned, maxErrorsShown)
 }
 
 func joinDNSRecords(data map[string]any) string {

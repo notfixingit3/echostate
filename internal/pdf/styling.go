@@ -165,7 +165,7 @@ func collectSecurityFindings(result *models.ScanResult, details []models.ChangeD
 	}
 
 	if len(result.Errors) > 0 {
-		appendFinding("warning", fmt.Sprintf("%d gatherer error(s)", len(result.Errors)), result.Errors[0])
+		appendFinding("warning", fmt.Sprintf("%d gatherer error(s)", len(result.Errors)), sanitizeReportError(result.Errors[0]))
 	}
 
 	if len(findings) == 0 {

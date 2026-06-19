@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -134,6 +135,31 @@ func TestGatherTraceroute_FromMockOutput(t *testing.T) {
 	}
 	if data["local_prefix_redacted"] != 1 {
 		t.Fatalf("local_prefix_redacted = %#v, want 1", data["local_prefix_redacted"])
+	}
+}
+
+func TestGatherTraceroute_ExternalUnavailableSkipped(t *testing.T) {
+	_, data, err := gatherTraceroute(context.Background(), "example.com")
+	if err != nil {
+		t.Fatalf("gatherTraceroute() error = %v", err)
+	}
+
+	vantages, ok := data["vantages"].([]map[string]any)
+	if !ok || len(vantages) != 2 {
+		t.Fatalf("expected 2 vantages, got %#v", data["vantages"])
+	}
+	if vantages[1]["skipped"] == nil {
+		t.Fatalf("expected external vantage skipped, got %#v", vantages[1])
+	}
+	if warning := data["warning"]; warning != nil {
+		t.Fatalf("expected no traceroute warning when external API is unavailable, got %#v", warning)
+	}
+}
+
+func TestFormatTracerouteVantageWarning(t *testing.T) {
+	got := formatTracerouteVantageWarning("external", fmt.Errorf("external traceroute: HTTP 404"))
+	if got != "external: HTTP 404" {
+		t.Fatalf("formatTracerouteVantageWarning() = %q", got)
 	}
 }
 

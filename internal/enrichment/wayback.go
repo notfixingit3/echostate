@@ -8,7 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
+
+const waybackHTTPTimeout = 20 * time.Second
 
 func queryWayback(ctx context.Context, payload map[string]any) (map[string]any, error) {
 	host := resolveHost(payload)
@@ -27,9 +30,10 @@ func queryWayback(ctx context.Context, payload map[string]any) (map[string]any, 
 	}
 	req.Header.Set("User-Agent", "EchoState/1.0 (+https://github.com/notfixingit3/echostate)")
 
-	resp, err := httpClient().Do(req)
+	client := &http.Client{Timeout: waybackHTTPTimeout}
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, friendlyServiceError("wayback", err)
 	}
 	defer resp.Body.Close()
 

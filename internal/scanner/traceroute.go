@@ -2,9 +2,9 @@ package scanner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -19,9 +19,10 @@ const (
 	tracerouteTimeout       = 35 * time.Second
 	vantageLocal              = "local"
 	vantageExternal           = "external"
-	externalTracerouteURL     = "https://api.hackertarget.com/traceroute/?q="
-	externalTracerouteMaxBody = 64 * 1024
 )
+
+// HackerTarget discontinued the public traceroute API (returns HTTP 404).
+var errExternalTracerouteUnavailable = errors.New("HackerTarget traceroute API unavailable")
 
 var (
 	runTracerouteFunc      = runTraceroute
@@ -97,15 +98,11 @@ func gatherTraceroute(ctx context.Context, host string) (string, map[string]any,
 	}
 
 	var warnings []string
-	if localErr != nil && len(localHops) == 0 {
-		warnings = append(warnings, localErr.Error())
-	} else if localErr != nil {
-		warnings = append(warnings, "local: "+localErr.Error())
+	if localErr != nil {
+		warnings = append(warnings, formatTracerouteVantageWarning("local", localErr))
 	}
-	if extErr != nil && len(externalHops) == 0 {
-		warnings = append(warnings, "external: "+extErr.Error())
-	} else if extErr != nil {
-		warnings = append(warnings, "external: "+extErr.Error())
+	if extErr != nil && !errors.Is(extErr, errExternalTracerouteUnavailable) {
+		warnings = append(warnings, formatTracerouteVantageWarning("external", extErr))
 	}
 	if len(warnings) > 0 {
 		result["warning"] = strings.Join(warnings, "; ")
@@ -195,9 +192,21 @@ func buildVantageResult(id, label, source string, hops []map[string]any, err err
 		"hop_count": len(hops),
 	}
 	if err != nil {
-		result["warning"] = err.Error()
+		if errors.Is(err, errExternalTracerouteUnavailable) {
+			result["skipped"] = err.Error()
+		} else {
+			result["warning"] = err.Error()
+		}
 	}
 	return result
+}
+
+func formatTracerouteVantageWarning(label string, err error) string {
+	msg := strings.TrimSpace(err.Error())
+	for _, prefix := range []string{"external traceroute: ", "traceroute: "} {
+		msg = strings.TrimPrefix(msg, prefix)
+	}
+	return label + ": " + msg
 }
 
 func fetchExternalTraceroute(ctx context.Context, host string) (string, error) {
@@ -206,25 +215,8 @@ func fetchExternalTraceroute(ctx context.Context, host string) (string, error) {
 		return "", fmt.Errorf("empty host")
 	}
 
-	rawURL := externalTracerouteURL + url.QueryEscape(host)
-	body, _, err := httpGet(ctx, rawURL, externalTracerouteMaxBody)
-	if err != nil {
-		return "", fmt.Errorf("external traceroute: %w", err)
-	}
-
-	output := strings.TrimSpace(string(body))
-	if output == "" {
-		return "", fmt.Errorf("external traceroute: empty response")
-	}
-	lower := strings.ToLower(output)
-	if strings.Contains(lower, "error") && !strings.Contains(lower, "traceroute") {
-		return "", fmt.Errorf("external traceroute: %s", output)
-	}
-	if strings.Contains(lower, "api count exceeded") {
-		return "", fmt.Errorf("external traceroute: rate limit exceeded")
-	}
-
-	return output, nil
+	_ = ctx
+	return "", errExternalTracerouteUnavailable
 }
 
 func runTraceroute(ctx context.Context, host string) (string, error) {
