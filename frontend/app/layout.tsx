@@ -15,6 +15,7 @@ import {
   SITE_DESCRIPTION,
   SITE_NAME,
 } from "@/lib/site"
+import { siteBaseUrl } from "@/lib/site-url"
 import { cn } from "@/lib/utils"
 
 const sans = Plus_Jakarta_Sans({
@@ -34,6 +35,7 @@ const mono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteBaseUrl()),
   title: {
     default: SITE_NAME,
     template: `%s · ${SITE_NAME}`,

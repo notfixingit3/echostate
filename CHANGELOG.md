@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.49] - 2026-06-19
+
+### Added
+
+- **Audit log filters** — Action-type dropdown and expandable rows (user agent, full detail JSON, event IDs).
+- **SEO basics** — `/robots.txt` and `/sitemap.xml` (home page only); `metadataBase` from `NEXT_PUBLIC_SITE_URL`.
+
+### Changed
+
+- **Audit pagination** — Compact page control with ellipses instead of listing every page number.
+
 ## [0.0.1-beta.48] - 2026-06-19
 
 ### Added

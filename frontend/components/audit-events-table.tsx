@@ -5,6 +5,13 @@ import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Table,
   TableBody,
   TableCell,
@@ -15,6 +22,7 @@ import {
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -24,7 +32,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { fetchApi, ApiError } from "@/lib/api"
 import type { AuditEvent, PaginatedResponse } from "@/lib/types"
-import { SearchIcon, AlertCircleIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { SearchIcon, AlertCircleIcon, ChevronRightIcon } from "lucide-react"
 
 const ACTION_LABELS: Record<string, string> = {
   "auth.login": "Sign in",
@@ -47,6 +56,10 @@ const ACTION_LABELS: Record<string, string> = {
   "webhook.update": "Webhook updated",
   "webhook.delete": "Webhook deleted",
 }
+
+const ACTION_OPTIONS = Object.entries(ACTION_LABELS)
+  .map(([value, label]) => ({ value, label }))
+  .sort((a, b) => a.label.localeCompare(b.label))
 
 function formatAction(action: string): string {
   return ACTION_LABELS[action] ?? action
@@ -99,12 +112,37 @@ function formatIPCell(event: AuditEvent): { primary: string; secondary?: string 
   }
 }
 
+function formatDetailJSON(detail: Record<string, unknown>): string {
+  if (Object.keys(detail).length === 0) return "{}"
+  return JSON.stringify(detail, null, 2)
+}
+
+function paginationItems(current: number, total: number): Array<number | "ellipsis"> {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1)
+  }
+
+  const items: Array<number | "ellipsis"> = [1]
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+
+  if (start > 2) items.push("ellipsis")
+  for (let page = start; page <= end; page += 1) {
+    items.push(page)
+  }
+  if (end < total - 1) items.push("ellipsis")
+  items.push(total)
+  return items
+}
+
 type AuditResponse = PaginatedResponse<AuditEvent>
 
 export function AuditEventsTable() {
   const [q, setQ] = React.useState("")
   const [debouncedQ, setDebouncedQ] = React.useState("")
+  const [actionFilter, setActionFilter] = React.useState("all")
   const [page, setPage] = React.useState(1)
+  const [expandedId, setExpandedId] = React.useState<string | null>(null)
   const [data, setData] = React.useState<AuditResponse | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -127,6 +165,7 @@ export function AuditEventsTable() {
       params.set("page", String(page))
       params.set("limit", String(limit))
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim())
+      if (actionFilter !== "all") params.set("action", actionFilter)
 
       try {
         const result = await fetchApi<AuditResponse>(`/api/audit?${params.toString()}`)
@@ -150,7 +189,7 @@ export function AuditEventsTable() {
     return () => {
       cancelled = true
     }
-  }, [page, debouncedQ])
+  }, [page, debouncedQ, actionFilter])
 
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0
 
@@ -161,7 +200,7 @@ export function AuditEventsTable() {
           event.preventDefault()
           setPage(1)
         }}
-        className="flex items-center gap-2"
+        className="flex flex-wrap items-center gap-2"
       >
         <Input
           placeholder="Search actor, IP, resource, or detail"
@@ -170,9 +209,33 @@ export function AuditEventsTable() {
             setQ(event.target.value)
             setPage(1)
           }}
-          className="max-w-md"
+          className="max-w-md min-w-[12rem] flex-1"
           data-testid="audit-search-input"
         />
+        <Select
+          value={actionFilter}
+          onValueChange={(value) => {
+            if (value) {
+              setActionFilter(value)
+              setPage(1)
+            }
+          }}
+        >
+          <SelectTrigger
+            className="w-full min-w-[11rem] sm:w-52"
+            data-testid="audit-action-filter"
+          >
+            <SelectValue placeholder="All actions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All actions</SelectItem>
+            {ACTION_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button type="submit" disabled={loading}>
           <SearchIcon data-icon="inline-start" />
           Search
@@ -194,18 +257,20 @@ export function AuditEventsTable() {
         <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[16%]">When</TableHead>
-              <TableHead className="w-[14%]">Actor</TableHead>
-              <TableHead className="w-[18%]">Action</TableHead>
-              <TableHead className="w-[14%]">Resource</TableHead>
-              <TableHead className="w-[22%]">Detail</TableHead>
-              <TableHead className="w-[16%]">Client IP</TableHead>
+              <TableHead className="w-10" />
+              <TableHead className="w-[15%]">When</TableHead>
+              <TableHead className="w-[13%]">Actor</TableHead>
+              <TableHead className="w-[16%]">Action</TableHead>
+              <TableHead className="w-[13%]">Resource</TableHead>
+              <TableHead className="w-[20%]">Detail</TableHead>
+              <TableHead className="w-[15%]">Client IP</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && !data ? (
               ["a", "b", "c", "d", "e"].map((key) => (
                 <TableRow key={key}>
+                  <TableCell><Skeleton className="size-6" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -216,13 +281,13 @@ export function AuditEventsTable() {
               ))
             ) : !data ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   {error ? "Could not load audit events." : "Loading audit events…"}
                 </TableCell>
               </TableRow>
             ) : data.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No audit events found.
                 </TableCell>
               </TableRow>
@@ -240,37 +305,107 @@ export function AuditEventsTable() {
                 const ipTitle = ipCell.secondary
                   ? `${ipCell.primary}\n${ipCell.secondary}`
                   : ipCell.primary
+                const expanded = expandedId === event.id
 
                 return (
-                  <TableRow key={event.id} data-testid={`audit-row-${event.id}`}>
-                    <TableCell className="max-w-0 text-xs">
-                      <div className="truncate" title={when}>{when}</div>
-                    </TableCell>
-                    <TableCell className="max-w-0 text-sm">
-                      <div className="truncate" title={actor}>{actor}</div>
-                    </TableCell>
-                    <TableCell className="max-w-0 text-sm">
-                      <div className="truncate" title={event.action}>
-                        {formatAction(event.action)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-0 font-mono text-xs text-muted-foreground">
-                      <div className="truncate" title={resource}>{resource}</div>
-                    </TableCell>
-                    <TableCell className="max-w-0 text-xs text-muted-foreground">
-                      <div className="truncate" title={detail}>{detail}</div>
-                    </TableCell>
-                    <TableCell className="max-w-0 text-xs text-muted-foreground">
-                      <div className="truncate font-mono" title={ipTitle}>
-                        {ipCell.primary}
-                      </div>
-                      {ipCell.secondary ? (
-                        <div className="truncate text-[11px] leading-snug" title={ipCell.secondary}>
-                          {ipCell.secondary}
+                  <React.Fragment key={event.id}>
+                    <TableRow data-testid={`audit-row-${event.id}`}>
+                      <TableCell className="px-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-expanded={expanded}
+                          aria-label={expanded ? "Collapse row" : "Expand row"}
+                          data-testid={`audit-expand-${event.id}`}
+                          onClick={() =>
+                            setExpandedId((current) =>
+                              current === event.id ? null : event.id
+                            )
+                          }
+                        >
+                          <ChevronRightIcon
+                            className={cn(
+                              "transition-transform",
+                              expanded && "rotate-90"
+                            )}
+                          />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="max-w-0 text-xs">
+                        <div className="truncate" title={when}>{when}</div>
+                      </TableCell>
+                      <TableCell className="max-w-0 text-sm">
+                        <div className="truncate" title={actor}>{actor}</div>
+                      </TableCell>
+                      <TableCell className="max-w-0 text-sm">
+                        <div className="truncate" title={event.action}>
+                          {formatAction(event.action)}
                         </div>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell className="max-w-0 font-mono text-xs text-muted-foreground">
+                        <div className="truncate" title={resource}>{resource}</div>
+                      </TableCell>
+                      <TableCell className="max-w-0 text-xs text-muted-foreground">
+                        <div className="truncate" title={detail}>{detail}</div>
+                      </TableCell>
+                      <TableCell className="max-w-0 text-xs text-muted-foreground">
+                        <div className="truncate font-mono" title={ipTitle}>
+                          {ipCell.primary}
+                        </div>
+                        {ipCell.secondary ? (
+                          <div
+                            className="truncate text-[11px] leading-snug"
+                            title={ipCell.secondary}
+                          >
+                            {ipCell.secondary}
+                          </div>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                    {expanded ? (
+                      <TableRow data-testid={`audit-row-detail-${event.id}`}>
+                        <TableCell colSpan={7} className="bg-muted/20 p-4">
+                          <div className="flex flex-col gap-3 text-sm">
+                            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                              <span>
+                                <span className="font-medium text-foreground">Event ID:</span>{" "}
+                                <span className="font-mono">{event.id}</span>
+                              </span>
+                              {event.user_id ? (
+                                <span>
+                                  <span className="font-medium text-foreground">User ID:</span>{" "}
+                                  <span className="font-mono">{event.user_id}</span>
+                                </span>
+                              ) : null}
+                              <span>
+                                <span className="font-medium text-foreground">Action code:</span>{" "}
+                                <span className="font-mono">{event.action}</span>
+                              </span>
+                            </div>
+                            {event.user_agent ? (
+                              <div>
+                                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                  User agent
+                                </p>
+                                <p className="break-all font-mono text-xs text-muted-foreground">
+                                  {event.user_agent}
+                                </p>
+                              </div>
+                            ) : null}
+                            <div>
+                              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                Detail
+                              </p>
+                              <pre className="max-h-48 overflow-auto rounded-md border border-border/50 bg-background/70 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                                {formatDetailJSON(event.detail ?? {})}
+                              </pre>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </React.Fragment>
                 )
               })
             )}
@@ -288,14 +423,18 @@ export function AuditEventsTable() {
                 className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
               />
             </PaginationItem>
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-              (pageNumber) => (
-                <PaginationItem key={pageNumber}>
+            {paginationItems(page, totalPages).map((item, index) =>
+              item === "ellipsis" ? (
+                <PaginationItem key={`ellipsis-${index}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={item}>
                   <PaginationLink
-                    isActive={pageNumber === page}
-                    onClick={() => setPage(pageNumber)}
+                    isActive={item === page}
+                    onClick={() => setPage(item)}
                   >
-                    {pageNumber}
+                    {item}
                   </PaginationLink>
                 </PaginationItem>
               )
