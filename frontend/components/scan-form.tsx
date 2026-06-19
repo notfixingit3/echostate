@@ -185,10 +185,7 @@ export function ScanForm() {
     if (!report || report.status !== "completed" || !result) return
 
     try {
-      await downloadReport(
-        report,
-        `echostate-${result.host || "report"}-${report.id.slice(0, 8)}.pdf`
-      )
+      await downloadReport(report)
       setReportError(null)
     } catch (err) {
       if (err instanceof ApiError) {

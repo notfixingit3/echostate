@@ -176,8 +176,38 @@ export async function getLatestReportForSnapshot(
   return getReport(list.data[0].id)
 }
 
+function sanitizeReportHost(host: string): string {
+  let slug = host.trim().toLowerCase()
+  slug = slug.replace(/^https?:\/\//, "")
+  slug = slug.replace(/[/?#].*$/, "")
+  slug = slug.replace(/[^a-z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
+  if (!slug) return "unknown"
+  return slug.length > 80 ? slug.slice(0, 80) : slug
+}
+
+export function reportDownloadFilename(
+  host?: string,
+  completedAt?: string | null,
+  createdAt?: string | null
+): string {
+  const slug = sanitizeReportHost(host || "unknown")
+  const dateSource = completedAt || createdAt || new Date().toISOString()
+  const date = dateSource.slice(0, 10)
+  return `echostate-${slug}-${date}.pdf`
+}
+
+function filenameFromContentDisposition(header: string | null): string | undefined {
+  if (!header) return undefined
+  const match = header.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)
+  if (!match?.[1]) return undefined
+  return match[1].trim().replace(/^"|"$/g, "")
+}
+
 export async function downloadReport(
-  report: Pick<Report, "id" | "status" | "download_url">,
+  report: Pick<
+    Report,
+    "id" | "status" | "download_url" | "host" | "completed_at" | "created_at"
+  >,
   filename?: string
 ): Promise<void> {
   if (report.status !== "completed") {
@@ -205,7 +235,10 @@ export async function downloadReport(
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement("a")
   anchor.href = url
-  anchor.download = filename || `echostate-report-${report.id}.pdf`
+  anchor.download =
+    filename ||
+    filenameFromContentDisposition(response.headers.get("Content-Disposition")) ||
+    reportDownloadFilename(report.host, report.completed_at, report.created_at)
   document.body.appendChild(anchor)
   anchor.click()
   document.body.removeChild(anchor)

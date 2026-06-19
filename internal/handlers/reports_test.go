@@ -402,8 +402,24 @@ func TestDownloadReport_Completed(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, "application/pdf", w.Header().Get("Content-Type"))
 	require.Contains(t, w.Header().Get("Content-Disposition"), "attachment")
+	require.Contains(t, w.Header().Get("Content-Disposition"), "echostate-example.com-")
 	require.Contains(t, w.Header().Get("Content-Disposition"), ".pdf")
 	require.Equal(t, pdf, w.Body.Bytes())
+}
+
+func TestSanitizeReportFilenameHost(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{in: "example.com", want: "example.com"},
+		{in: "https://Foo.Bar/baz", want: "foo.bar"},
+		{in: "2001:db8::1", want: "2001-db8--1"},
+		{in: "  ", want: "unknown"},
+	}
+	for _, tc := range tests {
+		require.Equal(t, tc.want, sanitizeReportFilenameHost(tc.in), tc.in)
+	}
 }
 
 func TestDownloadReport_NotReady(t *testing.T) {

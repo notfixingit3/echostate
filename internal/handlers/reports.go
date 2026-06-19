@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -69,10 +70,16 @@ func (h *Handler) createReport(c *gin.Context) {
 		return
 	}
 
+	host, err := h.snapshotHost(ctx, snapshotID)
+	if err != nil || host == "" {
+		host = "unknown"
+	}
+
 	c.JSON(http.StatusAccepted, models.ReportResponse{
 		ID:         reportID,
 		Status:     models.ReportPending,
 		SnapshotID: snapshotID,
+		Host:       host,
 		CreatedAt:  time.Now().UTC(),
 	})
 }
@@ -168,10 +175,16 @@ func (h *Handler) snapshotReport(c *gin.Context) {
 		return
 	}
 
+	host, err := h.snapshotHost(ctx, snapshotID)
+	if err != nil || host == "" {
+		host = "unknown"
+	}
+
 	c.JSON(http.StatusAccepted, models.ReportResponse{
 		ID:         reportID,
 		Status:     models.ReportPending,
 		SnapshotID: snapshotID,
+		Host:       host,
 		CreatedAt:  time.Now().UTC(),
 	})
 }
@@ -186,8 +199,7 @@ func (h *Handler) serveReportPDF(c *gin.Context, report *models.Report) {
 		host = "unknown"
 	}
 
-	date := time.Now().UTC().Format("2006-01-02")
-	filename := fmt.Sprintf("echostate-%s-%s.pdf", host, date)
+	filename := reportPDFFilename(host, time.Now().UTC())
 
 	c.Header("Content-Type", "application/pdf")
 	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
@@ -286,4 +298,36 @@ func (h *Handler) findLatestSnapshotByHost(ctx context.Context, host string) (uu
 		return uuid.Nil, fmt.Errorf("find latest snapshot: %w", err)
 	}
 	return snapshotID, nil
+}
+
+func reportPDFFilename(host string, at time.Time) string {
+	return fmt.Sprintf("echostate-%s-%s.pdf", sanitizeReportFilenameHost(host), at.UTC().Format("2006-01-02"))
+}
+
+func sanitizeReportFilenameHost(host string) string {
+	host = strings.TrimSpace(strings.ToLower(host))
+	host = strings.TrimPrefix(host, "https://")
+	host = strings.TrimPrefix(host, "http://")
+	if idx := strings.IndexAny(host, "/?#"); idx >= 0 {
+		host = host[:idx]
+	}
+
+	var b strings.Builder
+	for _, r := range host {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '.', r == '-', r == '_':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+
+	slug := strings.Trim(b.String(), "-")
+	if slug == "" {
+		return "unknown"
+	}
+	if len(slug) > 80 {
+		slug = slug[:80]
+	}
+	return slug
 }
