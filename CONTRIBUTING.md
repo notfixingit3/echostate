@@ -34,7 +34,7 @@ Thank you for your interest in contributing.
 
 1. Create a feature branch from `dev`.
 2. Make changes with tests where applicable.
-3. If you add a dependency, gatherer, or external API integration, update [THIRD_PARTY.md](THIRD_PARTY.md) with license and cost/terms notes.
+3. If you add a dependency, gatherer, API route, or worker, update [appmap.md](appmap.md) and [THIRD_PARTY.md](THIRD_PARTY.md) as appropriate.
 
 4. Verify locally:
 

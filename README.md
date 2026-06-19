@@ -281,6 +281,8 @@ cd frontend && npx playwright test
 
 ## Architecture
 
+See **[appmap.md](appmap.md)** for a full application map: workers, gatherers, `raw_data` keys, Postgres/Neo4j schema, API routes, and frontend pages.
+
 ```
 echostate/
 ├── main.go                 # Entry point, workers, HTTP server
