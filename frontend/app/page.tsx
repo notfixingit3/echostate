@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 
+import { HelpTip } from "@/components/help-tip"
 import { ScanForm } from "@/components/scan-form"
 import { Badge } from "@/components/ui/badge"
 import { GlobeIcon, NetworkIcon, MonitorIcon } from "lucide-react"
@@ -8,19 +9,22 @@ const features = [
   {
     icon: GlobeIcon,
     title: "WHOIS",
+    helpId: "feature.whois",
     description: "Registrar, nameservers, expiration, and raw registry data.",
   },
   {
     icon: NetworkIcon,
     title: "ASN / BGP",
+    helpId: "feature.asn_bgp",
     description: "Origin ASN, prefix, country, and allocation via Team Cymru.",
   },
   {
     icon: MonitorIcon,
     title: "Web intel",
+    helpId: "feature.web_intel",
     description: "Page title, final URL, and copyright signals from the landing page.",
   },
-]
+] as const
 
 export default function Page() {
   return (
@@ -53,8 +57,9 @@ export default function Page() {
                     <Icon className="size-3.5 text-primary" />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-heading text-sm font-semibold">
+                    <p className="flex items-center gap-1.5 font-heading text-sm font-semibold">
                       {feature.title}
+                      <HelpTip id={feature.helpId} />
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {feature.description}

@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 
+import { HelpTip } from "@/components/help-tip"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CopyButton } from "@/components/copy-button"
@@ -38,6 +39,33 @@ import {
   formatFieldLabel,
   formatValue,
 } from "@/lib/intel"
+import { getFieldHelpId } from "@/lib/help-copy"
+import { cn } from "@/lib/utils"
+
+function IntelTabTrigger({
+  value,
+  helpId,
+  className,
+  onClick,
+  children,
+}: {
+  value: string
+  helpId: string
+  className?: string
+  onClick?: React.MouseEventHandler<HTMLButtonElement>
+  children: React.ReactNode
+}) {
+  return (
+    <TabsTrigger
+      value={value}
+      className={cn("gap-1.5", className)}
+      onClick={onClick}
+    >
+      {children}
+      <HelpTip id={helpId} />
+    </TabsTrigger>
+  )
+}
 import { ScreenshotTimeline } from "@/components/screenshot-timeline"
 import type { RawIntel } from "@/lib/intel"
 import type { ChangeDetail } from "@/lib/types"
@@ -277,8 +305,9 @@ function DataGrid({
           key={key}
           className="min-w-0 rounded-lg border border-border/50 bg-muted/15 p-3 sm:p-4"
         >
-          <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {formatFieldLabel(key)}
+            <HelpTip id={getFieldHelpId(key)} />
           </dt>
           <dd className="mt-2 min-w-0 text-sm">
             {key === "name_servers" ||
@@ -487,31 +516,47 @@ export function IntelPanels({
     <Tabs defaultValue="overview" className="w-full min-w-0">
       <div className="w-full overflow-x-auto pb-1">
       <TabsList className="h-auto w-max max-w-full flex-wrap justify-start gap-1 bg-muted/50 p-1 sm:w-auto">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="whois">WHOIS</TabsTrigger>
-        <TabsTrigger value="asn">ASN / BGP</TabsTrigger>
-        <TabsTrigger value="dns">DNS</TabsTrigger>
-        <TabsTrigger value="tls">TLS</TabsTrigger>
-        <TabsTrigger value="web">Web</TabsTrigger>
-        <TabsTrigger value="favicon">Favicon</TabsTrigger>
-        <TabsTrigger value="crawl">Crawl</TabsTrigger>
-        <TabsTrigger value="ct" className="gap-1.5">
+        <IntelTabTrigger value="overview" helpId="intel.tab.overview">
+          Overview
+        </IntelTabTrigger>
+        <IntelTabTrigger value="whois" helpId="intel.tab.whois">
+          WHOIS
+        </IntelTabTrigger>
+        <IntelTabTrigger value="asn" helpId="intel.tab.asn">
+          ASN / BGP
+        </IntelTabTrigger>
+        <IntelTabTrigger value="dns" helpId="intel.tab.dns">
+          DNS
+        </IntelTabTrigger>
+        <IntelTabTrigger value="tls" helpId="intel.tab.tls">
+          TLS
+        </IntelTabTrigger>
+        <IntelTabTrigger value="web" helpId="intel.tab.web">
+          Web
+        </IntelTabTrigger>
+        <IntelTabTrigger value="favicon" helpId="intel.tab.favicon">
+          Favicon
+        </IntelTabTrigger>
+        <IntelTabTrigger value="crawl" helpId="intel.tab.crawl">
+          Crawl
+        </IntelTabTrigger>
+        <IntelTabTrigger value="ct" helpId="intel.tab.ct">
           CT
           {ctCount > 0 ? (
             <Badge variant="secondary" className="size-5 justify-center p-0 text-[10px]">
               {ctCount}
             </Badge>
           ) : null}
-        </TabsTrigger>
-        <TabsTrigger value="traceroute" className="gap-1.5">
+        </IntelTabTrigger>
+        <IntelTabTrigger value="traceroute" helpId="intel.tab.traceroute">
           Traceroute
           {tracerouteCount > 0 ? (
             <Badge variant="secondary" className="size-5 justify-center p-0 text-[10px]">
               {tracerouteCount}
             </Badge>
           ) : null}
-        </TabsTrigger>
-        <TabsTrigger value="screenshots" className="gap-1.5">
+        </IntelTabTrigger>
+        <IntelTabTrigger value="screenshots" helpId="intel.tab.screenshots">
           <CameraIcon className="size-3" />
           Screenshots
           {hasScreenshot ? (
@@ -519,32 +564,42 @@ export function IntelPanels({
               1
             </Badge>
           ) : null}
-        </TabsTrigger>
-        <TabsTrigger value="storage">Storage</TabsTrigger>
-        <TabsTrigger value="enrichment">Enrichment</TabsTrigger>
-        <TabsTrigger value="pwhois">Submitter</TabsTrigger>
-        <TabsTrigger value="errors" className="gap-1.5">
+        </IntelTabTrigger>
+        <IntelTabTrigger value="storage" helpId="intel.tab.storage">
+          Storage
+        </IntelTabTrigger>
+        <IntelTabTrigger value="enrichment" helpId="intel.tab.enrichment">
+          Enrichment
+        </IntelTabTrigger>
+        <IntelTabTrigger value="pwhois" helpId="intel.tab.pwhois">
+          Submitter
+        </IntelTabTrigger>
+        <IntelTabTrigger value="errors" helpId="intel.tab.errors">
           Errors
           {errorCount > 0 ? (
             <Badge variant="destructive" className="size-5 justify-center p-0 text-[10px]">
               {errorCount}
             </Badge>
           ) : null}
-        </TabsTrigger>
-        <TabsTrigger value="changes" className="gap-1.5">
+        </IntelTabTrigger>
+        <IntelTabTrigger value="changes" helpId="intel.tab.changes">
           Changes
           {changeCount > 0 ? (
             <Badge variant="secondary" className="size-5 justify-center p-0 text-[10px]">
               {changeCount}
             </Badge>
           ) : null}
-        </TabsTrigger>
-        {snapshotId && (
-          <TabsTrigger value="raw-diff" onClick={loadDiff} className="gap-1.5">
+        </IntelTabTrigger>
+        {snapshotId ? (
+          <IntelTabTrigger
+            value="raw-diff"
+            helpId="intel.tab.raw_diff"
+            onClick={loadDiff}
+          >
             <GitCompareIcon className="size-3" />
             Raw Diff
-          </TabsTrigger>
-        )}
+          </IntelTabTrigger>
+        ) : null}
       </TabsList>
       </div>
 
@@ -866,7 +921,17 @@ export function IntelPanels({
 
       <TabsContent value="changes" className="mt-4">
         <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
-          <CardContent className="pt-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <GitCompareIcon className="size-4 text-primary" />
+              Changes since previous snapshot
+              <HelpTip id="snapshot.changes" />
+            </CardTitle>
+            <CardDescription>
+              Type shows which gatherer field changed; severity rates how important the drift is.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             {changeDetails && changeDetails.length > 0 ? (
               <ul className="flex flex-col gap-2">
                 {changeDetails.map((entry, index) => (

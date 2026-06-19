@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { HelpTip } from "@/components/help-tip"
 import { IntelSummary } from "@/components/intel-summary"
 import { IntelPanels } from "@/components/intel-panels"
 import { TargetSnapshotsTable } from "@/components/target-snapshots-table"
@@ -178,8 +179,9 @@ export function TargetDetailView({
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <RadarIcon className="size-4 text-primary" />
-              <h2 className="font-heading text-lg font-semibold tracking-tight">
+              <h2 className="flex items-center gap-2 font-heading text-lg font-semibold tracking-tight">
                 Latest intelligence
+                <HelpTip id="snapshot.intel_summary" />
               </h2>
               <Badge variant="secondary" className="font-mono text-xs" title={new Date(latest.scanned_at).toLocaleString()}>
                 {formatDistanceToNow(new Date(latest.scanned_at), { addSuffix: true })}

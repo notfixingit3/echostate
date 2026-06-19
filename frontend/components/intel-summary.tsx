@@ -83,15 +83,17 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
 
   return (
     <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <StatCard label="Host" value={intel.host} icon={GlobeIcon} mono />
+      <StatCard helpId="field.host" label="Host" value={intel.host} icon={GlobeIcon} mono />
       <StatCard
+        helpId="field.resolved_ip"
         label="Resolved IP"
         value={intel.resolvedIp}
         icon={ServerIcon}
         mono
       />
-      <StatCard label="ASN" value={asnLabel} icon={NetworkIcon} />
+      <StatCard helpId="field.asn" label="ASN" value={asnLabel} icon={NetworkIcon} />
       <StatCard
+        helpId="field.prefix"
         label="BGP Prefix"
         value={intel.prefix}
         icon={NetworkIcon}
@@ -101,11 +103,12 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <MapPinIcon className="size-3.5 shrink-0 text-primary/70" />
           Country
+          <HelpTip id="field.country" />
         </div>
         <CountryFlag code={intel.country} />
       </div>
-      <StatCard label="Web title" value={intel.webTitle} icon={FileTextIcon} />
-      <StatCard label="Registrar" value={intel.registrar} icon={GlobeIcon} />
+      <StatCard helpId="field.web_title" label="Web title" value={intel.webTitle} icon={FileTextIcon} />
+      <StatCard helpId="field.registrar" label="Registrar" value={intel.registrar} icon={GlobeIcon} />
       <StatCard
         helpId="intel.cert_expires"
         label="Cert expires"
@@ -208,6 +211,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.humansTxtLines ? (
         <StatCard
+          helpId="field.humans_txt"
           label="humans.txt"
           value={`${intel.humansTxtLines} lines`}
           icon={ScrollTextIcon}
@@ -215,6 +219,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.adsTxtLines ? (
         <StatCard
+          helpId="field.ads_txt"
           label="ads.txt"
           value={`${intel.adsTxtLines} lines`}
           icon={ScrollTextIcon}
@@ -222,6 +227,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.rdapSource ? (
         <StatCard
+          helpId="field.rdap_source"
           label="WHOIS source"
           value={intel.rdapSource}
           icon={GlobeIcon}
@@ -252,6 +258,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.hibpBreachedEmails ? (
         <StatCard
+          helpId="intel.hibp"
           label="HIBP breaches"
           value={`${intel.hibpBreachedEmails} email${intel.hibpBreachedEmails === 1 ? "" : "s"}`}
           icon={ShieldIcon}
@@ -269,6 +276,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.virustotalRecordCount ? (
         <StatCard
+          helpId="intel.virustotal_pdns"
           label="VT passive DNS"
           value={`${intel.virustotalRecordCount} records`}
           icon={DatabaseIcon}
@@ -295,7 +303,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.ctCertCount ? (
         <StatCard
-          helpId="intel.ct_certs"
+          helpId="intel.ct_certificates"
           label="CT certificates"
           value={String(intel.ctCertCount)}
           icon={ScrollTextIcon}
@@ -303,6 +311,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.hstsPreloaded ? (
         <StatCard
+          helpId="intel.hsts_preload"
           label="HSTS preload"
           value="Preloaded"
           icon={ShieldIcon}
@@ -310,6 +319,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.cookieNameCount ? (
         <StatCard
+          helpId="intel.cookie_names"
           label="Cookie names"
           value={`${intel.cookieNameCount} detected`}
           icon={PuzzleIcon}
@@ -338,6 +348,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         />
       ) : null}
       <StatCard
+        helpId="intel.favicon_mmh3"
         label="Favicon MMH3"
         value={intel.faviconMMH3}
         icon={ImageIcon}
@@ -346,6 +357,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       <StatCard helpId="intel.jarm" label="JARM" value={intel.jarm} icon={FingerprintIcon} mono />
       <StatCard helpId="intel.ja3s" label="JA3S" value={intel.ja3s} icon={FingerprintIcon} mono />
       <StatCard
+        helpId="intel.hijack_risk"
         label="BGP hijack risk"
         value={intel.hijackRisk}
         icon={ShieldIcon}
@@ -360,6 +372,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.securityTxtContact ? (
         <StatCard
+          helpId="intel.security_txt"
           label="Security contact"
           value={intel.securityTxtContact}
           icon={ShieldIcon}
@@ -368,6 +381,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.mtaStsMode ? (
         <StatCard
+          helpId="intel.mta_sts"
           label="MTA-STS"
           value={intel.mtaStsMode}
           icon={ShieldIcon}
@@ -376,6 +390,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.caaRecordCount ? (
         <StatCard
+          helpId="intel.caa"
           label="CAA records"
           value={String(intel.caaRecordCount)}
           icon={ShieldIcon}
@@ -383,6 +398,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.redirectHopCount ? (
         <StatCard
+          helpId="field.redirect_chain"
           label="HTTP redirects"
           value={`${intel.redirectHopCount} hop${intel.redirectHopCount === 1 ? "" : "s"}`}
           icon={GlobeIcon}
@@ -427,6 +443,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.bucketCount ? (
         <StatCard
+          helpId="field.detected_buckets"
           label="Cloud buckets"
           value={String(intel.bucketCount)}
           icon={CloudIcon}
@@ -441,6 +458,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.ctSubdomainCount ? (
         <StatCard
+          helpId="intel.ct_subdomains"
           label="CT subdomains"
           value={String(intel.ctSubdomainCount)}
           icon={ScrollTextIcon}
@@ -453,6 +471,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.wpPluginCount ? (
         <StatCard
+          helpId="intel.wp_plugins"
           label="WP plugins"
           value={`${intel.wpPluginCount} detected`}
           icon={PuzzleIcon}
@@ -465,6 +484,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       ) : null}
       {intel.wpThemeSlug ? (
         <StatCard
+          helpId="intel.wp_themes"
           label="WP theme"
           value={intel.wpThemeSlug}
           icon={LayoutTemplateIcon}
@@ -479,6 +499,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
         />
       ) : null}
       <StatCard
+        helpId="intel.submitter_ip"
         label="Submitter IP"
         value={intel.clientIp}
         icon={ServerIcon}
@@ -486,6 +507,7 @@ export function IntelSummary({ intel }: { intel: IntelHighlights }) {
       />
       {intel.pwhoisOrg ? (
         <StatCard
+          helpId="field.org_name"
           label="Submitter org"
           value={intel.pwhoisOrg}
           icon={NetworkIcon}

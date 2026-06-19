@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { HelpTip, LabelWithHelp } from "@/components/help-tip"
 import { IntelSummary } from "@/components/intel-summary"
 import { IntelPanels } from "@/components/intel-panels"
 import { CountryFlag } from "@/components/country-flag"
@@ -231,8 +232,9 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-4">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Scanned at
+              <HelpTip id="snapshot.scanned_at" />
             </span>
             <span className="flex items-center gap-1.5 text-sm font-medium">
               <CalendarIcon className="size-3.5 text-primary/70" />
@@ -240,8 +242,9 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Last seen
+              <HelpTip id="snapshot.last_seen" />
             </span>
             <span className="flex items-center gap-1.5 text-sm font-medium">
               <ClockIcon className="size-3.5 text-primary/70" />
@@ -249,8 +252,9 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Target
+              <HelpTip id="snapshot.target" />
             </span>
             <Button
               variant="link"
@@ -264,8 +268,9 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
             </Button>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Data hash
+              <HelpTip id="snapshot.data_hash" />
             </span>
             <span className="break-all font-mono text-xs text-muted-foreground">
               {snapshot.data_hash}
@@ -274,6 +279,10 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
         </CardContent>
         <Separator />
         <CardFooter className="flex flex-col items-start gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            PDF report
+            <HelpTip id="snapshot.create_report" />
+          </div>
           <div className="flex items-center gap-2">
             <Checkbox
               id="wait-for-enrichment"
@@ -281,7 +290,10 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
               onCheckedChange={(checked) => setWaitForEnrichment(checked)}
             />
             <Label htmlFor="wait-for-enrichment" className="text-sm font-normal">
-              Wait for enrichment before generating PDF
+              <LabelWithHelp
+                label="Wait for enrichment before generating PDF"
+                helpId="snapshot.wait_for_enrichment"
+              />
             </Label>
           </div>
           <div className="flex w-full flex-wrap justify-between gap-3">
@@ -367,8 +379,9 @@ export function SnapshotDetail({ snapshot: initialSnapshot }: { snapshot: Snapsh
       </Card>
 
       <div className="flex flex-col gap-3">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">
+        <h2 className="flex items-center gap-2 font-heading text-lg font-semibold tracking-tight">
           Intelligence summary
+          <HelpTip id="snapshot.intel_summary" />
         </h2>
         <IntelSummary intel={intel} />
       </div>

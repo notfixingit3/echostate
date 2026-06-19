@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CopyButton } from "@/components/copy-button"
 import { InvestigationNotes } from "@/components/investigation-notes"
+import { HelpTip } from "@/components/help-tip"
 import { formatFieldLabel } from "@/lib/intel"
+import { getFieldHelpId, getGraphNodeHelpId } from "@/lib/help-copy"
 import type { GraphEdge, GraphNode } from "@/lib/types"
 
 const INSPECTOR_FIELDS: Record<string, string[]> = {
@@ -94,8 +96,9 @@ export function GraphNodeInspector({
   return (
     <div className="flex flex-col gap-3 text-sm" data-testid="graph-node-inspector">
       <div>
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
           {selected.type}
+          <HelpTip id={getGraphNodeHelpId(selected.type)} />
         </div>
         <div className="mt-1 font-medium break-all">{selected.label}</div>
       </div>
@@ -130,8 +133,9 @@ export function GraphNodeInspector({
       <dl className="flex flex-col gap-2">
         {fields.map((field) => (
           <div key={field} className="rounded-md border border-border/50 bg-muted/10 px-3 py-2">
-            <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            <dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
               {formatFieldLabel(field)}
+              <HelpTip id={getFieldHelpId(field)} />
             </dt>
             <dd className="mt-1 flex items-start justify-between gap-2 break-all font-mono text-xs">
               <span>{formatPropValue(props[field])}</span>

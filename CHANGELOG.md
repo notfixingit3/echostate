@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.0.1-beta.47] - 2026-06-19
+
+### Added
+
+- **Intel glossary tooltips** — Plain-language ? help on jargon fields (JARM, JA3S, MMH3, BGP, CT, etc.) in summary cards, detail panels, graph inspector, and home page features.
+- **Snapshot context help** — Tooltips on snapshot metadata, PDF report options, intelligence summary heading, intel tab names, and the Changes diff tab.
+
 ## [0.0.1-beta.46] - 2026-06-19
 
 ### Changed
