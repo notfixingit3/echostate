@@ -118,6 +118,13 @@ Items are grouped by **difficulty** (engineering effort). Within each tier, lowe
 | — | PDF report overhaul | ✅ Done | beta.30 — wrapping key/value rows, paginated raw WHOIS, full intel sections (DNS w/ mail posture, BGP routing, TLS chain, web/favicon/crawl/storage/CT/traceroute), pWhois from snapshot row |
 | — | Sitemap index recursion | ✅ Done | beta.31 — BFS child sitemaps, common path fallbacks, PDF crawl highlights |
 | — | PDF enrichment + pWhois record | ✅ Done | beta.31 — `raw_data.enrichment` section, full `pwhois_data`, sitemap/bucket highlight counts |
+| — | THIRD_PARTY.md | ✅ Done | beta.37 — Go/npm licenses, Docker image terms, external API cost models |
+| — | Node 24 + multi-arch CI | ✅ Done | beta.38 — Node 24 LTS; native cross-compile for linux/amd64 + arm64 Docker images |
+| — | PDF report polish | ✅ Done | TOC page, host-date download filenames, cleaner intel layout, GitHub project URL on cover |
+| — | Profile + Settings nav | ✅ Done | Top menu Profile (`/profile`); admin Settings → `/admin/system` |
+| — | Snapshot & report delete | ✅ Done | List trash actions; `DELETE /api/snapshots/:id` (admin), `DELETE /api/reports/:id` (scanner+) |
+| — | Traceroute privacy | ✅ Done | Redact scanner LAN + first public ISP hop on local paths; Settings toggle (Scan Performance) |
+| — | PWA / mobile install | ✅ Done | `manifest.webmanifest`, service worker shell cache, safe-area layout, 192/512 icons |
 
 ---
 
@@ -191,6 +198,15 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 | R9 | Gatherer unit + integration tests | ✅ Done | beta.32 — parser tests for security.txt, MTA-STS, TLS-RPT, CAA, plain sitemaps, emails |
 | R10 | E2E report coverage | ✅ Done | beta.36 — Playwright PDF size assertion after full report sections |
 
+### P6 — Mobile & platform follow-ons
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| P6-1 | PWA install + shell cache | ✅ Done | Standalone manifest, `sw.js` (skips `/api/`), safe-area nav/footer |
+| P6-2 | Maskable / adaptive icons | ⏳ Next | Apple touch icon + `purpose: maskable` variants for cleaner home-screen tiles |
+| P6-3 | Offline snapshot read cache | ❌ Later | SW cache visited snapshot pages or key GET responses for flaky mobile links |
+| P6-4 | Bulk delete on list pages | ⏳ Next | Multi-select snapshots/reports with confirm dialog (admin / scanner+ gates) |
+
 ### Explicitly out of scope (unchanged)
 
 | # | Item | Status | Notes |
@@ -206,9 +222,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 94 items (core + graph + platform + P1–P5 batches through beta.36) |
-| **Next** | 0 (P5 wiring complete) |
+| **Done** | 102 items (core + graph + platform + P1–P6 through beta.38 + unreleased nav/delete/traceroute/PWA) |
+| **Next** | 2 (P6-2 maskable icons, P6-4 bulk delete) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
-| **Later / platform** | 2 (distributed agents, OIDC/RBAC) |
+| **Later / platform** | 3 (distributed agents, OIDC/RBAC, P6-3 offline cache) |
 
-**Suggested next picks:** Collection backlog complete — consider distributed agents or OIDC/RBAC (Later / platform tier)
+**Suggested next picks:** P6-2 maskable icons (quick polish) or P6-4 bulk delete — then distributed agents or OIDC/RBAC (Later tier)

@@ -132,7 +132,7 @@ Registered in `NewScanner()` — all run **concurrently** with per-gatherer time
 | `crawl` | `gatherCrawl` | `crawl.robots`, `security_txt`, `sitemap_urls`, `humans_txt`, `ads_txt` | HTTP fetch |
 | `storage` | `gatherStorage` | `storage.buckets`, `provider_hints` | HTML/URL pattern hints |
 | `ct` | `gatherCT` | `ct.subdomains`, `ct.certificates`, `count` | crt.sh; Cert Spotter fallback |
-| `traceroute` | `gatherTraceroute` | `traceroute.vantages[]`, hops, geo | Local + HackerTarget vantage |
+| `traceroute` | `gatherTraceroute` | `traceroute.vantages[]`, hops, geo | Local + HackerTarget vantage; local paths may redact scanner LAN/ISP prefix (`TracerouteRedactScannerPrefix`) |
 | `web` | `newWebGatherer` | `web.title`, `headers`, `security_headers`, `redirect_chain`, `meta`, `cookie_names`, `hsts_preload`, WordPress plugins/themes | Chrome CDP + HTTP |
 | `screenshot` | `newScreenshotGatherer` | `screenshot.url`, dimensions; thumbnail → `snapshot_blobs` | Chrome CDP JPEG |
 
@@ -209,8 +209,8 @@ Auth: `SessionAuth` on `/api/*`; role gates `scanner` vs `admin`. See [README §
 | Health | `GET /health`, `GET /api/version` | Public | `scan.go` |
 | Auth | `POST /api/auth/*`, profile, device codes | Mixed | `auth.go` |
 | Scan | `POST /api/scan`, `GET /api/scans/:id` | scanner | `scan.go` |
-| Targets / snapshots | CRUD read, tags, diff, screenshots | scanner/admin | `browse.go`, `snapshot.go` |
-| Reports | `POST/GET /api/reports`, download | scanner | `reports.go` |
+| Targets / snapshots | CRUD read, tags, diff, screenshots; `DELETE /api/snapshots/:id` | scanner/admin | `browse.go`, `snapshot.go` |
+| Reports | `POST/GET/DELETE /api/reports`, download | scanner | `reports.go`, `browse.go` |
 | Graph | `GET /api/graph`, graph views CRUD | scanner/admin | `graph.go`, `graph_views.go` |
 | Settings / webhooks | `GET/PUT /api/settings`, webhooks CRUD | admin | `settings.go`, `webhooks.go` |
 | Collections / notes | CRUD, bulk rescan | mixed | `collections.go`, `notes.go` |
@@ -226,12 +226,12 @@ Auth: `SessionAuth` on `/api/*`; role gates `scanner` vs `admin`. See [README §
 | `/` | Home scan form | `scan-form`, result card, Scan & Report |
 | `/targets` | Target list | `targets-table` |
 | `/target` | Target detail | `target-detail`, snapshots, intel tabs |
-| `/snapshots` | Global snapshot list | `snapshots-table` |
+| `/snapshots` | Global snapshot list | `snapshots-table` (admin delete) |
 | `/snapshot` | Snapshot detail | `snapshot-detail`, `intel-summary`, `intel-panels` |
 | `/graph` | Force graph | `graph-canvas`, toolbar, saved views |
 | `/collections` | Watchlists | collection CRUD, bulk rescan |
 | `/notes` | Investigation notes | compose, archive/trash |
-| `/reports` | Report list | status, download |
+| `/reports` | Report list | `reports-table` (delete), download |
 | `/report` | Single report | download link |
 | `/login` | Passkey auth | enrollment / WebAuthn |
 | `/profile` | User prefs | theme, timezone, passkeys |
@@ -240,7 +240,9 @@ Auth: `SessionAuth` on `/api/*`; role gates `scanner` vs `admin`. See [README §
 
 **Intel field lists:** `frontend/lib/intel.ts` — drives tabs, highlights, PDF parity.
 
-**API client:** `frontend/lib/api.ts` — cookie session, typed fetch helpers.
+**API client:** `frontend/lib/api.ts` — cookie session, typed fetch helpers (`deleteSnapshot`, `deleteReport`).
+
+**PWA:** `public/manifest.webmanifest`, `public/sw.js` (shell cache; skips `/api/`), `components/pwa-register.tsx`, icons under `public/icons/`.
 
 ---
 

@@ -6,19 +6,20 @@
 
 EchoState is a passive reconnaissance platform: a Go API plus Next.js web UI for scanning hosts, tracking changes over time, and downloading PDF reports.
 
-Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certificate, traceroute, certificate transparency, and webpage intelligence concurrently. Snapshots are never deleted — rescans highlight diffs. Submitter IPs are enriched asynchronously via [pWhois](https://pwhois.org/).
+Feed it a hostname, IP, or URL and it gathers WHOIS, BGP/ASN, DNS, TLS certificate, traceroute, certificate transparency, and webpage intelligence concurrently. Snapshots persist for historical tracking — identical rescans update `last_seen`, retention can prune old rows per target, and admins can delete individual snapshots from the list. Submitter IPs are enriched asynchronously via [pWhois](https://pwhois.org/).
 
 ## Features
 
 - **Passive recon** — WHOIS (with RDAP fallback), Team Cymru ASN/BGP (RIPEstat hijack-risk heuristics, AS-path enrichment, PeeringDB IX data), DNS (A/AAAA, MX, NS, TXT, CNAME, SOA, CAA, DNSSEC, PTR, DMARC, SPF/DKIM, MTA-STS, TLS-RPT, BIMI), TLS + JARM/JA3S (version, cipher, OCSP stapling), crt.sh subdomain + certificate metadata, multi-vantage traceroute (local + external), favicon MMH3, robots/security.txt/humans.txt/ads.txt/sitemap crawl (XML + plain-text), cloud bucket hints, HTTP redirect chains, HSTS preload check, cookie name fingerprint, security headers (HSTS, CSP, Permissions-Policy, Referrer-Policy, Cross-Origin-*), tech-stack fingerprinting, headless Chrome web scraping, and JPEG screenshot thumbnails.
-- **Web UI** — Scan form (including **Scan & Report** with inline PDF download), target detail with tags and rescan, intel tabs (WHOIS, ASN, DNS, TLS, Web, Favicon, Crawl, Storage, CT, Traceroute, Screenshots, Submitter), snapshot detail with **Create report** (hydrates latest report on load, polls until PDF is ready), side-by-side raw diffs, settings, and report downloads. Light mode default; version shown in footer.
+- **Web UI** — Scan form (including **Scan & Report** with inline PDF download), target detail with tags and rescan, intel tabs (WHOIS, ASN, DNS, TLS, Web, Favicon, Crawl, Storage, CT, Traceroute, Screenshots, Submitter), snapshot detail with **Create report** (hydrates latest report on load, polls until PDF is ready), side-by-side raw diffs, and report downloads. Top nav includes **Profile** (all users) and **Settings** → `/admin/system` (admin). Snapshot and report list pages support delete (admin / scanner+). Light mode default; version shown in footer.
+- **PWA / mobile** — Install as a standalone app (manifest + service worker shell cache); safe-area layout for notched phones; works best online (API calls are not offline-cached yet).
 - **Historical tracking** — Snapshots persist; identical rescans update `last_seen`. Field-level `change_details` (severity, type, summary) highlight TLS expiry, CAA/DNSSEC/MTA-STS shifts, security.txt contacts, redirect chains, new CT certs, enrichment hits, BGP drift, and more.
 - **Async scans** — `POST /api/scan` enqueues a job (`202`); poll `GET /api/scans/:id` for status and the resulting snapshot.
 - **Scheduled rescans** — Background scheduler re-scans stale targets on a configurable interval.
-- **PDF reports** — Async worker renders snapshot intel to PDF (maroto) with branding, screenshot thumbnail, change summaries, and DNS/TLS sections; queue via **Create report** on a snapshot or `POST /api/reports`, then poll `GET /api/reports/:id` or download when `status` is `completed`.
+- **PDF reports** — Async worker renders snapshot intel to PDF (maroto) with table of contents, branding, screenshot thumbnail, change summaries, and full intel sections; queue via **Create report** on a snapshot or `POST /api/reports`, then poll `GET /api/reports/:id` or download when `status` is `completed`. Downloads use `echostate-{host}-{date}.pdf` filenames.
 - **IP enrichment** — pWhois worker enriches submitter IPs (org, ASN, geo).
 - **Notifications** — Slack, Discord, MS Teams webhooks, and Pushover mobile alerts with structured change payloads and alert-rule filtering.
-- **Settings** — DNS resolvers, DKIM selectors, pWhois server, rate limit, scan concurrency/timeouts, scheduler, retention, alert rules (graph drift + mail/DNS security presets, per-webhook filters), and optional Shodan/Censys/HIBP/RiskIQ/VirusTotal API keys.
+- **Settings** — DNS resolvers, DKIM selectors, pWhois server, rate limit, scan concurrency/timeouts, scheduler, retention, traceroute privacy (redact scanner LAN/ISP prefix on local paths), alert rules (graph drift + mail/DNS security presets, per-webhook filters), and optional Shodan/Censys/HIBP/RiskIQ/VirusTotal API keys.
 - **Passkey authentication (beta.20+)** — WebAuthn passkeys with single-use enrollment/recovery codes; `admin` and `scanner` roles. See [Authentication](#authentication).
 - **Legacy API key** — Optional `ECHOSTATE_API_KEY` still works for admin mutations when no users exist yet.
 - **Neo4j graph** — Relationship sync on scan plus interactive `/graph` UI with infra, CT, DNS (NS/MX/CNAME/DMARC/SOA/CAA/MTA-STS/DNSSEC/BIMI), security.txt contacts, Wayback URLs, cert SAN, BGP, traceroute, and peering views; route diff, shared hops, intel events, and infra clusters.
@@ -128,8 +129,9 @@ Set these in `.env` (Docker) or your shell (local `go run`). See `.env.example`.
 
 | Area | Path | Who |
 | ---- | ---- | --- |
-| **Profile** (name, theme, timezone, passkeys) | `/profile` — click your name in the nav | All signed-in users |
-| **Administration** (server settings) | `/admin` — nav **Admin** link | Admin only |
+| **Profile** (name, theme, timezone, passkeys) | `/profile` — nav **Profile** link | All signed-in users |
+| **Settings** (DNS, scan, retention, alert rules, API keys) | `/admin/system` — nav **Settings** link | Admin only |
+| **Administration** (integrations, auth, users) | `/admin` — nav **Admin** link | Admin only |
 
 **Profile** sections: display name, theme/timezone preferences, device enrollment codes, passkey management.
 
@@ -230,9 +232,11 @@ Rescanning a target uses the same endpoint — there is no separate rescan API.
 | `GET /api/snapshots` | All snapshots (`target_id` filter) |
 | `GET /api/snapshots/:id` | Full snapshot with pWhois data |
 | `GET /api/snapshots/:id/diff` | Raw JSON diff vs previous snapshot |
+| `DELETE /api/snapshots/:id` | Delete snapshot (admin) |
 | `GET /api/snapshots/:id/report` | Queue or fetch report for a snapshot |
 | `GET /api/reports` | Report list (`status`, `snapshot_id`) |
 | `POST /api/reports` | Queue PDF (`{"snapshot_id":"..."}`) |
+| `DELETE /api/reports/:id` | Delete report row (scanner+) |
 | `GET /api/reports/:id/download` | Download completed PDF |
 | `GET/POST/PUT/DELETE /api/webhooks` | Webhook management |
 | `GET /api/scans/:id` | Async scan job status (+ snapshot when complete) |
