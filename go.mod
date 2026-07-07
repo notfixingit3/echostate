@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	github.com/chromedp/cdproto v0.0.0-20260321001828-e3e3800016bc
 	github.com/chromedp/chromedp v0.15.1
+	github.com/exaring/otelpgx v0.11.1
 	github.com/georgestarcher/pwhois v1.0.0
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-contrib/requestid v1.0.6
@@ -12,7 +13,7 @@ require (
 	github.com/go-webauthn/webauthn v0.17.4
 	github.com/google/uuid v1.6.0
 	github.com/hdm/jarm-go v0.0.8
-	github.com/jackc/pgx/v5 v5.7.1
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/johnfercher/maroto/v2 v2.4.0
 	github.com/likexian/whois v1.15.7
 	github.com/likexian/whois-parser v1.24.21

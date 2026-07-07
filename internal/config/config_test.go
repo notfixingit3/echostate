@@ -140,3 +140,71 @@ func TestLoadAllowsMissingAuthPepperInDevelopment(t *testing.T) {
 	_, err := Load()
 	require.NoError(t, err)
 }
+
+func TestLoad_ObservabilityDefaults(t *testing.T) {
+	for _, key := range []string{
+		"ECHOSTATE_ENV", "ECHOSTATE_LOG_LEVEL", "ECHOSTATE_LOG_FORMAT",
+		"ECHOSTATE_METRICS_PORT", "OTEL_EXPORTER_OTLP_ENDPOINT",
+		"OTEL_TRACES_SAMPLER", "OTEL_TRACES_SAMPLER_ARG",
+		"DATABASE_URL",
+	} {
+		t.Setenv(key, "")
+	}
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	require.Equal(t, "info", cfg.LogLevel)
+	require.Equal(t, "json", cfg.LogFormat)
+	require.Equal(t, 9090, cfg.MetricsPort)
+	require.Equal(t, "", cfg.OTelEndpoint)
+	require.Equal(t, "parentbased_traceidratio", cfg.OTelSampler)
+	require.Equal(t, "1.0", cfg.OTelSamplerArg) // dev default
+}
+
+func TestLoad_ObservabilityOverrides(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/echostate?sslmode=disable")
+	t.Setenv("ECHOSTATE_LOG_LEVEL", "debug")
+	t.Setenv("ECHOSTATE_LOG_FORMAT", "text")
+	t.Setenv("ECHOSTATE_METRICS_PORT", "9999")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel:4318")
+	t.Setenv("OTEL_TRACES_SAMPLER", "always_on")
+	t.Setenv("OTEL_TRACES_SAMPLER_ARG", "0.5")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	require.Equal(t, "debug", cfg.LogLevel)
+	require.Equal(t, "text", cfg.LogFormat)
+	require.Equal(t, 9999, cfg.MetricsPort)
+	require.Equal(t, "http://otel:4318", cfg.OTelEndpoint)
+	require.Equal(t, "always_on", cfg.OTelSampler)
+	require.Equal(t, "0.5", cfg.OTelSamplerArg)
+}
+
+func TestLoad_ObservabilitySamplerArgProduction(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/echostate?sslmode=disable")
+	t.Setenv("ECHOSTATE_AUTH_PEPPER", "production-only-random-pepper-value")
+	t.Setenv("ECHOSTATE_ENV", "production")
+	t.Setenv("OTEL_TRACES_SAMPLER_ARG", "")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	require.Equal(t, "0.1", cfg.OTelSamplerArg)
+}
+
+func TestLoad_ObservabilitySamplerArgDev(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/echostate?sslmode=disable")
+	t.Setenv("ECHOSTATE_ENV", "development")
+	t.Setenv("OTEL_TRACES_SAMPLER_ARG", "")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	require.Equal(t, "1.0", cfg.OTelSamplerArg)
+}

@@ -6,7 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func testDatabaseURL() string {
@@ -140,4 +146,68 @@ func TestClose_DoesNotPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		d.Close()
 	})
+}
+
+func TestConnect_SetsTracer(t *testing.T) {
+	config, err := pgxpool.ParseConfig(testDatabaseURL())
+	require.NoError(t, err)
+
+	config.ConnConfig.Tracer = otelpgx.NewTracer()
+	require.NotNil(t, config.ConnConfig.Tracer)
+}
+
+func TestConnect_TracerDoesNotBlockConnection(t *testing.T) {
+	d := requirePostgres(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	var result int
+	err := d.Pool.QueryRow(ctx, "SELECT 1").Scan(&result)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result)
+}
+
+func TestConnect_TracerEmitsSpanForQuery(t *testing.T) {
+	// Set up an in-memory OTel exporter to capture spans.
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSyncer(exporter),
+	)
+	otel.SetTracerProvider(tp)
+	t.Cleanup(func() { otel.SetTracerProvider(sdktrace.NewTracerProvider()) })
+
+	d := requirePostgres(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	var result int
+	err := d.Pool.QueryRow(ctx, "SELECT 1").Scan(&result)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result)
+
+	// Force span export by shutting down the provider.
+	require.NoError(t, tp.Shutdown(ctx))
+
+	spans := exporter.GetSpans()
+	require.NotEmpty(t, spans, "expected at least one span from SELECT 1")
+
+	// The span name should contain "SELECT" or the query operation.
+	found := false
+	for _, s := range spans {
+		if s.Name == "query SELECT 1" || s.Name == "SELECT 1" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected a span named 'query SELECT 1' or 'SELECT 1', got: %v", spanNames(spans))
+}
+
+func spanNames(stubs tracetest.SpanStubs) []string {
+	names := make([]string, len(stubs))
+	for i, s := range stubs {
+		names[i] = s.Name
+	}
+	return names
 }

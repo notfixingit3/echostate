@@ -22,6 +22,12 @@ type Config struct {
 	Branch             string
 	GitHubRepo         string
 	UpdateCheckEnabled bool
+	LogLevel           string
+	LogFormat          string
+	MetricsPort        int
+	OTelEndpoint       string
+	OTelSampler        string
+	OTelSamplerArg     string
 }
 
 // Load reads configuration from environment variables and validates required fields.
@@ -29,9 +35,16 @@ func Load() (*Config, error) {
 	pwhoisEnabled, _ := strconv.ParseBool(getEnv("ECHOSTATE_PWHOIS_ENABLED", "true"))
 	pwhoisCacheTTL, _ := strconv.Atoi(getEnv("PWHOIS_CACHE_TTL_HOURS", "24"))
 	updateCheckEnabled, _ := strconv.ParseBool(getEnv("ECHOSTATE_UPDATE_CHECK", "true"))
+	metricsPort, _ := strconv.Atoi(getEnv("ECHOSTATE_METRICS_PORT", "9090"))
+
+	env := getEnv("ECHOSTATE_ENV", "development")
+	defaultSamplerArg := "0.1"
+	if env != "production" {
+		defaultSamplerArg = "1.0"
+	}
 
 	cfg := &Config{
-		Env:                getEnv("ECHOSTATE_ENV", "development"),
+		Env:                env,
 		Port:               getEnv("ECHOSTATE_PORT", "8080"),
 		DatabaseURL:        os.Getenv("DATABASE_URL"),
 		BrowserWSURL:       getEnv("BROWSER_WS_URL", "ws://localhost:3000/"),
@@ -44,6 +57,12 @@ func Load() (*Config, error) {
 		Branch:             getEnv("ECHOSTATE_BRANCH", "dev"),
 		GitHubRepo:         getEnv("ECHOSTATE_GITHUB_REPO", "notfixingit3/echostate"),
 		UpdateCheckEnabled: updateCheckEnabled,
+		LogLevel:           getEnv("ECHOSTATE_LOG_LEVEL", "info"),
+		LogFormat:          getEnv("ECHOSTATE_LOG_FORMAT", "json"),
+		MetricsPort:        metricsPort,
+		OTelEndpoint:       os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+		OTelSampler:        getEnv("OTEL_TRACES_SAMPLER", "parentbased_traceidratio"),
+		OTelSamplerArg:     getEnv("OTEL_TRACES_SAMPLER_ARG", defaultSamplerArg),
 	}
 
 	if cfg.DatabaseURL == "" {

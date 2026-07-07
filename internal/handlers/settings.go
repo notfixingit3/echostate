@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/config"
+	"github.com/notfixingit3/echostate/internal/observability/log"
 )
 
 func (h *Handler) purgeAuditEvents() {
@@ -70,6 +72,13 @@ func (h *Handler) updateSettings(c *gin.Context) {
 	}
 
 	config.UpdateSettings(req)
+
+	if req.LogLevel != "" {
+		if err := log.SetLevel(req.LogLevel); err != nil {
+			slog.Warn("invalid log_level in settings, keeping current level", "log_level", req.LogLevel, "error", err)
+		}
+	}
+
 	h.recordAudit(c, audit.ActionSettingsUpdate, "settings", "app_settings", map[string]any{
 		"audit_retention_days": req.AuditRetentionDays,
 	})

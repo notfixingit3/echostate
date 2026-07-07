@@ -53,6 +53,7 @@ type SystemSettings struct {
 	CodeAttemptWindowMinutes  int         `json:"code_attempt_window_minutes"`
 	WebAuthnRPID              string      `json:"webauthn_rp_id"`
 	WebAuthnRPOrigin          string      `json:"webauthn_rp_origin"`
+	LogLevel                  string      `json:"log_level,omitempty"`
 }
 
 var (
@@ -82,6 +83,7 @@ var (
 		SessionTTLHours:           168,
 		MaxCodeAttempts:           5,
 		CodeAttemptWindowMinutes:  15,
+		LogLevel:                  "info",
 	}
 	GlobalSettings = defaultSettings
 	settingsMu     sync.RWMutex
@@ -200,6 +202,9 @@ func normalizeSettings(s SystemSettings) SystemSettings {
 	}
 	if s.CodeAttemptWindowMinutes <= 0 {
 		s.CodeAttemptWindowMinutes = defaultSettings.CodeAttemptWindowMinutes
+	}
+	if s.LogLevel == "" {
+		s.LogLevel = defaultSettings.LogLevel
 	}
 	return s
 }

@@ -28,3 +28,11 @@ func TestNormalizeSettings_HTTPTimeouts(t *testing.T) {
 	assert.Equal(t, 12, normalized.EnrichmentHTTPTimeoutSec)
 	assert.Equal(t, 30, normalized.WaybackHTTPTimeoutSec)
 }
+
+func TestNormalizeSettings_LogLevel(t *testing.T) {
+	normalized := normalizeSettings(SystemSettings{LogLevel: ""})
+	assert.Equal(t, "info", normalized.LogLevel)
+
+	normalized = normalizeSettings(SystemSettings{LogLevel: "debug"})
+	assert.Equal(t, "debug", normalized.LogLevel)
+}

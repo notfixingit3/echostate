@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,6 +26,8 @@ func Connect(databaseURL string) (*DB, error) {
 
 	config.MaxConns = 10
 	config.MinConns = 2
+
+	config.ConnConfig.Tracer = otelpgx.NewTracer()
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
