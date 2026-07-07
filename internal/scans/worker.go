@@ -13,6 +13,7 @@ import (
 	"github.com/notfixingit3/echostate/internal/config"
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/models"
+	obstrace "github.com/notfixingit3/echostate/internal/observability/trace"
 )
 
 const (
@@ -108,13 +109,18 @@ func (w *Worker) Stop() {
 }
 
 // CreateJob inserts a pending scan job and wakes the worker.
-func (w *Worker) CreateJob(ctx context.Context, host, clientIP string) (uuid.UUID, error) {
+func (w *Worker) CreateJob(ctx context.Context, host, clientIP string, traceparent ...string) (uuid.UUID, error) {
 	var jobID uuid.UUID
+	jobTraceparent := ""
+	if len(traceparent) > 0 {
+		jobTraceparent = traceparent[0]
+	}
+
 	err := w.db.Pool.QueryRow(ctx, `
-		INSERT INTO scan_jobs (host, status, client_ip)
-		VALUES ($1, $2, $3)
+		INSERT INTO scan_jobs (host, status, client_ip, traceparent)
+		VALUES ($1, $2, $3, NULLIF($4, ''))
 		RETURNING id
-	`, host, models.ScanJobPending, clientIP).Scan(&jobID)
+	`, host, models.ScanJobPending, clientIP, jobTraceparent).Scan(&jobID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert scan job: %w", err)
 	}
@@ -174,11 +180,11 @@ func (w *Worker) GetJob(ctx context.Context, jobID uuid.UUID) (*models.ScanJob, 
 
 // ProcessNext claims and runs one pending job. Intended for tests.
 func (w *Worker) ProcessNext(ctx context.Context) (bool, error) {
-	jobID, host, clientIP, ok, err := w.claimNextPending(ctx)
+	jobID, host, clientIP, traceparent, ok, err := w.claimNextPending(ctx)
 	if err != nil || !ok {
 		return ok, err
 	}
-	w.runJob(ctx, jobID, host, clientIP)
+	w.runJob(ctx, jobID, host, clientIP, traceparent)
 	return true, nil
 }
 
@@ -205,7 +211,7 @@ func (w *Worker) processPending(ctx context.Context) {
 		case w.sem <- struct{}{}:
 		}
 
-		jobID, host, clientIP, ok, err := w.claimNextPending(ctx)
+		jobID, host, clientIP, traceparent, ok, err := w.claimNextPending(ctx)
 		if err != nil {
 			slog.Default().Error("scan worker: claim next pending", slog.String("component", "scan_worker"), slog.String("error", err.Error()))
 			<-w.sem
@@ -217,36 +223,36 @@ func (w *Worker) processPending(ctx context.Context) {
 		}
 
 		w.wg.Add(1)
-		go func() {
+		go func(jobID uuid.UUID, host, clientIP, traceparent string) {
 			defer func() {
 				<-w.sem
 				w.wg.Done()
 			}()
-			w.runJob(ctx, jobID, host, clientIP)
-		}()
+			w.runJob(ctx, jobID, host, clientIP, traceparent)
+		}(jobID, host, clientIP, traceparent)
 	}
 }
 
-func (w *Worker) claimNextPending(ctx context.Context) (jobID uuid.UUID, host, clientIP string, ok bool, err error) {
+func (w *Worker) claimNextPending(ctx context.Context) (jobID uuid.UUID, host, clientIP, traceparent string, ok bool, err error) {
 	tx, err := w.db.Pool.Begin(ctx)
 	if err != nil {
-		return uuid.Nil, "", "", false, fmt.Errorf("begin transaction: %w", err)
+		return uuid.Nil, "", "", "", false, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	err = tx.QueryRow(ctx, `
-		SELECT id, host, client_ip
+		SELECT id, host, client_ip, COALESCE(traceparent, '')
 		FROM scan_jobs
 		WHERE status = $1
 		ORDER BY created_at ASC
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
-	`, models.ScanJobPending).Scan(&jobID, &host, &clientIP)
+	`, models.ScanJobPending).Scan(&jobID, &host, &clientIP, &traceparent)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return uuid.Nil, "", "", false, nil
+			return uuid.Nil, "", "", "", false, nil
 		}
-		return uuid.Nil, "", "", false, fmt.Errorf("select pending scan: %w", err)
+		return uuid.Nil, "", "", "", false, fmt.Errorf("select pending scan: %w", err)
 	}
 
 	_, err = tx.Exec(ctx, `
@@ -255,22 +261,29 @@ func (w *Worker) claimNextPending(ctx context.Context) (jobID uuid.UUID, host, c
 		WHERE id = $2
 	`, models.ScanJobRunning, jobID)
 	if err != nil {
-		return uuid.Nil, "", "", false, fmt.Errorf("mark scan running: %w", err)
+		return uuid.Nil, "", "", "", false, fmt.Errorf("mark scan running: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return uuid.Nil, "", "", false, fmt.Errorf("commit claim: %w", err)
+		return uuid.Nil, "", "", "", false, fmt.Errorf("commit claim: %w", err)
 	}
 
-	return jobID, host, clientIP, true, nil
+	return jobID, host, clientIP, traceparent, true, nil
 }
 
-func (w *Worker) runJob(parent context.Context, jobID uuid.UUID, host, clientIP string) {
+func (w *Worker) runJob(parent context.Context, jobID uuid.UUID, host, clientIP, traceparent string) {
 	if parent == nil {
 		parent = context.Background()
 	}
-	ctx, cancel := context.WithTimeout(parent, scanJobTimeoutFromSettings())
+
+	ctx := obstrace.ContextFromTraceparent(traceparent)
+	ctx, span := obstrace.Tracer().Start(ctx, "scan_worker_process")
+	defer span.End()
+
+	ctx, cancel := context.WithTimeout(ctx, scanJobTimeoutFromSettings())
 	defer cancel()
+	stopParentCancel := context.AfterFunc(parent, cancel)
+	defer stopParentCancel()
 
 	result, err := w.runner.Run(ctx, host)
 	if err != nil {

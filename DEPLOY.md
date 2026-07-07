@@ -141,11 +141,75 @@ Enable retention (Settings → keep-N per target) to cap snapshot growth.
 
 ## Observability
 
-- **Health** — `GET /health` and `GET /api/version`.
-- **Logs** — API stdout (Gin request logging); `docker compose logs -f api`.
-- **Updates** — Optional upstream version check (`ECHOSTATE_UPDATE_CHECK`).
+EchoState now ships structured logging, request IDs, Prometheus metrics, and OpenTelemetry distributed tracing. All telemetry is opt-in and can be disabled for minimal deployments.
 
-Metrics and structured audit logs are not yet first-class; plan external log aggregation for production.
+### Logging
+
+The API writes structured JSON logs to stdout via Go's standard `log/slog`. Every request gets a unique `request_id` (via `gin-contrib/requestid`) and the current trace context is attached when tracing is enabled.
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `ECHOSTATE_LOG_LEVEL` | `info` | One of `debug`, `info`, `warn`, `error`. |
+| `ECHOSTATE_LOG_FORMAT` | `text` (`json` in prod) | `json` for machine-readable logs, `text` for human-friendly dev output. |
+
+Log level can also be changed at runtime in **Admin → System → Log level** without restarting the API.
+
+### Metrics
+
+Prometheus metrics are exposed on a **separate internal port** (default `9090`, configurable via `ECHOSTATE_METRICS_PORT`). The `/metrics` endpoint is not registered on the public API router and should not be exposed to the internet.
+
+**Restricting metrics in production:**
+
+- Bind the metrics port to `127.0.0.1` in your reverse proxy or Compose config. The local observability overlay does this automatically.
+- Use host firewall rules to block external access to the metrics port.
+- If you use an external metrics scraper, place it inside the same private network.
+
+Metrics collected: HTTP request counts and latency histograms (by method, path template, and status), worker job outcomes (scan, report, enrichment, pWhois) with queue depth and wait-time histograms, plus Go runtime and process collectors.
+
+### Local observability overlay
+
+For development and staging, a Docker Compose overlay provides Prometheus and Jaeger alongside the base stack:
+
+```bash
+docker compose -f docker-compose.yml \
+               -f docker-compose.observability.yml \
+               up -d
+```
+
+This adds:
+
+| Service | Host port | Purpose |
+| ------- | --------- | ------- |
+| Prometheus | `9091` | Scrapes `api:9090` every 15s. UI at http://localhost:9091. |
+| Jaeger | `16686` | Distributed tracing UI at http://localhost:16686. |
+| Jaeger OTLP gRPC | `4317` | OTLP/gRPC ingest endpoint for the API tracer provider. |
+
+Port `9091` is used for Prometheus (not `9090`) to avoid conflict with the API metrics port.
+
+### Distributed tracing (OpenTelemetry)
+
+When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the API configures an OTLP/gRPC exporter and propagates W3C `traceparent` headers across scan jobs and report workers. If the endpoint is empty (the default), tracing is a zero-overhead no-op.
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(empty)_ | OTLP/gRPC collector address (e.g. `http://jaeger:4317`). |
+| `OTEL_TRACES_SAMPLER` | `parentbased_traceidratio` | Sampler type. `always_on` or `always_off` also accepted. |
+| `OTEL_TRACES_SAMPLER_ARG` | `0.1` (prod) / `1.0` (dev) | Sampling rate as a float. 1.0 = 100%, 0.1 = 10%. |
+
+**Default sampling:** in development (`ECHOSTATE_ENV=development`) the sampler arg defaults to `1.0` so every trace is captured. In production the default is `0.1` to keep overhead low while preserving a representative sample.
+
+Trace context propagates to async workers via `traceparent` columns on `scan_jobs` and `reports`. When a worker picks up a queued job, it reads the traceparent, reconstructs the span context, and continues the trace.
+
+**Jaeger setup (local):** set `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317` in `.env` and use the observability overlay. Traces appear at http://localhost:16686.
+
+### Health and readiness
+
+| Endpoint | Purpose | Dependencies checked |
+| -------- | ------- | -------------------- |
+| `GET /health` | **Liveness** — is the process alive? | None (always returns 200 if the server is running). |
+| `GET /ready` | **Readiness** — is the service healthy? | Postgres (required), Neo4j and browserless Chrome (optional). |
+
+Use `/health` for your orchestrator's liveness probe. Use `/ready` for readiness checks and load-balancer health checks. The Docker Compose healthcheck now uses `/ready` so `depends_on` waits for database connectivity before marking the API as healthy.
 
 ---
 

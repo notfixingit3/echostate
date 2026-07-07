@@ -13,6 +13,7 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/models"
+	obstrace "github.com/notfixingit3/echostate/internal/observability/trace"
 	"github.com/notfixingit3/echostate/internal/pdf"
 	"github.com/notfixingit3/echostate/internal/reports"
 	"github.com/notfixingit3/echostate/internal/scanner"
@@ -64,7 +65,8 @@ func (h *Handler) createReport(c *gin.Context) {
 		snapshotID = id
 	}
 
-	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID, req.WaitForEnrichment)
+	traceparent := obstrace.ExtractTraceparent(c.Request.Context())
+	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID, req.WaitForEnrichment, traceparent)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})
 		return
@@ -169,7 +171,8 @@ func (h *Handler) snapshotReport(c *gin.Context) {
 		}
 	}
 
-	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID, false)
+	traceparent := obstrace.ExtractTraceparent(c.Request.Context())
+	reportID, err := h.reportWorker.CreateReport(ctx, snapshotID, false, traceparent)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})
 		return

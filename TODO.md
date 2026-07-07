@@ -209,6 +209,21 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 | P6-5 | E2E auth + delete + CI | ✅ Done | Virtual WebAuthn setup, auth/delete/report specs, GitHub Actions `e2e` job |
 | P6-6 | DEPLOY.md + release checklist | ✅ Done | Production secrets, backup, upgrade path, pre-tag test gate |
 
+### P7 — Proposed upgrades from platform review
+
+Recommended next investments from the July 2026 architecture / quality review. These are not active-scanning features; they improve production readiness, maintainability, mobile use, or enterprise deployment.
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| P7-1 | Production observability | ✅ Done | Structured JSON logs, request IDs, worker/job metrics, Prometheus/OpenTelemetry; `DEPLOY.md` updated with full observability docs |
+| P7-2 | Abuse and security hardening | ❌ Next | Pin `browserless/chrome` instead of `:latest`, add nginx static security headers, use constant-time API-key comparison, and move toward per-user/per-route rate limits |
+| P7-3 | OpenAPI spec + generated frontend client | ❌ Next | Generate TypeScript API types/client from the Go API to reduce drift across `internal/handlers`, `internal/models`, and `frontend/lib` |
+| P7-4 | Frontend unit/component tests | ❌ Next | Add Vitest / Testing Library coverage for `frontend/lib/api`, auth state, scan form, target/snapshot tables, and report polling |
+| P7-5 | Dependency and tooling automation | ❌ Next | Add Dependabot/Renovate, `golangci-lint`, Trivy/Semgrep, and a Makefile/justfile for common test/build/release commands |
+| P7-6 | Distributed scanning agents | ❌ Later | Multi-region agent binary / control plane for real vantage diversity, scalable scan workers, and more resilient traceroute/Web collection |
+| P7-7 | OIDC/SAML + expanded RBAC | ❌ Later | Enterprise SSO, team/org isolation, and role model beyond passkey-only `admin` / `scanner` |
+| P7-8 | Offline snapshot read cache | ❌ Later | Extend the PWA service worker beyond shell cache so recently viewed snapshots/report metadata remain usable on flaky mobile links; supersedes P6-3 |
+
 ### Explicitly out of scope (unchanged)
 
 | # | Item | Status | Notes |
@@ -224,9 +239,9 @@ New gatherers must land in **intel tabs** (`intel.ts` field lists), **PDF render
 
 | | Count |
 |---|------|
-| **Done** | 106 items (core + graph + platform + P1–P6 through beta.43) |
-| **Next** | 0 (P6 polish complete) |
+| **Done** | 107 items (core + graph + platform + P1–P6 through beta.43 + P7-1 observability) |
+| **Next** | 4 proposed upgrade tracks (hardening, OpenAPI/client generation, frontend tests, dependency/tooling automation) |
 | **Skipped** | 4 (#6 port scan, G9 port graph, subdomain brute, vuln scan) |
-| **Later / platform** | 3 (distributed agents, OIDC/RBAC, P6-3 offline cache) |
+| **Later / platform** | 3 larger tracks (distributed agents, OIDC/SAML + expanded RBAC, offline snapshot read cache) |
 
-**Suggested next picks:** P6-3 offline cache (mobile) or distributed agents / OIDC/RBAC (Later tier)
+**Suggested next picks:** P7-1 observability, P7-2 abuse/security hardening, then P7-3 OpenAPI + generated frontend client. For larger product bets, pick P7-6 distributed agents or P7-7 OIDC/SAML + expanded RBAC.

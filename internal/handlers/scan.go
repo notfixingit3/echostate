@@ -20,6 +20,7 @@ import (
 	"github.com/notfixingit3/echostate/internal/models"
 	"github.com/notfixingit3/echostate/internal/observability/health"
 	"github.com/notfixingit3/echostate/internal/observability/metrics"
+	obstrace "github.com/notfixingit3/echostate/internal/observability/trace"
 	"github.com/notfixingit3/echostate/internal/reports"
 	"github.com/notfixingit3/echostate/internal/scanner"
 	"github.com/notfixingit3/echostate/internal/scans"
@@ -195,10 +196,11 @@ func (h *Handler) createScan(c *gin.Context) {
 		return
 	}
 
+	traceparent := obstrace.ExtractTraceparent(c.Request.Context())
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	jobID, err := h.scanWorker.CreateJob(ctx, normalized, c.ClientIP())
+	jobID, err := h.scanWorker.CreateJob(ctx, normalized, c.ClientIP(), traceparent)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("enqueue scan failed: %v", err)})
 		return

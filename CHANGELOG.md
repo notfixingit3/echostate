@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Structured JSON logging** with Go's standard `log/slog` — configurable log level and format (`text`/`json`), runtime log-level changes via Admin → System.
+- **Request IDs** via `gin-contrib/requestid` — every HTTP request gets a unique request ID attached to the response header and context logger.
+- **Prometheus metrics** on a separate internal port (default `9090`, configurable via `ECHOSTATE_METRICS_PORT`) — HTTP request counts and latency histograms, worker job outcomes (scan, report, enrichment, pWhois), queue depth, and wait-time histograms.
+- **OpenTelemetry distributed tracing** with OTLP/gRPC exporter — configurable sampler (default 1.0 in dev, 0.1 in production), W3C `traceparent` propagation across async scan/report workers, and `otelpgx` database tracing.
+- **Worker trace propagation** via `traceparent` columns on `scan_jobs` and `reports` — workers reconstruct span context when picking up queued jobs.
+- **Health and readiness endpoints** — `GET /health` (liveness, no dependency checks) and `GET /ready` (readiness, requires Postgres, optional Neo4j/browserless).
+- **Docker Compose observability overlay** (`docker-compose.observability.yml`) — adds Prometheus (port 9091) and Jaeger all-in-one (UI on 16686, OTLP gRPC on 4317) for local development.
+
 ## [0.0.2-dev.0] - 2026-06-19
 
 Development kickoff for the 0.0.2 cycle (post-stable 0.0.1).

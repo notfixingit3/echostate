@@ -15,17 +15,18 @@ import (
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/enrichment"
 	"github.com/notfixingit3/echostate/internal/models"
+	obstrace "github.com/notfixingit3/echostate/internal/observability/trace"
 	"github.com/notfixingit3/echostate/internal/pdf"
 )
 
 const (
-	defaultMaxConcurrency = 3
-	maxPDFSize            = 10 * 1024 * 1024
-	renderTimeout         = 30 * time.Second
-	wakeBufferSize        = 1
-	pollInterval             = 2 * time.Second
-	enrichmentWaitTimeout    = 45 * time.Second
-	enrichmentPollInterval   = 2 * time.Second
+	defaultMaxConcurrency  = 3
+	maxPDFSize             = 10 * 1024 * 1024
+	renderTimeout          = 30 * time.Second
+	wakeBufferSize         = 1
+	pollInterval           = 2 * time.Second
+	enrichmentWaitTimeout  = 45 * time.Second
+	enrichmentPollInterval = 2 * time.Second
 )
 
 // Renderer renders snapshot report data into a PDF byte slice.
@@ -103,13 +104,18 @@ func (w *Worker) Stop() {
 
 // CreateReport inserts a pending report for the given snapshot and wakes the
 // worker. It does not wait for generation to finish.
-func (w *Worker) CreateReport(ctx context.Context, snapshotID uuid.UUID, waitForEnrichment bool) (uuid.UUID, error) {
+func (w *Worker) CreateReport(ctx context.Context, snapshotID uuid.UUID, waitForEnrichment bool, traceparent ...string) (uuid.UUID, error) {
+	storedTraceparent := ""
+	if len(traceparent) > 0 {
+		storedTraceparent = traceparent[0]
+	}
+
 	var reportID uuid.UUID
 	err := w.db.Pool.QueryRow(ctx, `
-		INSERT INTO reports (snapshot_id, status, wait_for_enrichment)
-		VALUES ($1, $2, $3)
+		INSERT INTO reports (snapshot_id, status, wait_for_enrichment, traceparent)
+		VALUES ($1, $2, $3, NULLIF($4, ''))
 		RETURNING id
-	`, snapshotID, models.ReportPending, waitForEnrichment).Scan(&reportID)
+	`, snapshotID, models.ReportPending, waitForEnrichment, storedTraceparent).Scan(&reportID)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert report: %w", err)
 	}
@@ -201,7 +207,7 @@ func (w *Worker) processPending(ctx context.Context) {
 		case w.sem <- struct{}{}:
 		}
 
-		reportID, snapshotID, ok, err := w.claimNextPending(ctx)
+		reportID, snapshotID, traceparent, ok, err := w.claimNextPending(ctx)
 		if err != nil {
 			slog.Default().Error("report worker: claim next pending", slog.String("component", "report_worker"), slog.String("error", err.Error()))
 			<-w.sem
@@ -218,34 +224,34 @@ func (w *Worker) processPending(ctx context.Context) {
 				<-w.sem
 				w.wg.Done()
 			}()
-			w.runJob(reportID, snapshotID)
+			w.runJob(reportID, snapshotID, traceparent)
 		}()
 	}
 }
 
 // claimNextPending atomically selects and locks the next pending report,
-// updates its status to running, and returns the report and snapshot IDs.
+// updates its status to running, and returns the report, snapshot, and trace context.
 // If no pending report exists, ok is false.
-func (w *Worker) claimNextPending(ctx context.Context) (reportID uuid.UUID, snapshotID uuid.UUID, ok bool, err error) {
+func (w *Worker) claimNextPending(ctx context.Context) (reportID uuid.UUID, snapshotID uuid.UUID, traceparent string, ok bool, err error) {
 	tx, err := w.db.Pool.Begin(ctx)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, false, fmt.Errorf("begin transaction: %w", err)
+		return uuid.Nil, uuid.Nil, "", false, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	err = tx.QueryRow(ctx, `
-		SELECT id, snapshot_id
+		SELECT id, snapshot_id, COALESCE(traceparent, '')
 		FROM reports
 		WHERE status = $1
 		ORDER BY created_at ASC
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
-	`, models.ReportPending).Scan(&reportID, &snapshotID)
+	`, models.ReportPending).Scan(&reportID, &snapshotID, &traceparent)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return uuid.Nil, uuid.Nil, false, nil
+			return uuid.Nil, uuid.Nil, "", false, nil
 		}
-		return uuid.Nil, uuid.Nil, false, fmt.Errorf("select pending report: %w", err)
+		return uuid.Nil, uuid.Nil, "", false, fmt.Errorf("select pending report: %w", err)
 	}
 
 	_, err = tx.Exec(ctx, `
@@ -254,19 +260,25 @@ func (w *Worker) claimNextPending(ctx context.Context) (reportID uuid.UUID, snap
 		WHERE id = $2
 	`, models.ReportRunning, reportID)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, false, fmt.Errorf("mark report running: %w", err)
+		return uuid.Nil, uuid.Nil, "", false, fmt.Errorf("mark report running: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return uuid.Nil, uuid.Nil, false, fmt.Errorf("commit claim: %w", err)
+		return uuid.Nil, uuid.Nil, "", false, fmt.Errorf("commit claim: %w", err)
 	}
 
-	return reportID, snapshotID, true, nil
+	return reportID, snapshotID, traceparent, true, nil
 }
 
-func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID) {
-	ctx, cancel := context.WithTimeout(w.ctx, renderTimeout)
+func (w *Worker) runJob(reportID uuid.UUID, snapshotID uuid.UUID, traceparent string) {
+	ctx := obstrace.ContextFromTraceparent(traceparent)
+	ctx, span := obstrace.Tracer().Start(ctx, "report_worker_process")
+	defer span.End()
+
+	ctx, cancel := context.WithTimeout(ctx, renderTimeout)
 	defer cancel()
+	stopCancelOnShutdown := context.AfterFunc(w.ctx, cancel)
+	defer stopCancelOnShutdown()
 
 	var waitForEnrichment bool
 	_ = w.db.Pool.QueryRow(ctx, `
