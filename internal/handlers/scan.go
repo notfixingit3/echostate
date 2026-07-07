@@ -18,10 +18,12 @@ import (
 	"github.com/notfixingit3/echostate/internal/db"
 	"github.com/notfixingit3/echostate/internal/middleware"
 	"github.com/notfixingit3/echostate/internal/models"
+	"github.com/notfixingit3/echostate/internal/observability/health"
+	"github.com/notfixingit3/echostate/internal/observability/metrics"
 	"github.com/notfixingit3/echostate/internal/reports"
-	"github.com/notfixingit3/echostate/internal/scheduler"
 	"github.com/notfixingit3/echostate/internal/scanner"
 	"github.com/notfixingit3/echostate/internal/scans"
+	"github.com/notfixingit3/echostate/internal/scheduler"
 	"github.com/notfixingit3/echostate/internal/version"
 )
 
@@ -44,12 +46,12 @@ type Handler struct {
 }
 
 // Register wires routes into the Gin router and returns background workers.
-func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, cfg *config.Config, rateLimiter *middleware.RateLimiter) *Workers {
+func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, cfg *config.Config, rateLimiter *middleware.RateLimiter, _ *metrics.Registry, healthRegistry *health.Registry) *Workers {
 	h := &Handler{
-		db:          database,
-		neo4jClient: neo4jClient,
-		config:      cfg,
-		scanner:     scanner.NewScanner(cfg.BrowserWSURL),
+		db:           database,
+		neo4jClient:  neo4jClient,
+		config:       cfg,
+		scanner:      scanner.NewScanner(cfg.BrowserWSURL),
 		reportWorker: newWorker(database),
 	}
 
@@ -70,6 +72,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 	requireAdmin := middleware.RequireAuthRole(h.auth, auth.RoleAdmin)
 
 	router.GET("/health", h.health)
+	router.GET("/ready", health.ReadyHandler(healthRegistry))
 	router.GET("/api/version", h.getVersion)
 
 	api := router.Group("/api")
@@ -167,11 +170,7 @@ func Register(router *gin.Engine, database *db.DB, neo4jClient *db.Neo4jClient, 
 }
 
 func (h *Handler) health(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "ok",
-		"env":     h.config.Env,
-		"version": version.Version,
-	})
+	health.HealthHandler(h.config.Env, version.Version)(c)
 }
 
 func (h *Handler) getVersion(c *gin.Context) {
@@ -313,4 +312,3 @@ func (h *Handler) loadSnapshot(ctx context.Context, snapshotID uuid.UUID) (*mode
 	}
 	return &snapshot, nil
 }
-
