@@ -2,7 +2,7 @@ package audit
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -50,11 +50,11 @@ func (p *Purger) RunOnce(ctx context.Context) {
 
 	deleted, err := PurgeExpired(runCtx, p.db, days)
 	if err != nil {
-		log.Printf("audit purge: %v", err)
+		slog.Default().Error("audit purge", slog.String("component", "audit_purger"), slog.String("error", err.Error()))
 		return
 	}
 	if deleted > 0 {
-		log.Printf("audit purge: removed %d events older than %d days", deleted, days)
+		slog.Default().Info("audit purge: removed events", slog.String("component", "audit_purger"), slog.Int64("deleted", deleted), slog.Int("retention_days", days))
 	}
 }
 

@@ -1,0 +1,25 @@
+# Observability overlay — Prometheus metrics + Jaeger distributed tracing.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+services:
+  api:
+    ports:
+      - "127.0.0.1:${ECHOSTATE_METRICS_PORT:-9090}:9090"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: echostate-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9091:9090"
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: echostate-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4317:4317"

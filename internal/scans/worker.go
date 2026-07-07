@@ -3,7 +3,7 @@ package scans
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -207,7 +207,7 @@ func (w *Worker) processPending(ctx context.Context) {
 
 		jobID, host, clientIP, ok, err := w.claimNextPending(ctx)
 		if err != nil {
-			log.Printf("scan worker: claim next pending: %v", err)
+			slog.Default().Error("scan worker: claim next pending", slog.String("component", "scan_worker"), slog.String("error", err.Error()))
 			<-w.sem
 			return
 		}
@@ -279,7 +279,7 @@ func (w *Worker) runJob(parent context.Context, jobID uuid.UUID, host, clientIP 
 	}
 
 	if cancelled, err := w.jobWasCancelled(ctx, jobID); err != nil {
-		log.Printf("scan worker: check cancelled %s: %v", jobID, err)
+		slog.Default().Error("scan worker: check cancelled", slog.String("component", "scan_worker"), slog.String("job_id", jobID.String()), slog.String("error", err.Error()))
 	} else if cancelled {
 		return
 	}
@@ -301,7 +301,7 @@ func (w *Worker) runJob(parent context.Context, jobID uuid.UUID, host, clientIP 
 		WHERE id = $4
 	`, models.ScanJobCompleted, snapshot.ID, snapshot.TargetID, jobID)
 	if err != nil {
-		log.Printf("scan worker: mark completed %s: %v", jobID, err)
+		slog.Default().Error("scan worker: mark completed", slog.String("component", "scan_worker"), slog.String("job_id", jobID.String()), slog.String("error", err.Error()))
 	}
 }
 
@@ -315,7 +315,7 @@ func (w *Worker) failJob(ctx context.Context, jobID uuid.UUID, message string) {
 		WHERE id = $3
 	`, models.ScanJobFailed, message, jobID)
 	if err != nil {
-		log.Printf("scan worker: mark failed %s: %v", jobID, err)
+		slog.Default().Error("scan worker: mark failed", slog.String("component", "scan_worker"), slog.String("job_id", jobID.String()), slog.String("error", err.Error()))
 	}
 }
 

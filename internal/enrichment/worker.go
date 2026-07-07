@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -178,7 +178,7 @@ func EnrichSnapshot(ctx context.Context, database *db.DB, neo4j *db.Neo4jClient,
 	if err != nil {
 		return fmt.Errorf("store enrichment: %w", err)
 	}
-	log.Printf("enrichment: updated snapshot %s (%s)", snapshotID, status)
+	slog.Default().Info("enrichment: updated snapshot", slog.String("component", "enrichment"), slog.String("snapshot_id", snapshotID.String()), slog.String("status", status))
 
 	if len(diffEntries) > 0 {
 		snapshot := &models.Snapshot{

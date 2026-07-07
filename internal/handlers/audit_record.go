@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/notfixingit3/echostate/internal/audit"
 	"github.com/notfixingit3/echostate/internal/middleware"
+	"github.com/notfixingit3/echostate/internal/observability/log"
 )
 
 func (h *Handler) recordAudit(c *gin.Context, action, resourceType, resourceID string, detail map[string]any) {
@@ -37,7 +38,10 @@ func (h *Handler) recordAudit(c *gin.Context, action, resourceType, resourceID s
 		defer cancel()
 		entry.Detail = mergeIPInfo(entry.Detail, lookupIPInfo(ctx, entry.IP))
 		if err := h.audit.Record(ctx, entry); err != nil {
-			log.Printf("audit record failed action=%s: %v", entry.Action, err)
+			log.FromContext(ctx).Error("audit record failed",
+				slog.String("action", entry.Action),
+				slog.String("error", err.Error()),
+			)
 		}
 	}(entry)
 }
@@ -69,7 +73,10 @@ func (h *Handler) recordAuditActor(
 		defer cancel()
 		entry.Detail = mergeIPInfo(entry.Detail, lookupIPInfo(ctx, entry.IP))
 		if err := h.audit.Record(ctx, entry); err != nil {
-			log.Printf("audit record failed action=%s: %v", entry.Action, err)
+			log.FromContext(ctx).Error("audit record failed",
+				slog.String("action", entry.Action),
+				slog.String("error", err.Error()),
+			)
 		}
 	}(entry)
 }

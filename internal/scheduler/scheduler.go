@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -70,13 +70,13 @@ func (s *Scheduler) tick() {
 
 	hosts, err := s.staleTargets(ctx, settings.ScheduleStaleHours, settings.ScheduleTags)
 	if err != nil {
-		log.Printf("scheduler: list stale targets: %v", err)
+		slog.Default().Error("scheduler: list stale targets", slog.String("component", "scheduler"), slog.String("error", err.Error()))
 		return
 	}
 
 	for _, host := range hosts {
 		if _, err := s.scanWorker.CreateJob(ctx, host, "scheduler"); err != nil {
-			log.Printf("scheduler: enqueue %s: %v", host, err)
+			slog.Default().Error("scheduler: enqueue", slog.String("component", "scheduler"), slog.String("host", host), slog.String("error", err.Error()))
 		}
 	}
 }

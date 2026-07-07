@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -203,7 +203,7 @@ func (w *Worker) processPending(ctx context.Context) {
 
 		reportID, snapshotID, ok, err := w.claimNextPending(ctx)
 		if err != nil {
-			log.Printf("report worker: claim next pending: %v", err)
+			slog.Default().Error("report worker: claim next pending", slog.String("component", "report_worker"), slog.String("error", err.Error()))
 			<-w.sem
 			return
 		}
@@ -391,7 +391,7 @@ func (w *Worker) failReport(ctx context.Context, reportID uuid.UUID, message str
 		WHERE id = $3
 	`, models.ReportFailed, message, reportID)
 	if err != nil {
-		log.Printf("report worker: failed to mark report %s failed: %v", reportID, err)
+		slog.Default().Error("report worker: failed to mark report failed", slog.String("component", "report_worker"), slog.String("report_id", reportID.String()), slog.String("error", err.Error()))
 	}
 }
 

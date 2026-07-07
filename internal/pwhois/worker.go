@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
@@ -107,7 +107,7 @@ func (w *Worker) loop(ctx context.Context) {
 func (w *Worker) process(ctx context.Context) {
 	ips, err := w.pendingIPs(ctx)
 	if err != nil {
-		log.Printf("pwhois worker: fetch pending IPs: %v", err)
+		slog.Default().Error("pwhois worker: fetch pending IPs", slog.String("component", "pwhois_worker"), slog.String("error", err.Error()))
 		return
 	}
 	if len(ips) == 0 {
@@ -122,7 +122,7 @@ func (w *Worker) process(ctx context.Context) {
 		if !isRoutable(ip) {
 			w.cache.set(ip, nil)
 			if err := w.updateSnapshot(ctx, ip, nil); err != nil {
-				log.Printf("pwhois worker: mark skipped IP %s: %v", ip, err)
+				slog.Default().Error("pwhois worker: mark skipped IP", slog.String("component", "pwhois_worker"), slog.String("ip", ip), slog.String("error", err.Error()))
 			}
 			continue
 		}
@@ -176,7 +176,7 @@ func (w *Worker) lookupBatch(ctx context.Context, ips []string) {
 		if err == nil {
 			break
 		}
-		log.Printf("pwhois worker: lookup attempt %d failed: %v", attempt+1, err)
+		slog.Default().Warn("pwhois worker: lookup attempt failed", slog.String("component", "pwhois_worker"), slog.Int("attempt", attempt+1), slog.String("error", err.Error()))
 		if attempt < maxRetries {
 			select {
 			case <-ctx.Done():
@@ -189,7 +189,7 @@ func (w *Worker) lookupBatch(ctx context.Context, ips []string) {
 		}
 	}
 	if err != nil {
-		log.Printf("pwhois worker: lookup failed after %d attempts: %v", maxRetries+1, err)
+		slog.Default().Error("pwhois worker: lookup failed after all attempts", slog.String("component", "pwhois_worker"), slog.Int("attempts", maxRetries+1), slog.String("error", err.Error()))
 		return
 	}
 
@@ -204,12 +204,12 @@ func (w *Worker) lookupBatch(ctx context.Context, ips []string) {
 		if !ok {
 			w.cache.set(ip, nil)
 			if err := w.updateSnapshot(ctx, ip, nil); err != nil {
-				log.Printf("pwhois worker: update snapshot for missing IP %s: %v", ip, err)
+				slog.Default().Error("pwhois worker: update snapshot for missing IP", slog.String("component", "pwhois_worker"), slog.String("ip", ip), slog.String("error", err.Error()))
 			}
 			continue
 		}
 		if err := w.updateSnapshot(ctx, ip, &rec); err != nil {
-			log.Printf("pwhois worker: update snapshot for %s: %v", ip, err)
+			slog.Default().Error("pwhois worker: update snapshot", slog.String("component", "pwhois_worker"), slog.String("ip", ip), slog.String("error", err.Error()))
 		}
 	}
 }

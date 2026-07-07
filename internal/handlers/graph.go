@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
 	"github.com/notfixingit3/echostate/internal/db"
+	"github.com/notfixingit3/echostate/internal/observability/log"
 )
 
 func (h *Handler) getGraph(c *gin.Context) {
@@ -25,7 +27,12 @@ func (h *Handler) getGraph(c *gin.Context) {
 
 	graph, err := h.neo4jClient.GetGraphWithOpts(c.Request.Context(), opts)
 	if err != nil {
-		log.Printf("graph query failed (target_id=%q snapshot_id=%q): %v", opts.TargetID, opts.SnapshotID, err)
+		log.FromContext(c.Request.Context()).Error("graph query failed",
+			slog.String("action", "get_graph"),
+			slog.String("target_id", opts.TargetID),
+			slog.String("snapshot_id", opts.SnapshotID),
+			slog.String("error", err.Error()),
+		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load graph"})
 		return
 	}

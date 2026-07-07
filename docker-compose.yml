@@ -85,7 +85,7 @@ services:
       neo4j:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--spider", "http://localhost:8080/ready"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -99,6 +99,8 @@ func TestMigrate_CreatesTablesAndIsIdempotent(t *testing.T) {
 		{"reports", "snapshot_id"},
 		{"reports", "status"},
 		{"reports", "pdf"},
+		{"reports", "traceparent"},
+		{"scan_jobs", "traceparent"},
 	} {
 		var exists bool
 		err := d.Pool.QueryRow(ctx, `
@@ -138,6 +140,47 @@ func TestMigrate_CreatesTablesAndIsIdempotent(t *testing.T) {
 
 	// Running migrate a second time must succeed without side effects.
 	require.NoError(t, Migrate(d))
+}
+
+func TestMigrate_TraceparentColumnIsNullable(t *testing.T) {
+	d := requirePostgres(t)
+	require.NoError(t, Migrate(d))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var scanID string
+	err := d.Pool.QueryRow(ctx, `
+		INSERT INTO scan_jobs (host, status)
+		VALUES ('nullable-test.example.com', 'pending')
+		RETURNING id
+	`).Scan(&scanID)
+	require.NoError(t, err)
+
+	var tp *string
+	err = d.Pool.QueryRow(ctx, `SELECT traceparent FROM scan_jobs WHERE id = $1`, scanID).Scan(&tp)
+	require.NoError(t, err)
+	require.Nil(t, tp, "traceparent should be NULL for existing rows")
+
+	var reportID string
+	err = d.Pool.QueryRow(ctx, `
+		INSERT INTO reports (snapshot_id, status)
+		SELECT id, 'pending' FROM snapshots LIMIT 1
+		RETURNING id
+	`).Scan(&reportID)
+	if err != nil {
+		err = d.Pool.QueryRow(ctx, `
+			INSERT INTO reports (snapshot_id, status)
+			VALUES (NULL, 'pending')
+			RETURNING id
+		`).Scan(&reportID)
+	}
+	require.NoError(t, err)
+
+	var rp *string
+	err = d.Pool.QueryRow(ctx, `SELECT traceparent FROM reports WHERE id = $1`, reportID).Scan(&rp)
+	require.NoError(t, err)
+	require.Nil(t, rp, "traceparent should be NULL for existing rows")
 }
 
 func TestClose_DoesNotPanic(t *testing.T) {

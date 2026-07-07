@@ -307,6 +307,9 @@ func Migrate(db *DB) error {
 		ALTER TABLE users ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'system';
 		ALTER TABLE enrollment_sessions ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'initial';
 
+		ALTER TABLE scan_jobs ADD COLUMN IF NOT EXISTS traceparent VARCHAR(55);
+		ALTER TABLE reports ADD COLUMN IF NOT EXISTS traceparent VARCHAR(55);
+
 		CREATE TABLE IF NOT EXISTS audit_events (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
