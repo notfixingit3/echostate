@@ -139,6 +139,22 @@ func TestGatherTraceroute_FromMockOutput(t *testing.T) {
 }
 
 func TestGatherTraceroute_ExternalUnavailableSkipped(t *testing.T) {
+	origLocal := runTracerouteFunc
+	origExternal := fetchExternalTraceFunc
+	defer func() {
+		runTracerouteFunc = origLocal
+		fetchExternalTraceFunc = origExternal
+	}()
+
+	runTracerouteFunc = func(ctx context.Context, host string) (string, error) {
+		return `traceroute to example.com
+ 1  192.168.1.1  1.000 ms
+ 2  93.184.216.34  10.000 ms`, nil
+	}
+	fetchExternalTraceFunc = func(ctx context.Context, host string) (string, error) {
+		return "", errExternalTracerouteUnavailable
+	}
+
 	_, data, err := gatherTraceroute(context.Background(), "example.com")
 	if err != nil {
 		t.Fatalf("gatherTraceroute() error = %v", err)

@@ -162,19 +162,29 @@ func TestMigrate_TraceparentColumnIsNullable(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, tp, "traceparent should be NULL for existing rows")
 
+	var targetID string
+	err = d.Pool.QueryRow(ctx, `
+		INSERT INTO targets (host, normalized_host)
+		VALUES ('nullable-report.example.com', 'nullable-report.example.com')
+		ON CONFLICT (host) DO UPDATE SET normalized_host = EXCLUDED.normalized_host
+		RETURNING id
+	`).Scan(&targetID)
+	require.NoError(t, err)
+
+	var snapshotID string
+	err = d.Pool.QueryRow(ctx, `
+		INSERT INTO snapshots (target_id, data_hash, raw_data)
+		VALUES ($1, 'nullable-report-hash', '{}'::jsonb)
+		RETURNING id
+	`, targetID).Scan(&snapshotID)
+	require.NoError(t, err)
+
 	var reportID string
 	err = d.Pool.QueryRow(ctx, `
 		INSERT INTO reports (snapshot_id, status)
-		SELECT id, 'pending' FROM snapshots LIMIT 1
+		VALUES ($1, 'pending')
 		RETURNING id
-	`).Scan(&reportID)
-	if err != nil {
-		err = d.Pool.QueryRow(ctx, `
-			INSERT INTO reports (snapshot_id, status)
-			VALUES (NULL, 'pending')
-			RETURNING id
-		`).Scan(&reportID)
-	}
+	`, snapshotID).Scan(&reportID)
 	require.NoError(t, err)
 
 	var rp *string
@@ -218,7 +228,10 @@ func TestConnect_TracerEmitsSpanForQuery(t *testing.T) {
 		sdktrace.WithSyncer(exporter),
 	)
 	otel.SetTracerProvider(tp)
-	t.Cleanup(func() { otel.SetTracerProvider(sdktrace.NewTracerProvider()) })
+	t.Cleanup(func() {
+		_ = tp.Shutdown(context.Background())
+		otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	})
 
 	d := requirePostgres(t)
 
@@ -226,12 +239,13 @@ func TestConnect_TracerEmitsSpanForQuery(t *testing.T) {
 	defer cancel()
 
 	var result int
+	ctx, parent := tp.Tracer("test").Start(ctx, "parent")
 	err := d.Pool.QueryRow(ctx, "SELECT 1").Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
+	parent.End()
 
-	// Force span export by shutting down the provider.
-	require.NoError(t, tp.Shutdown(ctx))
+	require.NoError(t, tp.ForceFlush(ctx))
 
 	spans := exporter.GetSpans()
 	require.NotEmpty(t, spans, "expected at least one span from SELECT 1")

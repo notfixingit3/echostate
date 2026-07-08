@@ -102,8 +102,12 @@ func TestVerifyEnrollmentCodeTracksIPFailures(t *testing.T) {
 	ctx := context.Background()
 	svc := NewService(database, "http://localhost:3001")
 	clientIP := "203.0.113.50"
+	if _, err := database.Pool.Exec(ctx, `DELETE FROM enrollment_verify_attempts WHERE ip = $1`, clientIP); err != nil {
+		t.Fatalf("clear prior attempts: %v", err)
+	}
+	maxAttempts := svc.Settings().MaxCodeAttempts
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < maxAttempts-1; i++ {
 		_, err := svc.VerifyEnrollmentCode(ctx, fmt.Sprintf("0000000%d", i), clientIP)
 		if err != ErrInvalidCode {
 			t.Fatalf("attempt %d: expected ErrInvalidCode, got %v", i+1, err)
