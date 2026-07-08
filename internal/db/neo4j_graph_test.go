@@ -143,4 +143,3 @@ func TestNeo4jNodeToGraphSubdomainAndDNSHost(t *testing.T) {
 		t.Fatalf("unexpected dns host node: %#v", dns)
 	}
 }
-

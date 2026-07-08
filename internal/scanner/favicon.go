@@ -49,11 +49,11 @@ func gatherFavicon(ctx context.Context, host string) (string, map[string]any, er
 		hash := int32(murmur3.Sum32([]byte(b64)))
 
 		return "favicon", map[string]any{
-			"url":     candidate,
-			"mmh3":    strconv.Itoa(int(hash)),
-			"sha256":  hashSHA256(body),
-			"size":    len(body),
-			"shodan":  strconv.Itoa(int(hash)),
+			"url":    candidate,
+			"mmh3":   strconv.Itoa(int(hash)),
+			"sha256": hashSHA256(body),
+			"size":   len(body),
+			"shodan": strconv.Itoa(int(hash)),
 		}, nil
 	}
 

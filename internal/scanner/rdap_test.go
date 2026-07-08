@@ -100,11 +100,11 @@ func TestMergeWhoisRdap(t *testing.T) {
 		"registrar": "Classic Registrar",
 	}
 	mergeWhoisRdap(dst, map[string]any{
-		"source":            "rdap",
-		"registrar":         "RDAP Registrar",
-		"registrant_email":  "owner@example.com",
-		"abuse_email":       "abuse@example.com",
-		"expiration_date":   "2030-12-31",
+		"source":           "rdap",
+		"registrar":        "RDAP Registrar",
+		"registrant_email": "owner@example.com",
+		"abuse_email":      "abuse@example.com",
+		"expiration_date":  "2030-12-31",
 	})
 
 	if dst["registrar"] != "Classic Registrar" {

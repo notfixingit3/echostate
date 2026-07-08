@@ -122,10 +122,10 @@ func sendWebhook(hook models.Webhook, host string, changes []models.ChangeDetail
 	}
 
 	payload := map[string]any{
-		"text": fmt.Sprintf("EchoState alert for %s\n%s\n%s", host, changesStr, link),
-		"host": host,
+		"text":    fmt.Sprintf("EchoState alert for %s\n%s\n%s", host, changesStr, link),
+		"host":    host,
 		"changes": changes,
-		"link": link,
+		"link":    link,
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {

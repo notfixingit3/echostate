@@ -185,4 +185,3 @@ func (s *Service) List(ctx context.Context, opts ListOptions) (models.PaginatedR
 		Total: total,
 	}, nil
 }
-

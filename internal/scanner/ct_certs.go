@@ -40,13 +40,13 @@ func parseCTCertificates(body []byte) ([]map[string]any, error) {
 
 		names := collectCTNames(record.NameValue, record.CommonName)
 		certs = append(certs, map[string]any{
-			"issuer":        strings.TrimSpace(record.IssuerName),
-			"serial":        serial,
-			"not_before":    strings.TrimSpace(record.NotBefore),
-			"not_after":     strings.TrimSpace(record.NotAfter),
-			"common_name":   strings.TrimSpace(record.CommonName),
-			"sans":          names,
-			"crt_sh_id":     record.ID,
+			"issuer":      strings.TrimSpace(record.IssuerName),
+			"serial":      serial,
+			"not_before":  strings.TrimSpace(record.NotBefore),
+			"not_after":   strings.TrimSpace(record.NotAfter),
+			"common_name": strings.TrimSpace(record.CommonName),
+			"sans":        names,
+			"crt_sh_id":   record.ID,
 		})
 
 		if len(certs) >= ctMaxCertificates {

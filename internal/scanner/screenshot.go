@@ -136,4 +136,3 @@ func resizeJPEGThumbnail(src image.Image, maxWidth, quality int) ([]byte, error)
 	}
 	return buf.Bytes(), nil
 }
-

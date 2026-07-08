@@ -29,10 +29,10 @@ func buildBGPPathProfile(paths []string) map[string]any {
 	}
 
 	return map[string]any{
-		"path_count":    len(paths),
-		"primary_path":  shortest,
-		"longest_path":  longest,
-		"stability":     stability,
-		"unique_paths":  len(paths),
+		"path_count":   len(paths),
+		"primary_path": shortest,
+		"longest_path": longest,
+		"stability":    stability,
+		"unique_paths": len(paths),
 	}
 }

@@ -15,22 +15,22 @@ type Target struct {
 
 // Snapshot stores a single reconnaissance result for a target.
 type Snapshot struct {
-	ID              uuid.UUID      `json:"id"`
-	TargetID        uuid.UUID      `json:"target_id"`
-	ScannedAt       time.Time      `json:"scanned_at"`
-	LastSeen        time.Time      `json:"last_seen"`
-	DataHash        string         `json:"data_hash"`
-	RawData         map[string]any `json:"raw_data"`
-	Changes         []string       `json:"changes,omitempty"`
-	ChangeDetails   []ChangeDetail `json:"change_details,omitempty"`
-	PwhoisData      map[string]any `json:"pwhois_data,omitempty"`
-	PwhoisLookedUp  *time.Time     `json:"pwhois_looked_up_at,omitempty"`
-	PwhoisOriginAS  *string        `json:"pwhois_origin_as,omitempty"`
-	PwhoisOrgName   *string        `json:"pwhois_org_name,omitempty"`
-	PwhoisCountry   *string        `json:"pwhois_country_code,omitempty"`
-	PwhoisCity      *string        `json:"pwhois_city,omitempty"`
-	PwhoisPrefix    *string        `json:"pwhois_prefix,omitempty"`
-	ClientIP        string         `json:"client_ip,omitempty"`
+	ID             uuid.UUID      `json:"id"`
+	TargetID       uuid.UUID      `json:"target_id"`
+	ScannedAt      time.Time      `json:"scanned_at"`
+	LastSeen       time.Time      `json:"last_seen"`
+	DataHash       string         `json:"data_hash"`
+	RawData        map[string]any `json:"raw_data"`
+	Changes        []string       `json:"changes,omitempty"`
+	ChangeDetails  []ChangeDetail `json:"change_details,omitempty"`
+	PwhoisData     map[string]any `json:"pwhois_data,omitempty"`
+	PwhoisLookedUp *time.Time     `json:"pwhois_looked_up_at,omitempty"`
+	PwhoisOriginAS *string        `json:"pwhois_origin_as,omitempty"`
+	PwhoisOrgName  *string        `json:"pwhois_org_name,omitempty"`
+	PwhoisCountry  *string        `json:"pwhois_country_code,omitempty"`
+	PwhoisCity     *string        `json:"pwhois_city,omitempty"`
+	PwhoisPrefix   *string        `json:"pwhois_prefix,omitempty"`
+	ClientIP       string         `json:"client_ip,omitempty"`
 }
 
 // ChangeDetail is a structured snapshot diff entry.
@@ -67,35 +67,35 @@ func (s ScanJobStatus) IsValid() bool {
 
 // ScanJob tracks an asynchronous reconnaissance scan.
 type ScanJob struct {
-	ID           uuid.UUID      `json:"id"`
-	Host         string         `json:"host"`
-	Status       ScanJobStatus  `json:"status"`
-	SnapshotID   *uuid.UUID     `json:"snapshot_id,omitempty"`
-	TargetID     *uuid.UUID     `json:"target_id,omitempty"`
-	ErrorMessage string         `json:"error,omitempty"`
-	ClientIP     string         `json:"client_ip,omitempty"`
-	CreatedAt    time.Time      `json:"created_at"`
-	CompletedAt  *time.Time     `json:"completed_at,omitempty"`
-	Snapshot     *Snapshot      `json:"snapshot,omitempty"`
+	ID           uuid.UUID     `json:"id"`
+	Host         string        `json:"host"`
+	Status       ScanJobStatus `json:"status"`
+	SnapshotID   *uuid.UUID    `json:"snapshot_id,omitempty"`
+	TargetID     *uuid.UUID    `json:"target_id,omitempty"`
+	ErrorMessage string        `json:"error,omitempty"`
+	ClientIP     string        `json:"client_ip,omitempty"`
+	CreatedAt    time.Time     `json:"created_at"`
+	CompletedAt  *time.Time    `json:"completed_at,omitempty"`
+	Snapshot     *Snapshot     `json:"snapshot,omitempty"`
 }
 
 // ScanResult is the unified reconnaissance payload stored in raw_data.
 type ScanResult struct {
-	Host      string         `json:"host"`
-	ScannedAt time.Time      `json:"scanned_at"`
-	WHOIS     map[string]any `json:"whois,omitempty"`
-	ASN       map[string]any `json:"asn,omitempty"`
-	Web       map[string]any `json:"web,omitempty"`
-	TLS       map[string]any `json:"tls,omitempty"`
-	DNS       map[string]any `json:"dns,omitempty"`
-	Favicon   map[string]any `json:"favicon,omitempty"`
-	Crawl     map[string]any `json:"crawl,omitempty"`
-	Storage   map[string]any `json:"storage,omitempty"`
-	CT          map[string]any `json:"ct,omitempty"`
-	Traceroute  map[string]any `json:"traceroute,omitempty"`
-	Screenshot  map[string]any `json:"screenshot,omitempty"`
-	Enrichment  map[string]any `json:"enrichment,omitempty"`
-	Errors      []string       `json:"errors,omitempty"`
+	Host       string         `json:"host"`
+	ScannedAt  time.Time      `json:"scanned_at"`
+	WHOIS      map[string]any `json:"whois,omitempty"`
+	ASN        map[string]any `json:"asn,omitempty"`
+	Web        map[string]any `json:"web,omitempty"`
+	TLS        map[string]any `json:"tls,omitempty"`
+	DNS        map[string]any `json:"dns,omitempty"`
+	Favicon    map[string]any `json:"favicon,omitempty"`
+	Crawl      map[string]any `json:"crawl,omitempty"`
+	Storage    map[string]any `json:"storage,omitempty"`
+	CT         map[string]any `json:"ct,omitempty"`
+	Traceroute map[string]any `json:"traceroute,omitempty"`
+	Screenshot map[string]any `json:"screenshot,omitempty"`
+	Enrichment map[string]any `json:"enrichment,omitempty"`
+	Errors     []string       `json:"errors,omitempty"`
 }
 
 // ReportStatus represents the lifecycle state of a PDF report.
@@ -118,9 +118,9 @@ func (s ReportStatus) IsValid() bool {
 
 // CreateReportRequest is the payload accepted by POST /api/reports.
 type CreateReportRequest struct {
-	SnapshotID          *uuid.UUID `json:"snapshot_id,omitempty"`
-	Host                *string    `json:"host,omitempty"`
-	WaitForEnrichment   bool       `json:"wait_for_enrichment,omitempty"`
+	SnapshotID        *uuid.UUID `json:"snapshot_id,omitempty"`
+	Host              *string    `json:"host,omitempty"`
+	WaitForEnrichment bool       `json:"wait_for_enrichment,omitempty"`
 }
 
 // ReportResponse is the JSON envelope returned by report endpoints.
@@ -137,14 +137,14 @@ type ReportResponse struct {
 
 // Report is the internal model mapping to the reports database table.
 type Report struct {
-	ID                  uuid.UUID    `json:"id"`
-	SnapshotID          uuid.UUID    `json:"snapshot_id"`
-	Status              ReportStatus `json:"status"`
-	ErrorMessage        string       `json:"error_message,omitempty"`
-	PDF                 []byte       `json:"-"`
-	CreatedAt           time.Time    `json:"created_at"`
-	CompletedAt         *time.Time   `json:"completed_at,omitempty"`
-	WaitForEnrichment   bool         `json:"wait_for_enrichment,omitempty"`
+	ID                uuid.UUID    `json:"id"`
+	SnapshotID        uuid.UUID    `json:"snapshot_id"`
+	Status            ReportStatus `json:"status"`
+	ErrorMessage      string       `json:"error_message,omitempty"`
+	PDF               []byte       `json:"-"`
+	CreatedAt         time.Time    `json:"created_at"`
+	CompletedAt       *time.Time   `json:"completed_at,omitempty"`
+	WaitForEnrichment bool         `json:"wait_for_enrichment,omitempty"`
 }
 
 type PaginatedResponse[T any] struct {
@@ -174,36 +174,36 @@ type TargetDetail struct {
 
 // ScreenshotEntry is a thumbnail captured during a snapshot scan.
 type ScreenshotEntry struct {
-	SnapshotID  uuid.UUID `json:"snapshot_id"`
-	ScannedAt   time.Time `json:"scanned_at"`
-	URL         string    `json:"url,omitempty"`
-	Width       int       `json:"width,omitempty"`
-	Height      int       `json:"height,omitempty"`
-	Format      string    `json:"format,omitempty"`
-	Thumbnail   string    `json:"thumbnail,omitempty"`
-	Error       string    `json:"error,omitempty"`
+	SnapshotID uuid.UUID `json:"snapshot_id"`
+	ScannedAt  time.Time `json:"scanned_at"`
+	URL        string    `json:"url,omitempty"`
+	Width      int       `json:"width,omitempty"`
+	Height     int       `json:"height,omitempty"`
+	Format     string    `json:"format,omitempty"`
+	Thumbnail  string    `json:"thumbnail,omitempty"`
+	Error      string    `json:"error,omitempty"`
 }
 
 type SnapshotSummary struct {
-	ID              uuid.UUID  `json:"id"`
-	TargetID        uuid.UUID  `json:"target_id"`
-	Host            string     `json:"host"`
-	ScannedAt       time.Time  `json:"scanned_at"`
-	LastSeen        time.Time  `json:"last_seen"`
-	DataHash        string     `json:"data_hash"`
-	Changes         []string   `json:"changes,omitempty"`
-	ClientIP        string     `json:"client_ip"`
-	PwhoisLookedUp  *time.Time `json:"pwhois_looked_up_at,omitempty"`
-	PwhoisOriginAS  *string    `json:"pwhois_origin_as,omitempty"`
-	PwhoisOrgName   *string    `json:"pwhois_org_name,omitempty"`
-	PwhoisCountry   *string    `json:"pwhois_country_code,omitempty"`
-	PwhoisCity      *string    `json:"pwhois_city,omitempty"`
-	PwhoisPrefix    *string    `json:"pwhois_prefix,omitempty"`
-	Asn             *string    `json:"asn,omitempty"`
-	AsName          *string    `json:"as_name,omitempty"`
-	WebTitle        *string    `json:"web_title,omitempty"`
-	Registrar       *string    `json:"registrar,omitempty"`
-	ResolvedIP      *string    `json:"resolved_ip,omitempty"`
+	ID             uuid.UUID  `json:"id"`
+	TargetID       uuid.UUID  `json:"target_id"`
+	Host           string     `json:"host"`
+	ScannedAt      time.Time  `json:"scanned_at"`
+	LastSeen       time.Time  `json:"last_seen"`
+	DataHash       string     `json:"data_hash"`
+	Changes        []string   `json:"changes,omitempty"`
+	ClientIP       string     `json:"client_ip"`
+	PwhoisLookedUp *time.Time `json:"pwhois_looked_up_at,omitempty"`
+	PwhoisOriginAS *string    `json:"pwhois_origin_as,omitempty"`
+	PwhoisOrgName  *string    `json:"pwhois_org_name,omitempty"`
+	PwhoisCountry  *string    `json:"pwhois_country_code,omitempty"`
+	PwhoisCity     *string    `json:"pwhois_city,omitempty"`
+	PwhoisPrefix   *string    `json:"pwhois_prefix,omitempty"`
+	Asn            *string    `json:"asn,omitempty"`
+	AsName         *string    `json:"as_name,omitempty"`
+	WebTitle       *string    `json:"web_title,omitempty"`
+	Registrar      *string    `json:"registrar,omitempty"`
+	ResolvedIP     *string    `json:"resolved_ip,omitempty"`
 }
 
 type ReportSummary struct {
@@ -327,20 +327,20 @@ type GraphPinnedNode struct {
 }
 
 type SavedGraphView struct {
-	ID                  uuid.UUID                  `json:"id"`
-	Name                string                     `json:"name"`
-	Description         string                     `json:"description"`
-	ViewMode            string                     `json:"view_mode"`
-	TargetID            *uuid.UUID                 `json:"target_id,omitempty"`
-	VantageFilter       string                     `json:"vantage_filter"`
-	SnapshotID          *uuid.UUID                 `json:"snapshot_id,omitempty"`
-	CompareSnapshotID   *uuid.UUID                 `json:"compare_snapshot_id,omitempty"`
-	CompareMode         string                     `json:"compare_mode"`
-	PinnedNodes         map[string]GraphPinnedNode `json:"pinned_nodes"`
-	SelectedNodeID      *string                    `json:"selected_node_id,omitempty"`
-	CreatedAt           time.Time                  `json:"created_at"`
-	UpdatedAt           time.Time                  `json:"updated_at"`
-	TargetHost          *string                    `json:"target_host,omitempty"`
+	ID                uuid.UUID                  `json:"id"`
+	Name              string                     `json:"name"`
+	Description       string                     `json:"description"`
+	ViewMode          string                     `json:"view_mode"`
+	TargetID          *uuid.UUID                 `json:"target_id,omitempty"`
+	VantageFilter     string                     `json:"vantage_filter"`
+	SnapshotID        *uuid.UUID                 `json:"snapshot_id,omitempty"`
+	CompareSnapshotID *uuid.UUID                 `json:"compare_snapshot_id,omitempty"`
+	CompareMode       string                     `json:"compare_mode"`
+	PinnedNodes       map[string]GraphPinnedNode `json:"pinned_nodes"`
+	SelectedNodeID    *string                    `json:"selected_node_id,omitempty"`
+	CreatedAt         time.Time                  `json:"created_at"`
+	UpdatedAt         time.Time                  `json:"updated_at"`
+	TargetHost        *string                    `json:"target_host,omitempty"`
 }
 
 type CreateSavedGraphViewRequest struct {

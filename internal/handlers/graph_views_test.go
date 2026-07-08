@@ -21,12 +21,12 @@ func TestCreateUpdateDeleteGraphView(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	createBody := models.CreateSavedGraphViewRequest{
-		Name:        "BGP drift lens",
-		Description: "Compare latest BGP for target",
-		ViewMode:    "bgp",
-		TargetID:    &targetID,
+		Name:          "BGP drift lens",
+		Description:   "Compare latest BGP for target",
+		ViewMode:      "bgp",
+		TargetID:      &targetID,
 		VantageFilter: "all",
-		CompareMode: "latest",
+		CompareMode:   "latest",
 		PinnedNodes: map[string]models.GraphPinnedNode{
 			"node-1": {X: 12.5, Y: -4.2},
 		},
@@ -49,13 +49,13 @@ func TestCreateUpdateDeleteGraphView(t *testing.T) {
 	require.InDelta(t, 12.5, created.PinnedNodes["node-1"].X, 0.001)
 
 	updateBody := models.UpdateSavedGraphViewRequest{
-		Name:        "BGP drift lens",
-		Description: "Updated description",
-		ViewMode:    "traceroute",
-		TargetID:    &targetID,
+		Name:          "BGP drift lens",
+		Description:   "Updated description",
+		ViewMode:      "traceroute",
+		TargetID:      &targetID,
 		VantageFilter: "external",
-		CompareMode: "previous",
-		PinnedNodes: map[string]models.GraphPinnedNode{},
+		CompareMode:   "previous",
+		PinnedNodes:   map[string]models.GraphPinnedNode{},
 	}
 	updatePayload, err := json.Marshal(updateBody)
 	require.NoError(t, err)

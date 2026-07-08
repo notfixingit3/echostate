@@ -64,18 +64,18 @@ type ExportCollectionMember struct {
 
 // ExportBundle is the portable EchoState investigation dataset.
 type ExportBundle struct {
-	FormatVersion    int                      `json:"format_version"`
-	ExportedAt       time.Time                `json:"exported_at"`
-	EchoStateVersion string                   `json:"echostate_version"`
-	Targets          []ExportTarget           `json:"targets"`
-	Snapshots        []ExportSnapshot         `json:"snapshots"`
-	SnapshotBlobs    []ExportSnapshotBlob     `json:"snapshot_blobs,omitempty"`
-	Collections      []ExportCollection       `json:"collections"`
+	FormatVersion     int                      `json:"format_version"`
+	ExportedAt        time.Time                `json:"exported_at"`
+	EchoStateVersion  string                   `json:"echostate_version"`
+	Targets           []ExportTarget           `json:"targets"`
+	Snapshots         []ExportSnapshot         `json:"snapshots"`
+	SnapshotBlobs     []ExportSnapshotBlob     `json:"snapshot_blobs,omitempty"`
+	Collections       []ExportCollection       `json:"collections"`
 	CollectionMembers []ExportCollectionMember `json:"collection_members"`
-	Notes            []InvestigationNote      `json:"notes"`
-	GraphViews       []SavedGraphView         `json:"graph_views"`
-	Webhooks         []Webhook                `json:"webhooks,omitempty"`
-	Settings         map[string]any           `json:"settings,omitempty"`
+	Notes             []InvestigationNote      `json:"notes"`
+	GraphViews        []SavedGraphView         `json:"graph_views"`
+	Webhooks          []Webhook                `json:"webhooks,omitempty"`
+	Settings          map[string]any           `json:"settings,omitempty"`
 }
 
 // ImportRequest imports a portable bundle into the current install.
@@ -87,20 +87,20 @@ type ImportRequest struct {
 
 // ImportResult summarizes an import operation.
 type ImportResult struct {
-	TargetsImported          int      `json:"targets_imported"`
-	TargetsSkipped           int      `json:"targets_skipped"`
-	SnapshotsImported        int      `json:"snapshots_imported"`
-	SnapshotsSkipped         int      `json:"snapshots_skipped"`
-	SnapshotBlobsImported    int      `json:"snapshot_blobs_imported"`
-	CollectionsImported      int      `json:"collections_imported"`
-	CollectionsSkipped       int      `json:"collections_skipped"`
-	CollectionMembersImported int     `json:"collection_members_imported"`
-	NotesImported            int      `json:"notes_imported"`
-	NotesSkipped             int      `json:"notes_skipped"`
-	GraphViewsImported       int      `json:"graph_views_imported"`
-	GraphViewsSkipped        int      `json:"graph_views_skipped"`
-	WebhooksImported         int      `json:"webhooks_imported"`
-	SettingsImported         bool     `json:"settings_imported"`
-	GraphSyncQueued          int      `json:"graph_sync_queued"`
-	Warnings                 []string `json:"warnings,omitempty"`
+	TargetsImported           int      `json:"targets_imported"`
+	TargetsSkipped            int      `json:"targets_skipped"`
+	SnapshotsImported         int      `json:"snapshots_imported"`
+	SnapshotsSkipped          int      `json:"snapshots_skipped"`
+	SnapshotBlobsImported     int      `json:"snapshot_blobs_imported"`
+	CollectionsImported       int      `json:"collections_imported"`
+	CollectionsSkipped        int      `json:"collections_skipped"`
+	CollectionMembersImported int      `json:"collection_members_imported"`
+	NotesImported             int      `json:"notes_imported"`
+	NotesSkipped              int      `json:"notes_skipped"`
+	GraphViewsImported        int      `json:"graph_views_imported"`
+	GraphViewsSkipped         int      `json:"graph_views_skipped"`
+	WebhooksImported          int      `json:"webhooks_imported"`
+	SettingsImported          bool     `json:"settings_imported"`
+	GraphSyncQueued           int      `json:"graph_sync_queued"`
+	Warnings                  []string `json:"warnings,omitempty"`
 }

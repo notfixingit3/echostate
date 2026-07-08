@@ -14,16 +14,16 @@ import (
 )
 
 const (
-	maxFieldLen         = 512
-	valueCharsPerLine   = 72
-	kvLineHeight        = 4.5
-	rawLineHeight       = 3.8
-	labelColWidth       = 3
-	valueColWidth       = 9
-	tableRowHeight      = 6.0
-	tableHeaderHeight   = 7.0
-	tableLineHeight     = 3.8
-	tableTotalCols      = 12
+	maxFieldLen       = 512
+	valueCharsPerLine = 72
+	kvLineHeight      = 4.5
+	rawLineHeight     = 3.8
+	labelColWidth     = 3
+	valueColWidth     = 9
+	tableRowHeight    = 6.0
+	tableHeaderHeight = 7.0
+	tableLineHeight   = 3.8
+	tableTotalCols    = 12
 )
 
 type tableCell struct {

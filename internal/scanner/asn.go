@@ -24,7 +24,7 @@ var (
 	lookupTXTFunc = func(ctx context.Context, resolver *net.Resolver, name string) ([]string, error) {
 		return resolver.LookupTXT(ctx, name)
 	}
-	enrichRoutingFunc  = enrichRouting
+	enrichRoutingFunc   = enrichRouting
 	enrichPeeringDBFunc = enrichPeeringDB
 )
 

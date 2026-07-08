@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-
 )
 
 func fingerprintJA3S(ctx context.Context, host string, port int) (string, error) {
@@ -83,7 +82,7 @@ func buildJA3SClientHello(serverName string) []byte {
 	handshake := make([]byte, 0, 256)
 	handshake = append(handshake, 0x01) // ClientHello
 	handshakeLenPos := len(handshake)
-	handshake = append(handshake, 0, 0, 0) // placeholder uint24 length
+	handshake = append(handshake, 0, 0, 0)    // placeholder uint24 length
 	handshake = append(handshake, 0x03, 0x03) // TLS 1.2
 	handshake = append(handshake, random[:]...)
 	handshake = append(handshake, 0x00) // session id length

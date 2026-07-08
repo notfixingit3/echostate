@@ -278,4 +278,3 @@ func stringDiff(previous, current []string) (added, removed []string) {
 	sort.Strings(removed)
 	return added, removed
 }
-

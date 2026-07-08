@@ -18,8 +18,6 @@ import (
 	"github.com/notfixingit3/echostate/internal/webhooks"
 )
 
-
-
 // PendingPayload is stored on new snapshots while async enrichment runs.
 func PendingPayload() map[string]any {
 	return map[string]any{

@@ -81,7 +81,7 @@ func (c *Neo4jClient) SyncSnapshot(ctx context.Context, target *models.Target, s
 				}
 			}
 		}
-		
+
 		// Add relationship for IP if it exists
 		if asnMap, ok := snapshot.RawData["asn"].(map[string]any); ok {
 			if ipVal, ok := asnMap["ip"].(string); ok && ipVal != "" {

@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	sitemapLocPattern = regexp.MustCompile(`(?i)<loc>\s*([^<\s]+)\s*</loc>`)
+	sitemapLocPattern   = regexp.MustCompile(`(?i)<loc>\s*([^<\s]+)\s*</loc>`)
 	defaultSitemapPaths = []string{
 		"/sitemap.xml",
 		"/sitemap.txt",

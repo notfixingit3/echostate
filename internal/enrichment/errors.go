@@ -45,4 +45,3 @@ func friendlyServiceError(service string, err error) error {
 	}
 	return errors.New(service + ": request failed")
 }
-

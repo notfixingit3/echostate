@@ -21,15 +21,15 @@ func (h *Handler) authConfig(c *gin.Context) {
 	settings := auth.SettingsFromConfig(config.GetSettings(), h.config.FrontendURL)
 	c.JSON(http.StatusOK, gin.H{
 		"auth_required":               required,
-		"auth_enabled":              settings.AuthEnabled,
-		"enrollment_code_ttl_hours": settings.EnrollmentCodeTTLHours,
-		"enrollment_code_length":    settings.EnrollmentCodeLength,
-		"recovery_code_length":      settings.RecoveryCodeLength,
-		"session_ttl_hours":         settings.SessionTTLHours,
-		"max_code_attempts":         settings.MaxCodeAttempts,
+		"auth_enabled":                settings.AuthEnabled,
+		"enrollment_code_ttl_hours":   settings.EnrollmentCodeTTLHours,
+		"enrollment_code_length":      settings.EnrollmentCodeLength,
+		"recovery_code_length":        settings.RecoveryCodeLength,
+		"session_ttl_hours":           settings.SessionTTLHours,
+		"max_code_attempts":           settings.MaxCodeAttempts,
 		"code_attempt_window_minutes": settings.CodeAttemptWindowMinutes,
-		"webauthn_rp_id":            settings.WebAuthnRPID,
-		"webauthn_rp_origin":        settings.WebAuthnRPOrigin,
+		"webauthn_rp_id":              settings.WebAuthnRPID,
+		"webauthn_rp_origin":          settings.WebAuthnRPOrigin,
 	})
 }
 

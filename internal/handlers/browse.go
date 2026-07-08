@@ -670,14 +670,14 @@ func (h *Handler) getSnapshotDiff(c *gin.Context) {
 		WHERE target_id = $1 AND scanned_at < $2
 		ORDER BY scanned_at DESC LIMIT 1
 	`, targetID, scannedAt).Scan(&previousRawData)
-	
+
 	if err != nil && err != pgx.ErrNoRows {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch previous snapshot"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"current": currentRawData,
+		"current":  currentRawData,
 		"previous": previousRawData,
 	})
 }
@@ -829,4 +829,3 @@ func (h *Handler) deleteReport(c *gin.Context) {
 	h.recordAudit(c, audit.ActionReportDelete, "report", reportID.String(), nil)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
-

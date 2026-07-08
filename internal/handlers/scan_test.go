@@ -466,8 +466,6 @@ func TestHandler_FrontendURL_NilConfig(t *testing.T) {
 	require.Equal(t, "", h.frontendURL())
 }
 
-
-
 func TestCreateScan_RateLimitExceeded(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

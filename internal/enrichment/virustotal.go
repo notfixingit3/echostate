@@ -78,9 +78,9 @@ func summarizeVTResolutions(items []any) []map[string]any {
 			continue
 		}
 		entry := map[string]any{
-			"ip":         stringField(attrs, "ip_address"),
-			"date":       stringField(attrs, "date"),
-			"resolver":   stringField(attrs, "resolver"),
+			"ip":       stringField(attrs, "ip_address"),
+			"date":     stringField(attrs, "date"),
+			"resolver": stringField(attrs, "resolver"),
 		}
 		if entry["ip"] == "" {
 			continue

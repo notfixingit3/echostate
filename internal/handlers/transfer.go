@@ -70,8 +70,8 @@ func (h *Handler) importData(c *gin.Context) {
 	}
 
 	h.recordAudit(c, audit.ActionDataImport, "import", "bundle", map[string]any{
-		"conflict":      req.Conflict,
-		"rebuild_graph": req.RebuildGraph,
+		"conflict":           req.Conflict,
+		"rebuild_graph":      req.RebuildGraph,
 		"targets_imported":   result.TargetsImported,
 		"snapshots_imported": result.SnapshotsImported,
 		"targets_skipped":    result.TargetsSkipped,
@@ -91,4 +91,3 @@ func parseBoolQuery(c *gin.Context, key string, defaultValue bool) bool {
 	}
 	return value
 }
-

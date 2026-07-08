@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	peeringDBBaseURL    = "https://peeringdb.com/api"
-	peeringDBMaxBytes   = 512 * 1024
-	peeringDBIXLimit    = 40
+	peeringDBBaseURL  = "https://peeringdb.com/api"
+	peeringDBMaxBytes = 512 * 1024
+	peeringDBIXLimit  = 40
 )
 
 var (

@@ -18,24 +18,24 @@ import (
 )
 
 type Options struct {
-	IncludeBlobs   bool
-	IncludeConfig  bool
+	IncludeBlobs  bool
+	IncludeConfig bool
 }
 
 // BuildBundle reads investigation data from Postgres for portable export.
 func BuildBundle(ctx context.Context, database *db.DB, opts Options) (*models.ExportBundle, error) {
 	bundle := &models.ExportBundle{
-		FormatVersion:    models.ExportBundleFormatVersion,
-		ExportedAt:       time.Now().UTC(),
-		EchoStateVersion: version.Version,
-		Targets:          []models.ExportTarget{},
-		Snapshots:        []models.ExportSnapshot{},
-		SnapshotBlobs:    []models.ExportSnapshotBlob{},
-		Collections:      []models.ExportCollection{},
+		FormatVersion:     models.ExportBundleFormatVersion,
+		ExportedAt:        time.Now().UTC(),
+		EchoStateVersion:  version.Version,
+		Targets:           []models.ExportTarget{},
+		Snapshots:         []models.ExportSnapshot{},
+		SnapshotBlobs:     []models.ExportSnapshotBlob{},
+		Collections:       []models.ExportCollection{},
 		CollectionMembers: []models.ExportCollectionMember{},
-		Notes:            []models.InvestigationNote{},
-		GraphViews:       []models.SavedGraphView{},
-		Webhooks:         []models.Webhook{},
+		Notes:             []models.InvestigationNote{},
+		GraphViews:        []models.SavedGraphView{},
+		Webhooks:          []models.Webhook{},
 	}
 
 	targetRows, err := database.Pool.Query(ctx, `

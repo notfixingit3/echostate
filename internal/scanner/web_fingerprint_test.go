@@ -55,11 +55,11 @@ func TestExtractTechStackFromHeaders(t *testing.T) {
 	})
 
 	want := map[string]struct{}{
-		"Server: nginx/1.24.0":       {},
-		"X-Powered-By: PHP/8.2.0":    {},
+		"Server: nginx/1.24.0":        {},
+		"X-Powered-By: PHP/8.2.0":     {},
 		"X-AspNet-Version: 4.0.30319": {},
-		"CDN: Cloudflare":            {},
-		"Via: 1.1 varnish":           {},
+		"CDN: Cloudflare":             {},
+		"Via: 1.1 varnish":            {},
 	}
 
 	if len(got) != len(want) {

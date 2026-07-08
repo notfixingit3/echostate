@@ -108,9 +108,9 @@ func parse(v string) (parsedVersion, error) {
 	}
 
 	out := parsedVersion{
-		major:  major,
-		minor:  minor,
-		patch:  patch,
+		major: major,
+		minor: minor,
+		patch: patch,
 	}
 	if prerelease != "" {
 		out.hasPrerelease = true

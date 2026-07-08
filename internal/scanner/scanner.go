@@ -52,20 +52,20 @@ func (s *Scanner) Run(ctx context.Context, host string) (*models.ScanResult, err
 	normalized := NormalizeHost(host)
 
 	result := &models.ScanResult{
-		Host:      normalized,
-		ScannedAt: time.Now().UTC(),
-		WHOIS:     make(map[string]any),
-		ASN:       make(map[string]any),
-		Web:       make(map[string]any),
-		TLS:       make(map[string]any),
-		DNS:       make(map[string]any),
-		Favicon:   make(map[string]any),
-		Crawl:     make(map[string]any),
-		Storage:   make(map[string]any),
+		Host:       normalized,
+		ScannedAt:  time.Now().UTC(),
+		WHOIS:      make(map[string]any),
+		ASN:        make(map[string]any),
+		Web:        make(map[string]any),
+		TLS:        make(map[string]any),
+		DNS:        make(map[string]any),
+		Favicon:    make(map[string]any),
+		Crawl:      make(map[string]any),
+		Storage:    make(map[string]any),
 		CT:         make(map[string]any),
-		Traceroute:  make(map[string]any),
-		Screenshot:  make(map[string]any),
-		Errors:      []string{},
+		Traceroute: make(map[string]any),
+		Screenshot: make(map[string]any),
+		Errors:     []string{},
 	}
 
 	var mu sync.Mutex

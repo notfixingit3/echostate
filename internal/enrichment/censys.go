@@ -105,8 +105,8 @@ func summarizeCensysServices(raw any) []map[string]any {
 			continue
 		}
 		entry := map[string]any{
-			"port":        service["port"],
-			"transport":   stringField(service, "transport_protocol"),
+			"port":         service["port"],
+			"transport":    stringField(service, "transport_protocol"),
 			"service_name": stringField(service, "service_name"),
 		}
 		if tls, ok := service["tls"].(map[string]any); ok {

@@ -43,9 +43,9 @@ func TestRenderReport(t *testing.T) {
 			},
 		},
 		DNS: map[string]any{
-			"A":    []string{"93.184.216.34"},
-			"MX":   []string{"10 mail.example.com"},
-			"SPF":  map[string]any{"policy": "-all", "record": "v=spf1 -all"},
+			"A":   []string{"93.184.216.34"},
+			"MX":  []string{"10 mail.example.com"},
+			"SPF": map[string]any{"policy": "-all", "record": "v=spf1 -all"},
 			"MAIL_POSTURE": map[string]any{
 				"grade":    "A",
 				"score":    95,

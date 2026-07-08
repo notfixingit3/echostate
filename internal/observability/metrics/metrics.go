@@ -19,11 +19,11 @@ import (
 type Registry struct {
 	reg *prometheus.Registry
 
-	httpRequestsTotal        *prometheus.CounterVec
-	httpRequestDuration      *prometheus.HistogramVec
-	workerJobsTotal          *prometheus.CounterVec
-	workerQueueDepth         *prometheus.GaugeVec
-	workerQueueWaitSeconds   *prometheus.HistogramVec
+	httpRequestsTotal      *prometheus.CounterVec
+	httpRequestDuration    *prometheus.HistogramVec
+	workerJobsTotal        *prometheus.CounterVec
+	workerQueueDepth       *prometheus.GaugeVec
+	workerQueueWaitSeconds *prometheus.HistogramVec
 }
 
 // New creates a new Registry, registers Go runtime and process collectors, and
@@ -88,11 +88,11 @@ func New() *Registry {
 	)
 
 	return &Registry{
-		reg:                  reg,
-		httpRequestsTotal:    httpRequestsTotal,
-		httpRequestDuration:  httpRequestDuration,
-		workerJobsTotal:      workerJobsTotal,
-		workerQueueDepth:     workerQueueDepth,
+		reg:                    reg,
+		httpRequestsTotal:      httpRequestsTotal,
+		httpRequestDuration:    httpRequestDuration,
+		workerJobsTotal:        workerJobsTotal,
+		workerQueueDepth:       workerQueueDepth,
 		workerQueueWaitSeconds: workerQueueWaitSeconds,
 	}
 }

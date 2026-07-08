@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	maxBatchSize  = 100
+	maxBatchSize = 100
 	// pwhois.org provides the IP WHOIS lookup service used by this package.
 	// Data is sourced from Regional Internet Registries (RIRs) and is subject to
 	// their respective terms of use. See https://pwhois.org/ for details.

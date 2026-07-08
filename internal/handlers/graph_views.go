@@ -218,16 +218,16 @@ func (h *Handler) deleteGraphView(c *gin.Context) {
 }
 
 type graphViewPayload struct {
-	name                string
-	description         string
-	viewMode            string
-	targetID            *uuid.UUID
-	vantageFilter       string
-	snapshotID          *uuid.UUID
-	compareSnapshotID   *uuid.UUID
-	compareMode         string
-	pinnedJSON          []byte
-	selectedNodeID      *string
+	name              string
+	description       string
+	viewMode          string
+	targetID          *uuid.UUID
+	vantageFilter     string
+	snapshotID        *uuid.UUID
+	compareSnapshotID *uuid.UUID
+	compareMode       string
+	pinnedJSON        []byte
+	selectedNodeID    *string
 }
 
 func normalizeGraphViewPayload(

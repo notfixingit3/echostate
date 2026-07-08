@@ -76,28 +76,28 @@ type GraphRouteDiff struct {
 
 // GraphPathHop is one hop in an ordered traceroute path.
 type GraphPathHop struct {
-	Hop      int      `json:"hop"`
-	IP       string   `json:"ip,omitempty"`
-	Label    string   `json:"label"`
-	RTTMs    *float64 `json:"rtt_ms,omitempty"`
-	Timeout  bool     `json:"timeout,omitempty"`
-	Country  string   `json:"country,omitempty"`
-	City     string   `json:"city,omitempty"`
-	Lat      *float64 `json:"lat,omitempty"`
-	Lon      *float64 `json:"lon,omitempty"`
+	Hop     int      `json:"hop"`
+	IP      string   `json:"ip,omitempty"`
+	Label   string   `json:"label"`
+	RTTMs   *float64 `json:"rtt_ms,omitempty"`
+	Timeout bool     `json:"timeout,omitempty"`
+	Country string   `json:"country,omitempty"`
+	City    string   `json:"city,omitempty"`
+	Lat     *float64 `json:"lat,omitempty"`
+	Lon     *float64 `json:"lon,omitempty"`
 }
 
 // GraphGeoPoint is a geolocated point for map rendering.
 type GraphGeoPoint struct {
-	IP          string   `json:"ip"`
-	Lat         float64  `json:"lat"`
-	Lon         float64  `json:"lon"`
-	Country     string   `json:"country,omitempty"`
-	City        string   `json:"city,omitempty"`
-	Hop         int      `json:"hop,omitempty"`
-	TargetID    string   `json:"target_id,omitempty"`
-	TargetLabel string   `json:"target_label,omitempty"`
-	Label       string   `json:"label,omitempty"`
+	IP          string  `json:"ip"`
+	Lat         float64 `json:"lat"`
+	Lon         float64 `json:"lon"`
+	Country     string  `json:"country,omitempty"`
+	City        string  `json:"city,omitempty"`
+	Hop         int     `json:"hop,omitempty"`
+	TargetID    string  `json:"target_id,omitempty"`
+	TargetLabel string  `json:"target_label,omitempty"`
+	Label       string  `json:"label,omitempty"`
 }
 
 // GraphASPath is a BGP AS path observed for a target prefix.
@@ -120,13 +120,13 @@ type GraphPath struct {
 
 // GraphVantageDivergence highlights asymmetric routing between traceroute vantages.
 type GraphVantageDivergence struct {
-	TargetID     string   `json:"target_id"`
-	TargetLabel  string   `json:"target_label"`
-	VantageA     string   `json:"vantage_a"`
-	VantageB     string   `json:"vantage_b"`
-	DivergesAt   int      `json:"diverges_at,omitempty"`
-	OnlyInA      []string `json:"only_in_a,omitempty"`
-	OnlyInB      []string `json:"only_in_b,omitempty"`
+	TargetID    string   `json:"target_id"`
+	TargetLabel string   `json:"target_label"`
+	VantageA    string   `json:"vantage_a"`
+	VantageB    string   `json:"vantage_b"`
+	DivergesAt  int      `json:"diverges_at,omitempty"`
+	OnlyInA     []string `json:"only_in_a,omitempty"`
+	OnlyInB     []string `json:"only_in_b,omitempty"`
 }
 
 // GraphPeeringIX is an internet exchange where a target's ASN is present.
@@ -165,23 +165,23 @@ type GraphTopologyDiff struct {
 
 // GraphResponse is returned by GET /api/graph.
 type GraphResponse struct {
-	View  string         `json:"view"`
-	Nodes []GraphNode    `json:"nodes"`
-	Edges []GraphEdge    `json:"edges"`
-	Stats map[string]int `json:"stats"`
-	SnapshotID          string               `json:"snapshot_id,omitempty"`
-	ScannedAt           int64                `json:"scanned_at,omitempty"`
-	CompareSnapshotID   string               `json:"compare_snapshot_id,omitempty"`
-	CompareMode         string               `json:"compare_mode,omitempty"`
-	TopologyDiff        *GraphTopologyDiff   `json:"topology_diff,omitempty"`
-	Paths    []GraphPath     `json:"paths,omitempty"`
-	Geo      []GraphGeoPoint `json:"geo,omitempty"`
-	ASPaths    []GraphASPath    `json:"as_paths,omitempty"`
-	SharedHops  []GraphSharedHop  `json:"shared_hops,omitempty"`
-	SharedSANs  []GraphSharedSAN  `json:"shared_sans,omitempty"`
-	Clusters            []GraphCluster           `json:"clusters,omitempty"`
-	RouteDiff           *GraphRouteDiff          `json:"route_diff,omitempty"`
-	VantageDivergence   []GraphVantageDivergence `json:"vantage_divergence,omitempty"`
-	PeeringIX           []GraphPeeringIX         `json:"peering_ix,omitempty"`
-	Events              []GraphIntelEvent        `json:"events,omitempty"`
+	View              string                   `json:"view"`
+	Nodes             []GraphNode              `json:"nodes"`
+	Edges             []GraphEdge              `json:"edges"`
+	Stats             map[string]int           `json:"stats"`
+	SnapshotID        string                   `json:"snapshot_id,omitempty"`
+	ScannedAt         int64                    `json:"scanned_at,omitempty"`
+	CompareSnapshotID string                   `json:"compare_snapshot_id,omitempty"`
+	CompareMode       string                   `json:"compare_mode,omitempty"`
+	TopologyDiff      *GraphTopologyDiff       `json:"topology_diff,omitempty"`
+	Paths             []GraphPath              `json:"paths,omitempty"`
+	Geo               []GraphGeoPoint          `json:"geo,omitempty"`
+	ASPaths           []GraphASPath            `json:"as_paths,omitempty"`
+	SharedHops        []GraphSharedHop         `json:"shared_hops,omitempty"`
+	SharedSANs        []GraphSharedSAN         `json:"shared_sans,omitempty"`
+	Clusters          []GraphCluster           `json:"clusters,omitempty"`
+	RouteDiff         *GraphRouteDiff          `json:"route_diff,omitempty"`
+	VantageDivergence []GraphVantageDivergence `json:"vantage_divergence,omitempty"`
+	PeeringIX         []GraphPeeringIX         `json:"peering_ix,omitempty"`
+	Events            []GraphIntelEvent        `json:"events,omitempty"`
 }

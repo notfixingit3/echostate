@@ -8,33 +8,33 @@ import (
 )
 
 var securityHeaderKeys = map[string]struct{}{
-	"strict-transport-security":        {},
-	"content-security-policy":            {},
+	"strict-transport-security":           {},
+	"content-security-policy":             {},
 	"content-security-policy-report-only": {},
-	"x-frame-options":                    {},
-	"x-content-type-options":             {},
-	"permissions-policy":                 {},
-	"referrer-policy":                    {},
-	"cross-origin-opener-policy":         {},
-	"cross-origin-embedder-policy":       {},
-	"cross-origin-resource-policy":       {},
+	"x-frame-options":                     {},
+	"x-content-type-options":              {},
+	"permissions-policy":                  {},
+	"referrer-policy":                     {},
+	"cross-origin-opener-policy":          {},
+	"cross-origin-embedder-policy":        {},
+	"cross-origin-resource-policy":        {},
 }
 
 // techHeaderKeys lists response headers promoted into tech_stack fingerprints.
 var techHeaderKeys = map[string]struct{}{
-	"server":                   {},
-	"x-powered-by":             {},
-	"x-aspnet-version":         {},
-	"x-aspnetmvc-version":      {},
-	"x-generator":              {},
-	"x-drupal-cache":           {},
-	"x-drupal-dynamic-cache":   {},
-	"x-varnish":                {},
-	"x-runtime":                {},
-	"x-version":                {},
-	"via":                      {},
-	"x-served-by":              {},
-	"x-cache":                  {},
+	"server":                 {},
+	"x-powered-by":           {},
+	"x-aspnet-version":       {},
+	"x-aspnetmvc-version":    {},
+	"x-generator":            {},
+	"x-drupal-cache":         {},
+	"x-drupal-dynamic-cache": {},
+	"x-varnish":              {},
+	"x-runtime":              {},
+	"x-version":              {},
+	"via":                    {},
+	"x-served-by":            {},
+	"x-cache":                {},
 }
 
 func headersFromNetwork(raw network.Headers) map[string]string {
