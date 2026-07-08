@@ -3,6 +3,9 @@ import { test, expect } from "@playwright/test"
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+const API_BASE = "http://localhost:8080"
+const METRICS_URL = "http://127.0.0.1:9090/metrics"
+
 test.describe("Smoke", () => {
   test("home page renders logo and navigation", async ({ page }) => {
     await page.goto("/")
@@ -100,5 +103,28 @@ test.describe("Smoke", () => {
     await expect(statusHeader).toBeVisible()
 
     await expect(table.locator("table tbody tr")).not.toHaveCount(0)
+  })
+
+  test("health endpoint returns status ok", async ({ request }) => {
+    const resp = await request.get(`${API_BASE}/health`)
+    expect(resp.ok()).toBeTruthy()
+    const body = await resp.json()
+    expect(body).toHaveProperty("status", "ok")
+  })
+
+  test("metrics endpoint exposes echostate_http_requests_total", async ({
+    request,
+  }) => {
+    let resp: Awaited<ReturnType<typeof request.get>>
+    try {
+      resp = await request.get(METRICS_URL, { timeout: 5000 })
+    } catch {
+      test.skip(true, "Metrics endpoint not reachable — observability overlay not active")
+      return
+    }
+
+    expect(resp.ok()).toBeTruthy()
+    const body = await resp.text()
+    expect(body).toContain("echostate_http_requests_total")
   })
 })
